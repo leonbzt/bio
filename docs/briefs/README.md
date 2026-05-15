@@ -17,7 +17,8 @@ Self-contained, paste-into-an-agent task instructions for the project.
 - `phase_3/` — Active gameplay. **Complete (smoke test partially done).** 9 briefs (00–08).
 - `phase_4/` — Prestige. **Complete.** 9 briefs (00–08).
 - `phase_5/` — Fungi. **Complete.** 9 briefs (00–08).
-- `phase_6/` — Symbiosis. **In progress.** 8 briefs (00–07).
+- `phase_6/` — Symbiosis. **Complete.** 8 briefs (00–07).
+- `phase_7/` — Polish + release. **In progress.** 9 briefs (00–08).
 - `phase_5/` — Fungi. *Not yet written.*
 - `phase_6/` — Symbiosis. *Not yet written.*
 - `phase_7/` — Polish. *Not yet written.*

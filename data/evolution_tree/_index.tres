@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="EvolutionTreeIndex" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="EvolutionTreeIndex" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/evolution_tree_index.gd" id="1"]
 [ext_resource type="Resource" path="res://data/evolution_tree/thrifty_growth.tres" id="2"]
@@ -6,7 +6,10 @@
 [ext_resource type="Resource" path="res://data/evolution_tree/toxin_potency.tres" id="4"]
 [ext_resource type="Resource" path="res://data/evolution_tree/efficient_photosynthesis.tres" id="5"]
 [ext_resource type="Resource" path="res://data/evolution_tree/unlock_fungi.tres" id="6"]
+[ext_resource type="Resource" path="res://data/evolution_tree/unlock_symbiosis.tres" id="7"]
+[ext_resource type="Resource" path="res://data/evolution_tree/mutualism.tres" id="8"]
+[ext_resource type="Resource" path="res://data/evolution_tree/wood_wide_web.tres" id="9"]
 
 [resource]
 script = ExtResource("1")
-nodes = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
+nodes = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9")])

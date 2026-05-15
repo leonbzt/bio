@@ -13,7 +13,7 @@ func _ready() -> void:
 func _on_tile_tapped(coord: Vector2i) -> void:
 	if GameState.input_mode != GameState.INPUT_MODE_COLONIZE:
 		return
-	if GameState.current_kingdom_id != KINGDOM_ID:
+	if not _is_active():
 		return
 	if _territory.get_surface_owner(coord) != &"":
 		return
@@ -43,3 +43,11 @@ func _get_cost() -> Dictionary:
 	if MetaModifiers.is_unlocked(&"thrifty_growth"):
 		cost = 4.0
 	return {ResourceLedger.BIOMASS: cost}
+
+
+func _is_active() -> bool:
+	if GameState.current_kingdom_id == KINGDOM_ID:
+		return true
+	if GameState.current_kingdom_id == &"symbiosis" and GameState.placement_target == KINGDOM_ID:
+		return true
+	return false

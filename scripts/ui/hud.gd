@@ -22,6 +22,7 @@ const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
 @onready var _tick_indicator: ColorRect = $TickIndicator
 @onready var _toxin_button: Button = $ToxinBloomButton
 @onready var _pause_button: Button = $PauseButton
+@onready var _layer_toggle: Button = $LayerToggle
 @onready var _toast_panel: PanelContainer = $EventToast
 @onready var _toast_title: Label = $EventToast/ToastContent/ToastTitle
 @onready var _toast_body: Label = $EventToast/ToastContent/ToastBody
@@ -47,6 +48,7 @@ func _ready() -> void:
 	_build_event_index()
 	_setup_toxin_button()
 	_pause_button.pressed.connect(_on_pause_pressed)
+	_layer_toggle.pressed.connect(_on_layer_toggle_pressed)
 	EventBus.resource_changed.connect(_on_resource_changed)
 	EventBus.tick.connect(_on_tick)
 	EventBus.input_mode_changed.connect(_on_input_mode_changed)
@@ -54,6 +56,11 @@ func _ready() -> void:
 	EventBus.event_resolved.connect(_on_event_resolved)
 	EventBus.replay_started.connect(_on_replay_started)
 	EventBus.replay_finished.connect(_on_replay_finished)
+	EventBus.placement_target_changed.connect(_on_placement_target_changed)
+	EventBus.run_started.connect(_on_run_started)
+	EventBus.run_loaded.connect(_on_run_loaded_for_layer)
+	_refresh_layer_toggle_visibility()
+	_refresh_layer_toggle_label()
 
 
 func _bind_labels() -> void:
@@ -96,6 +103,41 @@ func _on_replay_started(_ticks: int) -> void:
 
 func _on_replay_finished() -> void:
 	_is_replaying = false
+
+
+func _on_run_started(_kingdom_id: StringName) -> void:
+	_refresh_layer_toggle_visibility()
+	_refresh_layer_toggle_label()
+
+
+func _on_run_loaded_for_layer(_save_version: int) -> void:
+	_refresh_layer_toggle_visibility()
+	_refresh_layer_toggle_label()
+
+
+func _refresh_layer_toggle_visibility() -> void:
+	_layer_toggle.visible = (GameState.current_kingdom_id == &"symbiosis")
+
+
+func _on_layer_toggle_pressed() -> void:
+	if GameState.current_kingdom_id != &"symbiosis":
+		return
+	var next: StringName = &"fungi" if GameState.placement_target == &"plantae" else &"plantae"
+	GameState.placement_target = next
+	EventBus.placement_target_changed.emit(next)
+
+
+func _on_placement_target_changed(_target: StringName) -> void:
+	_refresh_layer_toggle_label()
+
+
+func _refresh_layer_toggle_label() -> void:
+	if GameState.placement_target == &"fungi":
+		_layer_toggle.text = "Layer: Fungi"
+		_layer_toggle.modulate = Color(0.78, 0.55, 0.85)
+	else:
+		_layer_toggle.text = "Layer: Plant"
+		_layer_toggle.modulate = Color(0.55, 0.85, 0.55)
 
 
 

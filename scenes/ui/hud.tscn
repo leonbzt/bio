@@ -70,6 +70,18 @@ offset_right = -16.0
 offset_bottom = -16.0
 text = "Toxin Bloom"
 
+[node name="LayerToggle" type="Button" parent="."]
+visible = false
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 0.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -56.0
+offset_right = 120.0
+offset_bottom = -16.0
+text = "Layer: Plant"
+
 [node name="EventToast" type="PanelContainer" parent="."]
 visible = false
 anchor_left = 0.5

@@ -7,8 +7,6 @@ const STARTER_SPECIES_BY_KINGDOM := {
 }
 
 var _all_species: Dictionary[StringName, SpeciesData] = {}
-var _active_species: SpeciesData = null
-var _trait_modifier_sum: Dictionary[StringName, float] = {}
 
 @onready var _territory: Node = get_node("../TerritorySystem")
 @onready var _nutrients: Node = get_node("../NutrientSystem")
@@ -17,10 +15,6 @@ var _trait_modifier_sum: Dictionary[StringName, float] = {}
 func _ready() -> void:
 	_load_species_index()
 	EventBus.tick.connect(_on_tick)
-	EventBus.run_loaded.connect(_on_run_loaded)
-	EventBus.run_started.connect(_on_run_started)
-	if not GameState.run_save.is_empty():
-		_on_run_loaded(SaveSystem.SAVE_VERSION)
 
 
 func _load_species_index() -> void:
@@ -35,87 +29,120 @@ func _load_species_index() -> void:
 		_all_species[species.id] = species
 
 
-func _on_run_loaded(_save_version: int) -> void:
-	_select_active_species()
-
-
-func _on_run_started(_kingdom_id: StringName) -> void:
-	_select_active_species()
-
-
-func _select_active_species() -> void:
-	_active_species = null
-	_trait_modifier_sum.clear()
+func _on_tick(_delta_seconds: float) -> void:
 	if _all_species.is_empty():
 		return
 	var kingdom_id: StringName = GameState.current_kingdom_id
+	if kingdom_id == &"plantae" or kingdom_id == &"fungi":
+		_tick_single_kingdom(kingdom_id)
+	elif kingdom_id == &"symbiosis":
+		_tick_symbiosis()
+
+
+func _tick_single_kingdom(kingdom_id: StringName) -> void:
 	var species_id: StringName = STARTER_SPECIES_BY_KINGDOM.get(kingdom_id, StringName())
 	if species_id == StringName():
-		push_warning("GrowthSystem: no starter species for kingdom %s" % String(kingdom_id))
 		return
-	var selected: SpeciesData = _all_species.get(species_id, null)
-	if selected == null:
-		push_error("GrowthSystem: missing species %s" % String(species_id))
+	var species: SpeciesData = _all_species.get(species_id, null)
+	if species == null:
 		return
-	_active_species = selected
-	_rebuild_trait_modifiers()
-
-
-func _rebuild_trait_modifiers() -> void:
-	_trait_modifier_sum.clear()
-	if _active_species == null:
-		return
-	for trait_item: TraitData in _active_species.base_traits:
-		if trait_item == null:
-			continue
-		for key in trait_item.modifiers.keys():
-			var key_name: StringName = StringName(key)
-			var value: float = float(trait_item.modifiers.get(key, 0.0))
-			_trait_modifier_sum[key_name] = _trait_modifier_sum.get(key_name, 0.0) + value
-
-
-func _on_tick(_delta_seconds: float) -> void:
-	if _active_species == null:
-		return
-
 	var coords: Array[Vector2i]
-	var is_fungi: bool = _active_species.kingdom_id == &"fungi"
-	if is_fungi:
+	if kingdom_id == &"fungi":
 		coords = _territory.get_subsurface_owned_coords(&"fungi")
 	else:
-		coords = _territory.get_surface_owned_coords(_active_species.kingdom_id)
-	if coords.is_empty():
+		coords = _territory.get_surface_owned_coords(&"plantae")
+	_apply_yields(species, coords, kingdom_id, 1.0)
+
+
+func _tick_symbiosis() -> void:
+	var plant_species: SpeciesData = _all_species.get(&"pioneer_grass", null)
+	var fungi_species: SpeciesData = _all_species.get(&"mycelium_thread", null)
+	if plant_species == null and fungi_species == null:
 		return
+	var surface_coords: Array[Vector2i] = []
+	var subsurface_coords: Array[Vector2i] = []
+	if plant_species != null:
+		surface_coords = _territory.get_surface_owned_coords(&"plantae")
+	if fungi_species != null:
+		subsurface_coords = _territory.get_subsurface_owned_coords(&"fungi")
+	if plant_species != null:
+		_apply_yields(plant_species, surface_coords, &"plantae", 1.0, true)
+	if fungi_species != null:
+		_apply_yields(fungi_species, subsurface_coords, &"fungi", 1.0, true)
 
-	var meta_mult: float = _get_meta_growth_multiplier()
-	if is_fungi:
-		meta_mult = 1.0
 
-	for resource_id in _active_species.tick_yield.keys():
+func _apply_yields(
+	species: SpeciesData,
+	coords: Array[Vector2i],
+	kingdom_id: StringName,
+	base_mult: float,
+	apply_symbiosis_bonus: bool = false
+) -> void:
+	if species == null or coords.is_empty():
+		return
+	var trait_mods: Dictionary = _compute_trait_modifiers(species)
+	var meta_mult: float = _get_meta_growth_multiplier() if kingdom_id == &"plantae" else 1.0
+
+	for resource_id in species.tick_yield.keys():
 		var resource_key: StringName = StringName(resource_id)
-		var base_yield: float = float(_active_species.tick_yield[resource_id])
+		var base_yield: float = float(species.tick_yield[resource_id])
 		if base_yield == 0.0:
 			continue
 		var total: float = 0.0
 		for coord in coords:
-			var multiplier: float = 1.0
+			var per_tile: float = base_yield * base_mult
 			if resource_key == &"biomass":
 				var biome: BiomeData = _nutrients.get_biome_at(coord)
 				if biome == null:
 					continue
-				multiplier *= biome.sunlight_per_tick
-				multiplier *= (1.0 + _trait_modifier_sum.get(&"biomass_per_tile", 0.0))
-				multiplier *= meta_mult
+				per_tile *= biome.sunlight_per_tick
+				per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
+				per_tile *= meta_mult
 			elif resource_key == &"decay":
-				multiplier *= (1.0 + _trait_modifier_sum.get(&"decay_per_tile", 0.0))
+				per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
 			elif resource_key == &"spores":
-				multiplier *= (1.0 + _trait_modifier_sum.get(&"spore_per_tile", 0.0))
-			total += base_yield * multiplier
+				per_tile *= (1.0 + float(trait_mods.get(&"spore_per_tile", 0.0)))
+
+			if apply_symbiosis_bonus and _is_tile_symbiotic(coord):
+				per_tile *= (1.0 + _get_symbiosis_bonus())
+			elif apply_symbiosis_bonus and MetaModifiers.is_unlocked(&"wood_wide_web"):
+				if _is_adjacent_to_symbiotic(coord):
+					per_tile *= 1.15
+
+			total += per_tile
 		if total > 0.0:
 			ResourceLedger.add(resource_key, total)
+
+
+func _is_tile_symbiotic(coord: Vector2i) -> bool:
+	return _territory.get_surface_owner(coord) == &"plantae" and _territory.get_subsurface_owner(coord) == &"fungi"
+
+
+func _is_adjacent_to_symbiotic(coord: Vector2i) -> bool:
+	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		if _is_tile_symbiotic(coord + offset):
+			return true
+	return false
+
+
+func _compute_trait_modifiers(species: SpeciesData) -> Dictionary:
+	var mods: Dictionary = {}
+	for trait_item: TraitData in species.base_traits:
+		if trait_item == null:
+			continue
+		for key in trait_item.modifiers.keys():
+			var key_name: StringName = StringName(key)
+			mods[key_name] = mods.get(key_name, 0.0) + float(trait_item.modifiers.get(key, 0.0))
+	return mods
 
 
 func _get_meta_growth_multiplier() -> float:
 	if MetaModifiers.is_unlocked(&"efficient_photosynthesis"):
 		return 1.2
 	return 1.0
+
+
+func _get_symbiosis_bonus() -> float:
+	if MetaModifiers.is_unlocked(&"mutualism"):
+		return 0.50
+	return 0.30

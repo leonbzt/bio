@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EvolutionNodeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/evolution_node_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"wood_wide_web"
+display_name = "Wood Wide Web"
+description = "Tiles next to a symbiotic tile gain +15% to their yields."
+prerequisites = [&"mutualism"]
+meta_cost = {
+"evolution_points": 18
+}
+grants_traits = []
+grants_kingdoms = []

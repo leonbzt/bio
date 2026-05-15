@@ -19,7 +19,7 @@ func _ready() -> void:
 func _on_tile_tapped(coord: Vector2i) -> void:
 	if GameState.input_mode != GameState.INPUT_MODE_COLONIZE:
 		return
-	if GameState.current_kingdom_id != KINGDOM_ID:
+	if not _is_active():
 		return
 	if _species == null:
 		return
@@ -66,3 +66,11 @@ func _get_cost() -> Dictionary:
 		for key in cost.keys():
 			cost[key] = maxf(0.0, float(cost[key]) * (1.0 + discount))
 	return cost
+
+
+func _is_active() -> bool:
+	if GameState.current_kingdom_id == KINGDOM_ID:
+		return true
+	if GameState.current_kingdom_id == &"symbiosis" and GameState.placement_target == KINGDOM_ID:
+		return true
+	return false

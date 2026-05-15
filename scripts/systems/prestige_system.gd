@@ -67,6 +67,11 @@ func start_run(kingdom_id: StringName) -> void:
 	GameState.current_kingdom_id = kingdom_id
 	GameState.run_seed = randi()
 	GameState.is_run_active = true
+	if kingdom_id == &"symbiosis":
+		GameState.placement_target = &"plantae"
+	else:
+		GameState.placement_target = kingdom_id
+	EventBus.placement_target_changed.emit(GameState.placement_target)
 	EventBus.run_started.emit(kingdom_id)
 	SaveSystem.save_now()
 
@@ -147,5 +152,6 @@ func _reset_run_state() -> void:
 	GameState.run_save = fresh_run
 	GameState.is_run_active = false
 	GameState.current_kingdom_id = &""
+	GameState.placement_target = &""
 	ResourceLedger.reset_run()
 	EventBus.run_loaded.emit(SaveSystem.SAVE_VERSION)

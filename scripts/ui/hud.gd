@@ -16,6 +16,33 @@ const RESOURCE_NAMES: Dictionary = {
 	ResourceLedger.SPORES: "Spores"
 }
 
+const VISIBLE_RESOURCES_BY_KINGDOM := {
+	&"plantae": [
+		ResourceLedger.BIOMASS,
+		ResourceLedger.NUTRIENTS,
+		ResourceLedger.SUNLIGHT
+	],
+	&"fungi": [
+		ResourceLedger.NUTRIENTS,
+		ResourceLedger.DECAY,
+		ResourceLedger.SPORES
+	],
+	&"symbiosis": [
+		ResourceLedger.BIOMASS,
+		ResourceLedger.NUTRIENTS,
+		ResourceLedger.SUNLIGHT,
+		ResourceLedger.DECAY,
+		ResourceLedger.SPORES
+	],
+	&"": [
+		ResourceLedger.BIOMASS,
+		ResourceLedger.NUTRIENTS,
+		ResourceLedger.SUNLIGHT,
+		ResourceLedger.DECAY,
+		ResourceLedger.SPORES
+	]
+}
+
 const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
 
 @onready var _labels_container: HBoxContainer = $Bar/Margin/ResourcesRow/Resources
@@ -61,6 +88,7 @@ func _ready() -> void:
 	EventBus.run_loaded.connect(_on_run_loaded_for_layer)
 	_refresh_layer_toggle_visibility()
 	_refresh_layer_toggle_label()
+	_refresh_resource_visibility()
 
 
 func _bind_labels() -> void:
@@ -108,11 +136,13 @@ func _on_replay_finished() -> void:
 func _on_run_started(_kingdom_id: StringName) -> void:
 	_refresh_layer_toggle_visibility()
 	_refresh_layer_toggle_label()
+	_refresh_resource_visibility()
 
 
 func _on_run_loaded_for_layer(_save_version: int) -> void:
 	_refresh_layer_toggle_visibility()
 	_refresh_layer_toggle_label()
+	_refresh_resource_visibility()
 
 
 func _refresh_layer_toggle_visibility() -> void:
@@ -138,6 +168,15 @@ func _refresh_layer_toggle_label() -> void:
 	else:
 		_layer_toggle.text = "Layer: Plant"
 		_layer_toggle.modulate = Color(0.55, 0.85, 0.55)
+
+
+func _refresh_resource_visibility() -> void:
+	var visible_set: Array = VISIBLE_RESOURCES_BY_KINGDOM.get(
+		GameState.current_kingdom_id,
+		VISIBLE_RESOURCES_BY_KINGDOM[&""]
+	)
+	for resource_id in _labels.keys():
+		_labels[resource_id].visible = visible_set.has(resource_id)
 
 
 

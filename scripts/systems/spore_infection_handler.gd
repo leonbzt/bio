@@ -4,6 +4,7 @@ const EVENT_ID: StringName = &"spore_infection"
 const KINGDOM_ID: StringName = &"fungi"
 
 @onready var _territory: Node = get_node("../TerritorySystem")
+@onready var _tile_grid: Node = get_node("../../TileGrid")
 
 var _spread_counter: int = 0
 var _spread_every: int = 5
@@ -57,7 +58,7 @@ func _try_spread_one() -> void:
 			var neighbor: Vector2i = c + offset
 			if neighbor.x < 0 or neighbor.y < 0:
 				continue
-			if neighbor.x >= 32 or neighbor.y >= 48:
+			if neighbor.x >= int(_tile_grid.GRID_WIDTH) or neighbor.y >= int(_tile_grid.GRID_HEIGHT):
 				continue
 			if seen.has(neighbor):
 				continue

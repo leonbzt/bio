@@ -10,6 +10,7 @@ var _all_species: Dictionary[StringName, SpeciesData] = {}
 
 @onready var _territory: Node = get_node("../TerritorySystem")
 @onready var _nutrients: Node = get_node("../NutrientSystem")
+@onready var _ambient: Node = get_node("../AmbientModifierSystem")
 
 
 func _ready() -> void:
@@ -89,13 +90,16 @@ func _apply_yields(
 		if base_yield == 0.0:
 			continue
 		var total: float = 0.0
+		var sun_mult: float = 1.0
+		if _ambient.has_method("get_multiplier"):
+			sun_mult = float(_ambient.get_multiplier(&"sunlight_multiplier"))
 		for coord in coords:
 			var per_tile: float = base_yield * base_mult
 			if resource_key == &"biomass":
 				var biome: BiomeData = _nutrients.get_biome_at(coord)
 				if biome == null:
 					continue
-				per_tile *= biome.sunlight_per_tick
+				per_tile *= biome.sunlight_per_tick * sun_mult
 				per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
 				per_tile *= meta_mult
 			elif resource_key == &"decay":

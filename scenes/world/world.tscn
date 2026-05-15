@@ -18,6 +18,7 @@
 [ext_resource type="Script" path="res://scripts/systems/corpse_system.gd" id="17"]
 [ext_resource type="Script" path="res://scripts/systems/fungi_colonization.gd" id="18"]
 [ext_resource type="Script" path="res://scripts/systems/spore_infection_handler.gd" id="19"]
+[ext_resource type="Script" path="res://scripts/systems/ambient_modifier_system.gd" id="20"]
 
 [node name="World" type="Node2D"]
 
@@ -62,6 +63,9 @@ script = ExtResource("17")
 
 [node name="SporeInfectionHandler" type="Node" parent="Systems"]
 script = ExtResource("19")
+
+[node name="AmbientModifierSystem" type="Node" parent="Systems"]
+script = ExtResource("20")
 
 [node name="AbilitySystem" type="Node" parent="Systems"]
 script = ExtResource("12")

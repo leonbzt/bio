@@ -7,6 +7,8 @@ extends Node
 
 const SAVE_VERSION: int = 4
 const SAVE_PATH: String = "user://save.json"
+const TEMP_PATH: String = "user://save.json.tmp"
+const BACKUP_PATH: String = "user://save.json.bak"
 
 
 func _ready() -> void:
@@ -22,25 +24,30 @@ func _notification(what: int) -> void:
 
 
 func save_now() -> void:
-	# TODO brief 03 — synchronous write, safe to call from tree_exiting.
-	var save_dict := {
-		"save_version": SAVE_VERSION,
-		"saved_at_unix": Time.get_unix_time_from_system(),
-		"meta": GameState.meta_save if GameState.meta_save is Dictionary else {},
-		"run": GameState.run_save if GameState.run_save is Dictionary else {}
-	}
+	var save_dict := _build_save_dict()
+	var json: String = JSON.stringify(save_dict, "\t")
 
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if file == null:
-		push_error("SaveSystem: failed to open save file for write: %s" % SAVE_PATH)
+	var tmp := FileAccess.open(TEMP_PATH, FileAccess.WRITE)
+	if tmp == null:
+		push_error("SaveSystem: failed to open temp file %s" % TEMP_PATH)
 		return
-	file.store_string(JSON.stringify(save_dict, "\t"))
+	tmp.store_string(json)
+	tmp.close()
+
+	if FileAccess.file_exists(SAVE_PATH):
+		if FileAccess.file_exists(BACKUP_PATH):
+			DirAccess.remove_absolute(BACKUP_PATH)
+		DirAccess.rename_absolute(SAVE_PATH, BACKUP_PATH)
+	DirAccess.rename_absolute(TEMP_PATH, SAVE_PATH)
 
 
 func load_or_create() -> void:
-	# TODO brief 03 — load existing or build default. Hydrate GameState.
-	# Emit EventBus.run_loaded(save_version) when done.
-	if not FileAccess.file_exists(SAVE_PATH):
+	var data: Dictionary = _try_load(SAVE_PATH)
+	if data.is_empty():
+		data = _try_load(BACKUP_PATH)
+		if not data.is_empty():
+			push_warning("SaveSystem: primary save corrupted, restored from backup")
+	if data.is_empty():
 		var fresh := _build_default_save()
 		_write_save(fresh)
 		GameState.meta_save = fresh["meta"]
@@ -49,36 +56,7 @@ func load_or_create() -> void:
 		EventBus.run_loaded.emit(fresh["save_version"])
 		return
 
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
-	if file == null:
-		push_error("SaveSystem: failed to open save file for read: %s" % SAVE_PATH)
-		return
-
-	var parse := JSON.new()
-	var err := parse.parse(file.get_as_text())
-	if err != OK:
-		push_error("SaveSystem: failed to parse save JSON: %s" % SAVE_PATH)
-		return
-
-	var raw: Variant = parse.data
-	if not (raw is Dictionary):
-		push_error("SaveSystem: save JSON root is not a Dictionary.")
-		return
-	var data: Dictionary = raw as Dictionary
-
-	var save_version := int(data.get("save_version", 0))
-	if save_version > SAVE_VERSION:
-		push_error("SaveSystem: save version %d is newer than build %d." % [save_version, SAVE_VERSION])
-		return
-	if save_version < SAVE_VERSION:
-		data = migrate(data, save_version)
-		data["save_version"] = SAVE_VERSION
-		_write_save(data)
-
-	GameState.meta_save = data.get("meta", {})
-	GameState.run_save = data.get("run", {})
-	GameState.last_save_unix = int(data.get("saved_at_unix", 0))
-	EventBus.run_loaded.emit(int(data.get("save_version", SAVE_VERSION)))
+	_apply_loaded(data)
 
 
 func reset_save() -> void:
@@ -86,6 +64,10 @@ func reset_save() -> void:
 		var err := DirAccess.remove_absolute(SAVE_PATH)
 		if err != OK:
 			push_error("SaveSystem: failed to delete save file: %s" % SAVE_PATH)
+	if FileAccess.file_exists(BACKUP_PATH):
+		DirAccess.remove_absolute(BACKUP_PATH)
+	if FileAccess.file_exists(TEMP_PATH):
+		DirAccess.remove_absolute(TEMP_PATH)
 	var fresh := _build_default_save()
 	_write_save(fresh)
 	GameState.meta_save = fresh["meta"]
@@ -197,3 +179,45 @@ func _write_save(save_dict: Dictionary) -> void:
 		push_error("SaveSystem: failed to open save file for write: %s" % SAVE_PATH)
 		return
 	file.store_string(JSON.stringify(save_dict, "\t"))
+
+
+func _build_save_dict() -> Dictionary:
+	return {
+		"save_version": SAVE_VERSION,
+		"saved_at_unix": Time.get_unix_time_from_system(),
+		"meta": GameState.meta_save if GameState.meta_save is Dictionary else {},
+		"run": GameState.run_save if GameState.run_save is Dictionary else {}
+	}
+
+
+func _try_load(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+	var text: String = file.get_as_text()
+	file.close()
+	var parser := JSON.new()
+	if parser.parse(text) != OK:
+		push_warning("SaveSystem: JSON parse failed for %s" % path)
+		return {}
+	var raw: Variant = parser.data
+	if not (raw is Dictionary):
+		return {}
+	var data: Dictionary = raw as Dictionary
+	var save_version := int(data.get("save_version", 0))
+	if save_version > SAVE_VERSION:
+		push_error("SaveSystem: %s has newer save_version (%d > %d)" % [path, save_version, SAVE_VERSION])
+		return {}
+	if save_version < SAVE_VERSION:
+		data = migrate(data, save_version)
+		data["save_version"] = SAVE_VERSION
+	return data
+
+
+func _apply_loaded(data: Dictionary) -> void:
+	GameState.meta_save = data.get("meta", {})
+	GameState.run_save = data.get("run", {})
+	GameState.last_save_unix = int(data.get("saved_at_unix", 0))
+	EventBus.run_loaded.emit(int(data.get("save_version", SAVE_VERSION)))

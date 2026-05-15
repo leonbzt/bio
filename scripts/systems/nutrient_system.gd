@@ -7,6 +7,7 @@ var _biomes: Array[BiomeData] = []
 
 @onready var _tile_grid: Node = get_node("../../TileGrid")
 @onready var _territory: Node = get_node("../TerritorySystem")
+@onready var _ambient: Node = get_node("../AmbientModifierSystem")
 
 
 func _ready() -> void:
@@ -64,15 +65,20 @@ func _on_run_loaded(_save_version: int) -> void:
 func _on_tick(_delta_seconds: float) -> void:
 	if not _territory.has_method("get_surface_owned_coords"):
 		return
+	var sun_mult: float = 1.0
+	var nut_mult: float = 1.0
+	if _ambient.has_method("get_multiplier"):
+		sun_mult = float(_ambient.get_multiplier(&"sunlight_multiplier"))
+		nut_mult = float(_ambient.get_multiplier(&"nutrient_multiplier"))
 	var coords: Array[Vector2i] = _territory.get_surface_owned_coords()
 	for coord in coords:
 		var biome: BiomeData = _biome_by_coord.get(coord, null)
 		if biome == null:
 			continue
 		if biome.sunlight_per_tick != 0.0:
-			ResourceLedger.add(ResourceLedger.SUNLIGHT, biome.sunlight_per_tick)
+			ResourceLedger.add(ResourceLedger.SUNLIGHT, biome.sunlight_per_tick * sun_mult)
 		if biome.nutrient_per_tick != 0.0:
-			ResourceLedger.add(ResourceLedger.NUTRIENTS, biome.nutrient_per_tick)
+			ResourceLedger.add(ResourceLedger.NUTRIENTS, biome.nutrient_per_tick * nut_mult)
 		if biome.decay_per_tick != 0.0:
 			ResourceLedger.add(ResourceLedger.DECAY, biome.decay_per_tick)
 

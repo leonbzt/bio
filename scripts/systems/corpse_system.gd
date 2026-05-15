@@ -10,7 +10,6 @@ var _is_replaying: bool = false
 
 
 func _ready() -> void:
-	EventBus.organism_died.connect(_on_organism_died)
 	EventBus.tick.connect(_on_tick)
 	EventBus.run_loaded.connect(_on_run_loaded)
 	EventBus.replay_started.connect(_on_replay_started)
@@ -41,11 +40,6 @@ func spawn_corpse(coord: Vector2i, decay_per_tick: float = DEFAULT_DECAY_PER_TIC
 
 func is_corpse_at(coord: Vector2i) -> bool:
 	return _corpses.has(coord)
-
-
-func _on_organism_died(_organism_id: int, _cause: StringName) -> void:
-	# Corpse spawns are initiated by HerbivoreManager with coord context.
-	return
 
 
 func _on_tick(_delta_seconds: float) -> void:

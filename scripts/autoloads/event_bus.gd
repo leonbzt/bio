@@ -33,6 +33,7 @@ signal event_resolved(event_id: StringName, outcome: StringName)
 # Input mode and abilities
 signal input_mode_changed(mode: StringName)
 signal ability_used(ability_id: StringName, payload: Dictionary)
+signal placement_target_changed(target: StringName)
 
 # Run lifecycle
 signal run_started(kingdom_id: StringName)

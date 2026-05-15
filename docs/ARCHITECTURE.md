@@ -60,6 +60,7 @@ signal event_resolved(event_id: StringName, outcome: StringName)
 # Input mode and abilities
 signal input_mode_changed(mode: StringName)
 signal ability_used(ability_id: StringName, payload: Dictionary)
+signal placement_target_changed(target: StringName)
 
 # Run lifecycle
 signal run_started(kingdom_id: StringName)
@@ -274,8 +275,8 @@ Each gameplay system is a single `.gd` script attached to a node under `world.ts
 | System | File | Subscribes to | Emits |
 |---|---|---|---|
 | `TerritorySystem` | `scripts/systems/territory_system.gd` | `run_loaded` | `tile_colonized`, `tile_lost` (via public mutators called by colonization systems) |
-| `PlantColonization` | `scripts/systems/plant_colonization.gd` | `tile_tapped` (only when `current_kingdom_id == &"plantae"`) | — (calls TerritorySystem) |
-| `FungiColonization` | `scripts/systems/fungi_colonization.gd` | `tile_tapped` (only when `current_kingdom_id == &"fungi"`) | — (calls TerritorySystem) |
+| `PlantColonization` | `scripts/systems/plant_colonization.gd` | `tile_tapped` (when kingdom is plantae, or symbiosis with placement_target=plantae) | — (calls TerritorySystem) |
+| `FungiColonization` | `scripts/systems/fungi_colonization.gd` | `tile_tapped` (when kingdom is fungi, or symbiosis with placement_target=fungi) | — (calls TerritorySystem) |
 | `CorpseSystem` | `scripts/systems/corpse_system.gd` | `organism_died`, `tick`, `run_loaded` | `organism_spawned` (for corpses), `organism_died` (when corpse fully decays) |
 | `TileInputRouter` | `scripts/systems/tile_input_router.gd` | raw input | `tile_tapped` |
 | `GrowthSystem` | `scripts/systems/growth_system.gd` | `tick` | `resource_changed` (via Ledger) |

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="TraitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/trait_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"mycorrhizal_network"
+display_name = "Mycorrhizal Network"
+description = "Adjacent fungi tiles share nutrient absorption."
+modifiers = {
+"nutrient_multiplier": 1.15,
+"spore_per_tile": 0.05
+}
+tradeoff_summary = "+15% nutrients shared / +5% spore yield"

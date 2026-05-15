@@ -8,6 +8,7 @@ const HERBIVORE_SPECIES_ID: StringName = &"herbivore"
 @onready var _tile_grid: Node = get_node("../../TileGrid")
 @onready var _organisms_parent: Node2D = get_node("../../Organisms")
 @onready var _pressure: Node = get_node("../EcologicalPressure")
+@onready var _corpses: Node = get_node("../CorpseSystem")
 
 var _herbivores: Array[Herbivore] = []
 var _state_by_id: Dictionary[int, Dictionary] = {}
@@ -123,6 +124,8 @@ func _on_ability_used(ability_id: StringName, payload: Dictionary) -> void:
 		if distance <= radius:
 			var remaining := herbivore.take_damage(damage)
 			if remaining <= 0.0:
+				if _corpses.has_method("spawn_corpse"):
+					_corpses.spawn_corpse(herbivore.coord)
 				EventBus.organism_died.emit(herbivore.organism_id, &"toxin_bloom")
 				_state_by_id.erase(herbivore.organism_id)
 				herbivore.queue_free()
@@ -222,7 +225,13 @@ func _sync_run_save() -> void:
 		run = {}
 		GameState.run_save = run
 
+	var existing: Array = run.get("organisms", []) as Array
 	var organisms_array: Array = []
+	for entry in existing:
+		if not (entry is Dictionary):
+			continue
+		if String(entry.get("species_id", "")) != String(HERBIVORE_SPECIES_ID):
+			organisms_array.append(entry)
 	for herbivore in _herbivores:
 		var state: Dictionary = _state_by_id.get(herbivore.organism_id, {})
 		organisms_array.append({

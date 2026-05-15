@@ -115,10 +115,11 @@ func _maybe_trigger() -> void:
 	if picked == null:
 		return
 
-	if picked.id != &"herbivore_wave":
-		print("EcologicalPressure: would have fired %s" % String(picked.id))
+	var kingdom_required: String = String(picked.payload.get("kingdom_required", ""))
+	if kingdom_required != "" and String(GameState.current_kingdom_id) != kingdom_required:
 		return
-	if owned_count < 6:
+
+	if picked.id == &"herbivore_wave" and owned_count < 6:
 		return
 
 	var payload: Dictionary = picked.payload.duplicate(true)

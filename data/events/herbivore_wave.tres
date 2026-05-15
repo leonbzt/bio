@@ -13,5 +13,6 @@ payload = {
 "spawn_count": 3,
 "chew_ticks": 4,
 "speed_ticks": 2,
-"hp": 2.0
+"hp": 2.0,
+"kingdom_required": "plantae"
 }

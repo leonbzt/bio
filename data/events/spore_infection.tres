@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"spore_infection"
+display_name = "Spore Bloom"
+description = "Conditions favor passive fungal spread."
+trigger_weight = 0.8
+duration_ticks = 60
+payload = {
+"spread_every_ticks": 5,
+"kingdom_required": "fungi"
+}

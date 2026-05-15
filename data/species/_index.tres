@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="SpeciesIndex" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_index.gd" id="1"]
+[ext_resource type="Resource" path="res://data/species/pioneer_grass.tres" id="2"]
+[ext_resource type="Resource" path="res://data/species/bramble.tres" id="3"]
+[ext_resource type="Resource" path="res://data/species/mycelium_thread.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+species = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4")])

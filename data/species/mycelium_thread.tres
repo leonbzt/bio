@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+[ext_resource type="Resource" path="res://data/traits/mycorrhizal_network.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"mycelium_thread"
+display_name = "Mycelium Thread"
+kingdom_id = &"fungi"
+sprite = null
+base_traits = Array[Resource]([ExtResource("2")])
+colonize_cost = {
+"spores": 3.0
+}
+tick_yield = {
+"decay": 0.4,
+"spores": 0.15
+}

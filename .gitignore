@@ -1,0 +1,30 @@
+# Godot 4 cache — regenerated on import; never commit
+.godot/
+
+# Android build templates — large, regenerable
+/android/
+
+# Editor user state
+*.user
+*.tmp
+
+# Export artifacts
+build/
+bin/
+*.apk
+*.aab
+*.pck
+
+# Keystores and signing secrets — NEVER commit
+*.keystore
+*.jks
+export_credentials.cfg
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

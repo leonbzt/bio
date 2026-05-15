@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="TraitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/trait_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"deep_roots"
+display_name = "Deep Roots"
+description = "Taproots reach mineral layers below the topsoil."
+modifiers = {
+"nutrient_multiplier": 1.25,
+"colonize_cost": 2.0
+}
+tradeoff_summary = "+25% nutrients / +2 biomass per colonize"

@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://bawlelfa4k5oe"]
+
+[ext_resource type="Script" uid="uid://bwalunr5lkrm3" path="res://scripts/ui/boot.gd" id="1"]
+
+[node name="Boot" type="Control" unique_id=99602584]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1527920565]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=844719586]
+layout_mode = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="CenterContainer/VBoxContainer" unique_id=198158536]
+layout_mode = 2
+text = "Bio-Fantasy RPG"
+
+[node name="Loading" type="Label" parent="CenterContainer/VBoxContainer" unique_id=150287097]
+layout_mode = 2
+text = "Loading..."

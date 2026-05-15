@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BiomeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/biome_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"forest_edge"
+display_name = "Forest Edge"
+sunlight_per_tick = 0.7
+nutrient_per_tick = 0.7
+decay_per_tick = 0.1

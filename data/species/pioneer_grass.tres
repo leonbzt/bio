@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+[ext_resource type="Resource" path="res://data/traits/fast_growth.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"pioneer_grass"
+display_name = "Pioneer Grass"
+kingdom_id = &"plantae"
+base_traits = Array[Resource]([ExtResource("2")])
+colonize_cost = {
+"biomass": 5.0
+}
+tick_yield = {
+"biomass": 0.5
+}

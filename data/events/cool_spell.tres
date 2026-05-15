@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"cool_spell"
+display_name = "Cool Spell"
+description = "Cloud cover dims sunlight."
+trigger_weight = 0.5
+duration_ticks = 60
+payload = {
+"sunlight_multiplier": 0.5
+}

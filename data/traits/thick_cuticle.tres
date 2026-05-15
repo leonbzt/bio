@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="TraitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/trait_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"thick_cuticle"
+display_name = "Thick Cuticle"
+description = "Waxy outer layer slows water loss but limits expansion."
+modifiers = {
+"defense": 2.0,
+"biomass_per_tile": -0.05
+}
+tradeoff_summary = "+2 defense / -5% biomass yield"

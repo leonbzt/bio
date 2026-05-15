@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EvolutionNodeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/evolution_node_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"pioneer_resilience"
+display_name = "Pioneer Resilience"
+description = "Need 5 tiles owned before events can fire (was 3)."
+prerequisites = []
+meta_cost = {
+"evolution_points": 3
+}
+grants_traits = []
+grants_kingdoms = []

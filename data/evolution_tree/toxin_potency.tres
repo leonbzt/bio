@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EvolutionNodeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/evolution_node_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"toxin_potency"
+display_name = "Toxin Potency"
+description = "Toxin Bloom damage 3 -> 5."
+prerequisites = [&"thrifty_growth"]
+meta_cost = {
+"evolution_points": 5
+}
+grants_traits = []
+grants_kingdoms = []

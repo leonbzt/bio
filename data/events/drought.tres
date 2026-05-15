@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"drought"
+display_name = "Drought"
+description = "Sunlight bakes the topsoil; nutrient generation halves."
+trigger_weight = 0.5
+duration_ticks = 90
+payload = {
+"nutrient_multiplier": 0.5
+}

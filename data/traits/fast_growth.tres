@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="TraitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/trait_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"fast_growth"
+display_name = "Fast Growth"
+description = "Soft tissues expand rapidly but tear under stress."
+modifiers = {
+"biomass_per_tile": 0.15,
+"defense": -1.0
+}
+tradeoff_summary = "+15% biomass / -1 defense"

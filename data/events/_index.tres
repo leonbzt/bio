@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EventIndex" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_index.gd" id="1"]
+[ext_resource type="Resource" path="res://data/events/herbivore_wave.tres" id="2"]
+[ext_resource type="Resource" path="res://data/events/drought.tres" id="3"]
+[ext_resource type="Resource" path="res://data/events/cool_spell.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+events = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4")])

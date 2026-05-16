@@ -30,6 +30,7 @@ func get_pending_reward() -> int:
 func trigger_prestige() -> void:
 	var reward: int = get_pending_reward()
 	var earned: float = float(GameState.run_save.get("statistics", {}).get("total_biomass_earned", 0.0))
+	_record_kingdom_played()
 	_update_meta_stats(reward, earned)
 	_reset_run_state()
 	var summary := {
@@ -47,6 +48,8 @@ func purchase_node(node_id: StringName) -> bool:
 	if is_node_unlocked(node_id):
 		return false
 	if not _prerequisites_met(node):
+		return false
+	if not _kingdoms_played_satisfied(node):
 		return false
 	var cost: int = int(node.meta_cost.get("evolution_points", 0))
 	var balance: int = get_evolution_points_balance()
@@ -76,6 +79,10 @@ func start_run(kingdom_id: StringName, niche_id: StringName = &"") -> void:
 	if GameState.run_save is Dictionary:
 		GameState.run_save["kingdom_id"] = String(kingdom_id)
 		GameState.run_save["niche_id"] = String(resolved_niche)
+		if MetaModifiers.is_unlocked(&"spore_distribution"):
+			GameState.run_save["spore_distribution_charges"] = 3
+		else:
+			GameState.run_save["spore_distribution_charges"] = 0
 	GameState.run_seed = randi()
 	GameState.is_run_active = true
 	if kingdom_id == &"symbiosis":
@@ -85,6 +92,9 @@ func start_run(kingdom_id: StringName, niche_id: StringName = &"") -> void:
 	EventBus.placement_target_changed.emit(GameState.placement_target)
 	EventBus.niche_changed.emit(resolved_niche)
 	EventBus.run_started.emit(kingdom_id)
+	if kingdom_id == &"symbiosis" and MetaModifiers.is_unlocked(&"symbiotic_generosity"):
+		ResourceLedger.add(ResourceLedger.BIOMASS, 10.0)
+		ResourceLedger.add(ResourceLedger.NUTRIENTS, 5.0)
 	SaveSystem.save_now()
 
 
@@ -134,6 +144,18 @@ func get_all_nodes() -> Array[EvolutionNodeData]:
 	return _all_nodes
 
 
+func get_unsatisfied_kingdoms(node_id: StringName) -> Array[StringName]:
+	var node := _find_node(node_id)
+	if node == null:
+		return []
+	var played: Array = GameState.meta_save.get("kingdoms_played", [])
+	var missing: Array[StringName] = []
+	for required in node.requires_kingdom_played:
+		if not played.has(String(required)):
+			missing.append(required)
+	return missing
+
+
 func _find_node(id: StringName) -> EvolutionNodeData:
 	return _nodes_by_id.get(id, null)
 
@@ -141,6 +163,16 @@ func _find_node(id: StringName) -> EvolutionNodeData:
 func _prerequisites_met(node: EvolutionNodeData) -> bool:
 	for prereq in node.prerequisites:
 		if not is_node_unlocked(prereq):
+			return false
+	return true
+
+
+func _kingdoms_played_satisfied(node: EvolutionNodeData) -> bool:
+	if node.requires_kingdom_played.is_empty():
+		return true
+	var played: Array = GameState.meta_save.get("kingdoms_played", [])
+	for required in node.requires_kingdom_played:
+		if not played.has(String(required)):
 			return false
 	return true
 
@@ -173,6 +205,16 @@ func _update_meta_stats(reward: int, earned_this_run: float) -> void:
 	GameState.meta_save["statistics"] = stats
 
 
+func _record_kingdom_played() -> void:
+	var kid: String = String(GameState.run_save.get("kingdom_id", ""))
+	if kid == "":
+		return
+	var played: Array = GameState.meta_save.get("kingdoms_played", []) as Array
+	if not played.has(kid):
+		played.append(kid)
+	GameState.meta_save["kingdoms_played"] = played
+
+
 func _reset_run_state() -> void:
 	var fresh_run := {
 		"kingdom_id": "",
@@ -184,6 +226,8 @@ func _reset_run_state() -> void:
 		"tiles": [],
 		"organisms": [],
 		"active_events": [],
+		"event_first_fires_seen": [],
+		"spore_distribution_charges": 0,
 		"statistics": {
 			"total_biomass_earned": 0.0,
 			"tiles_colonized": 0,

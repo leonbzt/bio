@@ -12,3 +12,8 @@ extends Resource
 @export var meta_cost: Dictionary = {}              # meta-currency cost
 @export var grants_traits: Array[TraitData] = []
 @export var grants_kingdoms: Array[StringName] = []
+
+# Phase 9 additions — see docs/PROGRESSION_WEB.md.
+@export var wing: StringName = &""
+@export var tier: int = 1
+@export var requires_kingdom_played: Array[StringName] = []

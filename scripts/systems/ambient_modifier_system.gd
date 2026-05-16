@@ -10,6 +10,8 @@ func _ready() -> void:
 
 
 func _on_event_started(event_id: StringName, payload: Dictionary) -> void:
+	if event_id == &"drought" and MetaModifiers.is_unlocked(&"drought_resilience"):
+		return
 	var mods: Dictionary = {}
 	if payload.has("nutrient_multiplier"):
 		mods["nutrient_multiplier"] = float(payload["nutrient_multiplier"])

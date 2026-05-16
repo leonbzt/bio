@@ -4,14 +4,15 @@
 
 [resource]
 script = ExtResource("1")
-id = &"toxin_potency"
-display_name = "Toxin Potency"
-description = "Toxin Bloom damage 3 -> 5."
-prerequisites = [&"thrifty_growth"]
+id = &"soil_memory"
+display_name = "Soil Memory"
+description = "Biomes that hosted past fungal runs yield 15% more biomass on plant colonization."
+prerequisites = [&"efficient_photosynthesis"]
 meta_cost = {
-"evolution_points": 5
+"evolution_points": 8
 }
 grants_traits = []
 grants_kingdoms = []
 wing = &"plantae"
 tier = 2
+requires_kingdom_played = [&"fungi"]

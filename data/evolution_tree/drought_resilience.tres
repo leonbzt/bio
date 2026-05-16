@@ -4,14 +4,14 @@
 
 [resource]
 script = ExtResource("1")
-id = &"toxin_potency"
-display_name = "Toxin Potency"
-description = "Toxin Bloom damage 3 -> 5."
-prerequisites = [&"thrifty_growth"]
+id = &"drought_resilience"
+display_name = "Drought Resilience"
+description = "Plant tiles no longer wither during Drought events. The water that isn't there teaches you not to need it."
+prerequisites = [&"pioneer_resilience"]
 meta_cost = {
-"evolution_points": 5
+"evolution_points": 12
 }
 grants_traits = []
 grants_kingdoms = []
 wing = &"plantae"
-tier = 2
+tier = 3

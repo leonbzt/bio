@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="EvolutionNodeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/evolution_node_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"endophytic_bridge"
+display_name = "Endophytic Bridge"
+description = "Mycorrhizal fungi and plantae tiles share resources when adjacent. Both gain +0.2 biomass/tick from the partnership."
+prerequisites = [&"unlock_mycorrhizal_fungi"]
+meta_cost = {
+"evolution_points": 10
+}
+grants_traits = []
+grants_kingdoms = []
+wing = &"hybrid"
+tier = 2
+requires_kingdom_played = [&"plantae"]

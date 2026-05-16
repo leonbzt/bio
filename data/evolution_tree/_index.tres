@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="EvolutionTreeIndex" load_steps=12 format=3]
+[gd_resource type="Resource" script_class="EvolutionTreeIndex" load_steps=23 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/evolution_tree_index.gd" id="1"]
 [ext_resource type="Resource" path="res://data/evolution_tree/thrifty_growth.tres" id="2"]
@@ -11,7 +11,18 @@
 [ext_resource type="Resource" path="res://data/evolution_tree/wood_wide_web.tres" id="9"]
 [ext_resource type="Resource" path="res://data/evolution_tree/unlock_parasitic_plantae.tres" id="10"]
 [ext_resource type="Resource" path="res://data/evolution_tree/unlock_mycorrhizal_fungi.tres" id="11"]
+[ext_resource type="Resource" path="res://data/evolution_tree/insectivory.tres" id="12"]
+[ext_resource type="Resource" path="res://data/evolution_tree/soil_memory.tres" id="13"]
+[ext_resource type="Resource" path="res://data/evolution_tree/drought_resilience.tres" id="14"]
+[ext_resource type="Resource" path="res://data/evolution_tree/saprophytic_efficiency_ii.tres" id="15"]
+[ext_resource type="Resource" path="res://data/evolution_tree/cordyceps_mastery.tres" id="16"]
+[ext_resource type="Resource" path="res://data/evolution_tree/spore_distribution.tres" id="17"]
+[ext_resource type="Resource" path="res://data/evolution_tree/endophytic_bridge.tres" id="18"]
+[ext_resource type="Resource" path="res://data/evolution_tree/photosynthetic_network.tres" id="19"]
+[ext_resource type="Resource" path="res://data/evolution_tree/symbiotic_generosity.tres" id="20"]
+[ext_resource type="Resource" path="res://data/evolution_tree/lichen_heritage.tres" id="21"]
+[ext_resource type="Resource" path="res://data/evolution_tree/unlock_animals.tres" id="22"]
 
 [resource]
 script = ExtResource("1")
-nodes = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11")])
+nodes = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22")])

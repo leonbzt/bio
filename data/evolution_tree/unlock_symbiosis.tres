@@ -13,3 +13,5 @@ meta_cost = {
 }
 grants_traits = []
 grants_kingdoms = [&"symbiosis"]
+wing = &"hybrid"
+tier = 2

@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/prestige_screen.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/evolution_tree_canvas.gd" id="2"]
 
 [node name="PrestigeScreen" type="Control"]
 anchor_right = 1.0
@@ -44,8 +45,14 @@ visible = false
 [node name="BalanceLabel" type="Label" parent="Content/TreeSection"]
 text = "Balance: 0 EP"
 
-[node name="TreeGrid" type="GridContainer" parent="Content/TreeSection"]
-columns = 2
+[node name="TreeScroll" type="ScrollContainer" parent="Content/TreeSection"]
+horizontal_scroll_mode = 2
+vertical_scroll_mode = 2
+scroll_deadzone = 0
+custom_minimum_size = Vector2(360, 420)
+
+[node name="TreeCanvas" type="Control" parent="Content/TreeSection/TreeScroll"]
+script = ExtResource("2")
 
 [node name="KingdomSection" type="VBoxContainer" parent="Content"]
 visible = false

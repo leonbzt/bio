@@ -52,6 +52,7 @@ signal organism_died(organism_id: int, cause: StringName)
 # Evolution
 signal trait_unlocked(trait_id: StringName)
 signal evolution_node_unlocked(node_id: StringName)
+signal discovery_unlocked(entry_id: StringName)
 
 # Ecological pressure
 signal event_started(event_id: StringName, payload: Dictionary)
@@ -144,6 +145,9 @@ Save schema:
   "meta": {
     "unlocked_kingdoms": ["plantae"],
     "evolution_tree": {"unlock_fungi": true},
+    "discovery_log": {},
+    "kingdoms_played": [],
+    "niches_played": [],
     "statistics": {
       "prestige_count": 1,
       "evolution_points_balance": 12,
@@ -160,6 +164,7 @@ Save schema:
     "active_events": [
       {"id": "herbivore_wave", "ticks_remaining": 45, "payload": {"spawn_count": 3}}
     ],
+    "event_first_fires_seen": [],
     "statistics": {
       "total_biomass_earned": 1247.5,
       "tiles_colonized": 18,
@@ -268,6 +273,19 @@ class_name EvolutionNodeData extends Resource
 @export var meta_cost: Dictionary
 @export var grants_traits: Array[TraitData]
 @export var grants_kingdoms: Array[StringName]
+@export var wing: StringName
+@export var tier: int
+@export var requires_kingdom_played: Array[StringName]
+```
+
+### `DiscoveryEntry` (Phase 9+)
+```gdscript
+class_name DiscoveryEntry extends Resource
+@export var id: StringName
+@export var title: String
+@export var body: String
+@export var category: StringName
+@export var trigger_id: StringName
 ```
 
 ### `NicheData` (Phase 8+)
@@ -306,6 +324,7 @@ Each gameplay system is a single `.gd` script attached to a node under `world.ts
 | `HerbivoreManager` | `scripts/systems/herbivore_manager.gd` | `tick`, `event_started`, `event_resolved`, `ability_used` | `organism_spawned`, `organism_died`, `tile_lost` |
 | `EvolutionSystem` | `scripts/systems/evolution_system.gd` | input | `trait_unlocked`, `evolution_node_unlocked` |
 | `PrestigeSystem` | `scripts/systems/prestige_system.gd` | UI button signals | `prestige_triggered`, `run_started`, `evolution_node_unlocked` |
+| `DiscoveryLog` | `scripts/autoloads/discovery_log.gd` | `evolution_node_unlocked`, `niche_changed`, `event_resolved`, `prestige_triggered` | `discovery_unlocked` |
 | `RunStatsTracker` | `scripts/systems/run_stats_tracker.gd` | `resource_changed`, `tile_colonized`, `event_resolved` | — (writes only to `GameState.run_save.statistics`) |
 | `OfflineProgress` | `scripts/systems/offline_progress.gd` | `run_loaded` | `replay_started`, `replay_finished`; drives `force_tick(n)` on TickClock |
 
@@ -379,6 +398,7 @@ Increment `SAVE_VERSION` and add a `migrate()` case any time the JSON schema cha
 | v3 | `meta.unlocked_kingdoms`, `meta.statistics`, `run.statistics` scaffolded |
 | v4 | tiles split into `surface_owner` / `subsurface_owner` |
 | v5 | `run.niche_id` added (defaults: plantae→`photosynthesizer`, fungi→`decomposer`, others→`""`); tile `data.parasite_decay_ticks` may be present; tile `data.surface_variant` / `data.subsurface_variant` may be present |
+| v6 | `meta.discovery_log`, `meta.kingdoms_played`, `meta.niches_played`, `run.event_first_fires_seen` added |
 
 ---
 

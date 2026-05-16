@@ -72,6 +72,12 @@ func _rule_fungi_substrate(coord: Vector2i, kingdom_id: StringName, species: Spe
 		if owned_set.has(offset):
 			return {"valid": true, "cost": _apply_trait_cost_modifiers(_resolve_cost(species, niche), species), "data": {}}
 
+	if MetaModifiers.is_unlocked(&"spore_distribution"):
+		var charges: int = _get_spore_distribution_charges()
+		if charges > 0 and _has_line_of_sight(coord, owned):
+			_set_spore_distribution_charges(charges - 1)
+			return {"valid": true, "cost": _apply_trait_cost_modifiers(_resolve_cost(species, niche), species), "data": {}}
+
 	return {"valid": false, "cost": {}, "data": {}}
 
 
@@ -181,3 +187,21 @@ func _apply_trait_cost_modifiers(cost: Dictionary, species: SpeciesData) -> Dict
 	for key in cost.keys():
 		cost[key] = maxf(0.0, float(cost[key]) * (1.0 + total_modifier))
 	return cost
+
+
+func _get_spore_distribution_charges() -> int:
+	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+	return int(run.get("spore_distribution_charges", 0))
+
+
+func _set_spore_distribution_charges(value: int) -> void:
+	if GameState.run_save is Dictionary:
+		GameState.run_save["spore_distribution_charges"] = maxi(0, value)
+		SaveSystem.save_now()
+
+
+func _has_line_of_sight(coord: Vector2i, owned: Array[Vector2i]) -> bool:
+	for c in owned:
+		if c.x == coord.x or c.y == coord.y:
+			return true
+	return false

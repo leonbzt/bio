@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 5
+const SAVE_VERSION: int = 6
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -152,6 +152,20 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 						run["niche_id"] = "decomposer"
 					_:
 						run["niche_id"] = ""
+	if from_version < 6:
+		# v5 -> v6: add discovery log, kingdoms played, niche history, and per-run event dedup.
+		if old.has("meta") and old["meta"] is Dictionary:
+			var meta: Dictionary = old["meta"]
+			if not meta.has("discovery_log"):
+				meta["discovery_log"] = {}
+			if not meta.has("kingdoms_played"):
+				meta["kingdoms_played"] = []
+			if not meta.has("niches_played"):
+				meta["niches_played"] = []
+		if old.has("run") and old["run"] is Dictionary:
+			var run: Dictionary = old["run"]
+			if not run.has("event_first_fires_seen"):
+				run["event_first_fires_seen"] = []
 	return old
 
 
@@ -162,6 +176,9 @@ func _build_default_save() -> Dictionary:
 		"meta": {
 			"unlocked_kingdoms": ["plantae"],
 			"evolution_tree": {},
+			"discovery_log": {},
+			"kingdoms_played": [],
+			"niches_played": [],
 			"statistics": {
 				"prestige_count": 0,
 				"evolution_points_balance": 0,
@@ -178,6 +195,7 @@ func _build_default_save() -> Dictionary:
 			"tiles": [],
 			"organisms": [],
 			"active_events": [],
+			"event_first_fires_seen": [],
 			"statistics": {
 				"total_biomass_earned": 0.0,
 				"tiles_colonized": 0,

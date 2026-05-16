@@ -4,9 +4,9 @@
 
 [resource]
 script = ExtResource("1")
-id = &"wood_wide_web"
-display_name = "Wood Wide Web"
-description = "Tiles next to a symbiotic tile gain +15% to their yields."
+id = &"lichen_heritage"
+display_name = "Lichen Heritage"
+description = "You may now play as Lichen — a single organism that is both plant and fungus. Unlocks in Phase 10."
 prerequisites = [&"mutualism"]
 meta_cost = {
 "evolution_points": 18
@@ -15,3 +15,4 @@ grants_traits = []
 grants_kingdoms = []
 wing = &"hybrid"
 tier = 3
+requires_kingdom_played = [&"plantae", &"fungi"]

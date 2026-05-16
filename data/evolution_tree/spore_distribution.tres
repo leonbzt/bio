@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="EvolutionNodeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/evolution_node_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"spore_distribution"
+display_name = "Spore Distribution"
+description = "Fungi colonization succeeds at range — adjacency no longer required. Three tiles per run may be seeded anywhere within line-of-sight of an owned tile."
+prerequisites = [&"saprophytic_efficiency_ii"]
+meta_cost = {
+"evolution_points": 14
+}
+grants_traits = []
+grants_kingdoms = []
+wing = &"fungi"
+tier = 3
+requires_kingdom_played = [&"plantae"]

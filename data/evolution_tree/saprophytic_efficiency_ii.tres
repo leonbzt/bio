@@ -4,14 +4,14 @@
 
 [resource]
 script = ExtResource("1")
-id = &"toxin_potency"
-display_name = "Toxin Potency"
-description = "Toxin Bloom damage 3 -> 5."
-prerequisites = [&"thrifty_growth"]
+id = &"saprophytic_efficiency_ii"
+display_name = "Saprophytic Efficiency II"
+description = "Decomposition yields 20% more biomass from each consumed corpse."
+prerequisites = [&"unlock_fungi"]
 meta_cost = {
-"evolution_points": 5
+"evolution_points": 7
 }
 grants_traits = []
 grants_kingdoms = []
-wing = &"plantae"
+wing = &"fungi"
 tier = 2

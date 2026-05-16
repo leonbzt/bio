@@ -83,6 +83,11 @@ func _apply_yields(
 		return
 	var trait_mods: Dictionary = _compute_trait_modifiers(species)
 	var meta_mult: float = _get_meta_growth_multiplier() if kingdom_id == &"plantae" else 1.0
+	var extra_biomass: float = 0.0
+	if MetaModifiers.is_unlocked(&"endophytic_bridge"):
+		for coord in coords:
+			if _is_endophytic_partner(coord, kingdom_id):
+				extra_biomass += 0.2
 
 	for resource_id in species.tick_yield.keys():
 		var resource_key: StringName = StringName(resource_id)
@@ -103,12 +108,15 @@ func _apply_yields(
 				per_tile *= _get_niche_yield_multiplier()
 				per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
 				per_tile *= meta_mult
+				if kingdom_id == &"plantae" and MetaModifiers.is_unlocked(&"soil_memory"):
+					per_tile *= 1.15
 				if _is_tile_mycorrhizal_boosted(coord):
 					per_tile *= 1.30
 			elif resource_key == &"decay":
 				per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
 			elif resource_key == &"spores":
 				per_tile *= (1.0 + float(trait_mods.get(&"spore_per_tile", 0.0)))
+
 
 			if apply_symbiosis_bonus and _is_tile_symbiotic(coord):
 				per_tile *= (1.0 + _get_symbiosis_bonus())
@@ -119,6 +127,8 @@ func _apply_yields(
 			total += per_tile
 		if total > 0.0:
 			ResourceLedger.add(resource_key, total)
+	if extra_biomass > 0.0:
+		ResourceLedger.add(ResourceLedger.BIOMASS, extra_biomass)
 
 
 func _is_tile_symbiotic(coord: Vector2i) -> bool:
@@ -128,6 +138,28 @@ func _is_tile_symbiotic(coord: Vector2i) -> bool:
 func _is_adjacent_to_symbiotic(coord: Vector2i) -> bool:
 	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 		if _is_tile_symbiotic(coord + offset):
+			return true
+	return false
+
+
+func _is_endophytic_partner(coord: Vector2i, kingdom_id: StringName) -> bool:
+	if kingdom_id == &"plantae":
+		return _is_adjacent_to_fungi(coord)
+	if kingdom_id == &"fungi":
+		return _is_adjacent_to_plantae(coord)
+	return false
+
+
+func _is_adjacent_to_fungi(coord: Vector2i) -> bool:
+	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		if _territory.get_subsurface_owner(coord + offset) == &"fungi":
+			return true
+	return false
+
+
+func _is_adjacent_to_plantae(coord: Vector2i) -> bool:
+	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		if _territory.get_surface_owner(coord + offset) == &"plantae":
 			return true
 	return false
 

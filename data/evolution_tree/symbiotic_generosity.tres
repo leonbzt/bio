@@ -4,14 +4,14 @@
 
 [resource]
 script = ExtResource("1")
-id = &"toxin_potency"
-display_name = "Toxin Potency"
-description = "Toxin Bloom damage 3 -> 5."
-prerequisites = [&"thrifty_growth"]
+id = &"symbiotic_generosity"
+display_name = "Symbiotic Generosity"
+description = "Symbiosis runs start with +10 biomass and +5 nutrients. The world remembers your partnerships."
+prerequisites = [&"unlock_symbiosis"]
 meta_cost = {
-"evolution_points": 5
+"evolution_points": 8
 }
 grants_traits = []
 grants_kingdoms = []
-wing = &"plantae"
+wing = &"hybrid"
 tier = 2

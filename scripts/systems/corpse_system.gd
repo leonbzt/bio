@@ -52,6 +52,8 @@ func _on_tick(_delta_seconds: float) -> void:
 	for coord in _corpses.keys():
 		var entry: Dictionary = _corpses[coord]
 		var decay_per_tick: float = float(entry.get("decay_per_tick", DEFAULT_DECAY_PER_TICK))
+		if MetaModifiers.is_unlocked(&"saprophytic_efficiency_ii"):
+			decay_per_tick *= 1.2
 		if decay_per_tick != 0.0:
 			ResourceLedger.add(ResourceLedger.DECAY, decay_per_tick)
 		var ticks_remaining: int = int(entry.get("ticks_remaining", 0)) - 1

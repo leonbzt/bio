@@ -160,3 +160,49 @@ func test_migrate_v4_fungi_default_niche() -> void:
 
 	var migrated := SaveSystem.migrate(v4_fungi, 4)
 	assert_eq(migrated["run"]["niche_id"], "decomposer")
+
+
+func test_migrate_v5_adds_discovery_fields() -> void:
+	var v5 := {
+		"save_version": 5,
+		"meta": {"unlocked_kingdoms": ["plantae", "fungi"], "evolution_tree": {}, "statistics": {}},
+		"run": {
+			"kingdom_id": "plantae",
+			"niche_id": "photosynthesizer",
+			"tiles": [],
+			"resources": {},
+			"biome_map": {},
+			"organisms": [],
+			"active_events": [],
+			"statistics": {"total_biomass_earned": 0.0, "tiles_colonized": 0, "waves_defeated": 0}
+		}
+	}
+	var migrated := SaveSystem.migrate(v5, 5)
+	assert_true(migrated["meta"].has("discovery_log"))
+	assert_true(migrated["meta"].has("kingdoms_played"))
+	assert_true(migrated["meta"].has("niches_played"))
+	assert_eq(migrated["meta"]["discovery_log"], {})
+	assert_eq(migrated["meta"]["kingdoms_played"], [])
+	assert_eq(migrated["meta"]["niches_played"], [])
+	assert_true(migrated["run"].has("event_first_fires_seen"))
+	assert_eq(migrated["run"]["event_first_fires_seen"], [])
+
+
+func test_migrate_v5_does_not_backfill_kingdoms_played() -> void:
+	var v5 := {
+		"save_version": 5,
+		"meta": {"unlocked_kingdoms": ["plantae", "fungi", "symbiosis"]},
+		"run": {}
+	}
+	var migrated := SaveSystem.migrate(v5, 5)
+	assert_eq(migrated["meta"]["kingdoms_played"], [])
+
+
+func test_migrate_v0_cascades_to_v6() -> void:
+	var v0 := {"save_version": 0, "meta": {}, "run": {"kingdom": "plantae"}}
+	var migrated := SaveSystem.migrate(v0, 0)
+	assert_true(migrated["meta"].has("discovery_log"))
+	assert_true(migrated["meta"].has("kingdoms_played"))
+	assert_true(migrated["meta"].has("niches_played"))
+	assert_true(migrated["run"].has("event_first_fires_seen"))
+	assert_eq(migrated["run"]["niche_id"], "photosynthesizer")

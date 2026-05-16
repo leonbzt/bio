@@ -9,7 +9,7 @@ extends Control
 @onready var _biomass_label: Label = $Content/SummarySection/BiomassLabel
 @onready var _confirm_button: Button = $Content/SummarySection/ConfirmPrestigeButton
 @onready var _balance_label: Label = $Content/TreeSection/BalanceLabel
-@onready var _tree_grid: GridContainer = $Content/TreeSection/TreeGrid
+@onready var _tree_canvas: Control = $Content/TreeSection/TreeScroll/TreeCanvas
 @onready var _kingdom_buttons: VBoxContainer = $Content/KingdomSection/KingdomButtons
 
 var _prestige_system: Node = null
@@ -51,33 +51,18 @@ func _refresh_tree() -> void:
 	if _prestige_system == null:
 		return
 	_balance_label.text = "Balance: %d EP" % _prestige_system.get_evolution_points_balance()
-	for child in _tree_grid.get_children():
-		child.queue_free()
-	for node in _prestige_system.get_all_nodes():
-		var button := Button.new()
-		button.text = "%s (%d EP)" % [node.display_name, int(node.meta_cost.get("evolution_points", 0))]
-		button.disabled = true
-		var prereqs_ok: bool = _prereqs_met(node)
-		var owned: bool = _prestige_system.is_node_unlocked(node.id)
-		var balance: int = _prestige_system.get_evolution_points_balance()
-		var cost: int = int(node.meta_cost.get("evolution_points", 0))
-		if owned:
-			button.text = "%s (Owned)" % node.display_name
-			button.disabled = true
-		elif prereqs_ok and balance >= cost:
-			button.disabled = false
-			button.pressed.connect(func() -> void:
-				if _prestige_system.purchase_node(node.id):
-					_refresh_tree()
-					_refresh_kingdoms()
-			)
-		elif prereqs_ok:
-			button.text = "%s (%d EP)" % [node.display_name, cost]
-			button.disabled = true
-		else:
-			button.text = "%s (Locked)" % node.display_name
-			button.disabled = true
-		_tree_grid.add_child(button)
+	if not _tree_canvas.has_meta("_setup_done"):
+		_tree_canvas.set_meta("_setup_done", true)
+		_tree_canvas.setup(_prestige_system)
+		_tree_canvas.node_purchase_requested.connect(_on_node_purchase_requested)
+	else:
+		_tree_canvas.refresh()
+
+
+func _on_node_purchase_requested(node_id: StringName) -> void:
+	if _prestige_system.purchase_node(node_id):
+		_refresh_tree()
+		_refresh_kingdoms()
 
 
 func _refresh_kingdoms() -> void:
@@ -151,15 +136,6 @@ func _show_kingdom_only() -> void:
 	_tree_section.visible = false
 	_kingdom_section.visible = true
 	_refresh_kingdoms()
-
-
-func _prereqs_met(node: EvolutionNodeData) -> bool:
-	if _prestige_system == null:
-		return false
-	for prereq in node.prerequisites:
-		if not _prestige_system.is_node_unlocked(prereq):
-			return false
-	return true
 
 
 func _close() -> void:

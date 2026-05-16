@@ -219,5 +219,7 @@ func _try_load(path: String) -> Dictionary:
 func _apply_loaded(data: Dictionary) -> void:
 	GameState.meta_save = data.get("meta", {})
 	GameState.run_save = data.get("run", {})
+	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+	GameState.current_kingdom_id = StringName(run.get("kingdom_id", ""))
 	GameState.last_save_unix = int(data.get("saved_at_unix", 0))
 	EventBus.run_loaded.emit(int(data.get("save_version", SAVE_VERSION)))

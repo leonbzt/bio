@@ -62,8 +62,8 @@ func _build_atlas_texture() -> Texture2D:
 	atlas_image.blit_rect(overlay, rect, Vector2i(TILE_SIZE, 0))
 
 	var fungi := base_image.duplicate()
-	var fungi_fill: Color = Color8(0x7a, 0x5f, 0xa8, 255)
-	var fungi_border: Color = Color8(0x63, 0x4c, 0x87, 255)
+	var fungi_fill: Color = Color8(0x7a, 0x5f, 0xa8, 160)
+	var fungi_border: Color = Color8(0x63, 0x4c, 0x87, 220)
 	for y in range(TILE_SIZE):
 		for x in range(TILE_SIZE):
 			var is_border: bool = x == 0 or y == 0 or x == TILE_SIZE - 1 or y == TILE_SIZE - 1

@@ -65,6 +65,8 @@ func start_run(kingdom_id: StringName) -> void:
 	if not is_kingdom_unlocked(kingdom_id):
 		return
 	GameState.current_kingdom_id = kingdom_id
+	if GameState.run_save is Dictionary:
+		GameState.run_save["kingdom_id"] = String(kingdom_id)
 	GameState.run_seed = randi()
 	GameState.is_run_active = true
 	if kingdom_id == &"symbiosis":

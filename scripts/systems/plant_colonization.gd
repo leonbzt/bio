@@ -2,6 +2,7 @@ extends Node
 
 const KINGDOM_ID: StringName = &"plantae"
 @onready var _territory: Node = get_node("../TerritorySystem")
+@onready var _rules: Node = get_node("/root/ColonizationRulesRegistry")
 
 var _niches_by_id: Dictionary[StringName, NicheData] = {}
 
@@ -22,7 +23,7 @@ func _on_tile_tapped(coord: Vector2i) -> void:
 	var species: SpeciesData = _get_species_for_niche(niche)
 	if species == null:
 		return
-	var result: Dictionary = ColonizationRulesRegistry.evaluate(
+	var result: Dictionary = _rules.evaluate(
 		niche.colonization_rule,
 		coord,
 		KINGDOM_ID,

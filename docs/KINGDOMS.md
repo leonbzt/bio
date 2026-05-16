@@ -81,28 +81,48 @@ Mobile-layer kingdom. Range-based (not tile-based). Defined by what they eat.
 
 ---
 
-## Symbiosis *(not a kingdom — see below)*
+## Layered lifeforms *(replaces "Symbiosis as kingdom" — see `GAME_VISION.md`)*
 
-In the MVP, symbiosis was treated as a third kingdom. **Post-MVP, this is reframed.**
+In the MVP, symbiosis was treated as a third kingdom. **Post-MVP, symbiosis is the long progression axis of the game** — the player gradually unlocks the ability to play more and more lifeforms at the same time, with each tier giving access to richer interactions and harder specialized environments.
 
-Symbiosis is now an **emergent property of paired species** rather than a separate playable kingdom. Specific species in different kingdoms can be designated as **symbiotic partners**. Choosing a symbiotic species at run start enters a dual-layer play mode where both partner kingdoms are placeable.
+### Layer ladder
 
-The existing dual-layer placement engine (Phase 5–6) is retained — it just gets reframed in UI and content.
+Layered lifeforms are **pre-authored curated species packs** — not free combinatorial assembly. Each pack has a fixed layer count and a fixed roster of species per layer (single species per layer at v1; later, species may be swappable within a layer).
+
+| Tier | Layers | Species pack examples | Unlock |
+|---|---|---|---|
+| 1 | 1 | Pioneer Grass, Mycelium Thread, Herbivore | Default per kingdom unlock |
+| 2 | 2 | **Lichen** (plantae × fungi), **Mycorrhizal Forest** (plantae × fungi at network scale) | `lichen_heritage` capstone (Phase 9 scaffolded) |
+| 3 | 3 | **Coral** (animal × algae × symbiont), **Termite Mound** (animal × fungi × bacteria) | Tier-2 capstone (Phases 13–14) |
+| 4+ | 4+ | Whole-ecosystem composites for specialized environments | Tier 3 (far horizon) |
 
 ### Implementation
-- `SpeciesData` gains `symbiotic_partner_kingdom: StringName` and `symbiotic_partner_species: StringName` fields.
-- A symbiotic species like **Lichen** has `kingdom_id = &"plantae"`, `symbiotic_partner_kingdom = &"fungi"`, `symbiotic_partner_species = &"mycelium_thread"`.
-- Run setup detects symbiotic species and enters dual-layer mode automatically.
-- The `&"symbiosis"` kingdom id stays as an internal mode tag (the engine already routes on it); but it disappears from the player-facing kingdom-selection UI.
 
-### Future symbiotic species
-- **Lichen** (plantae × fungi) — the existing dual-layer experience, reframed.
-- **Coral** (animals × algae) — when animal kingdom lands.
-- **Mycorrhizal forest** (plantae × fungi at scale) — a tier-3 species, granted by capstone evolution node.
-- **Endosymbiont** (any × microbial) — only relevant if scale ascension ever happens.
+- `SpeciesData` gains `layer_count: int` (1 = single, 2 = dual-layer, 3+ = stack), `layer_species: Array[SpeciesData]` (the per-layer roster — populated for layered species, empty for single-layer).
+- A layered species like **Lichen** has `layer_count = 2`, `layer_species = [pioneer_grass, mycelium_thread]`, and its own `kingdom_id = &"plantae"` for indexing purposes.
+- Run setup detects `layer_count > 1` and enters multi-layer placement mode automatically. The existing dual-layer placement engine (Phase 5–6) generalizes to N layers.
+- The `&"symbiosis"` kingdom id is retired in Phase 10. Layered species are accessed via species selection inside their primary kingdom.
 
-### Why reframe
-Treating symbiosis as a kingdom forces a *generic* "merged" identity. Treating it as paired species lets each pair have its own flavor — lichen is not coral is not mycorrhizal forest. More variety, less abstract.
+### Why pre-authored packs (not free combination)
 
-### Identity statement (for any symbiotic species)
-*"You are two. The boundary between you is a fiction the world tolerates."*
+Treating each layered lifeform as a curated tuple lets each pack have:
+- Its own colonization rules (Coral cannot grow on dry rock; Lichen can).
+- Its own resource economy (Lichen barely needs nutrients; Coral generates and consumes calcium).
+- Its own discovery entry (the voice text in `STORY_AND_TONE.md` framing).
+- Its own art and tile variant.
+
+A combinatorial system would force a generic "merged" identity again, which is the problem we're solving by retiring symbiosis-as-kingdom.
+
+### Future packs (sketched, not committed)
+
+- **Lichen** (plantae × fungi) — Phase 10. Existing dual-layer experience, reframed.
+- **Mycorrhizal Forest** (plantae × fungi at network scale) — Phase 10–11. Granted by `photosynthetic_network` (already in tree).
+- **Coral** (animal × algae × symbiont) — Phase 13–14. Requires animal kingdom + algae as a microbial-like sub-species.
+- **Termite Mound** (animal × fungi × bacteria) — Phase 14+. 3-layer model demo.
+- **Endosymbiont** (any × microbial) — only if scale ascension ever happens.
+
+### Identity statement
+
+For tier-2 packs: *"You are two. The boundary between you is a fiction the world tolerates."*
+
+For tier-3+ packs: *"You are an arrangement. The world does not recognize you as one thing because you are not one thing — and you are nevertheless succeeding."*

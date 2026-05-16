@@ -24,18 +24,33 @@ Each run sits at the intersection of three orthogonal choices:
 
 This is the source of replay variety. 5 kingdoms × 3 niches × 2 species = 30 distinct run configurations.
 
-## How symbiosis works (reframed)
+## How symbiosis works — layered-lifeform progression
 
-**Symbiosis is not a kingdom.** It's an emergent property that arises when certain species from different kingdoms occupy the same tile.
+**Symbiosis is not a kingdom. It is the long progression axis of the game.**
 
-Mechanically: some species are **symbiotic** — they carry a `partner_kingdom` and `partner_species` reference. Picking a symbiotic species at run start enters a dual-layer play mode where both kingdoms can be placed. The bonus yield applies only when the two specific partners occupy the same tile.
+Most idle/roguelikes have one progression dimension (numbers go up, or new content unlocks). This game has a *third* dimension that compounds with the others: **the number of lifeforms you can play simultaneously**. You start as a single-kingdom organism. By late-game you are playing a three- or four-layer composite organism, where each layer pulls from a different kingdom and their interaction is the gameplay.
 
-Future symbiotic pairs we might add:
-- **Lichen** (plantae × fungi) — the existing symbiosis, reframed as a species pair.
-- **Coral** (animals × algae) — once the animal kingdom lands.
-- **Mycorrhizal forest** (plantae × fungi at network scale) — a more advanced symbiosis.
+### The layer ladder
 
-The point: symbiosis becomes *something you unlock and assemble* rather than *a third kingdom*. More flavors. Cleaner conceptually.
+| Tier | Layer count | Examples | Unlock gate |
+|---|---|---|---|
+| 1 | **Single** | Photosynthesizer plantae, Decomposer fungi | Default |
+| 2 | **Dual** (symbiotic pair) | Lichen (plantae × fungi), Mycorrhizal partnership | `lichen_heritage` capstone node |
+| 3 | **Triple** | Coral (animal × algae × symbiont), Termite mound (animal × fungi × bacteria) | Tier-2 capstone in Tier 2 of roadmap |
+| 4+ | **Stack** | Whole-ecosystem composites that solve specialized environments | Tier 3, far horizon |
+
+### How layers are picked
+
+Species packs are **pre-authored curated tuples**, not free combinatorial assembly. *Lichen* always means plantae × fungi with specific partner species. *Coral* always means animal × algae × symbiont. This keeps each layered lifeform readable, distinct, and individually flavored — Coral is not just "another 3-layer pack," it has its own colonization rules and its own discovery entry.
+
+Players unlock a layered species via an evolution-tree node and gain the whole stack at once. Future systems may allow swapping species within a layer of a pack, but the layer count itself is fixed per species.
+
+### Why layered lifeforms is *the* progression axis
+
+- **It substantiates "you play life itself."** A single organism feels like a character; a layered organism feels like an *arrangement* — closer to what life actually is.
+- **It compounds with niches and the web.** A 3-layer Coral run is mechanically different from any single-kingdom run, *and* different from any 2-layer Lichen run.
+- **It gives specialized environments a real solution.** Late-game ecosystems can require specific layer stacks ("this is a coral reef; only an animal × algae × symbiont stack will thrive here"), which gives the ecosystem selector real bite without locking out player choice elsewhere.
+- **It absorbs cross-kingdom strategy.** The web-of-life evolution tree feeds into which layered species you can unlock; the layers determine which niches matter on which runs.
 
 ## The web of life — interconnected meta progression
 
@@ -53,9 +68,10 @@ Each kingdom advances the others. Total progression unfolds over dozens of runs 
 ## Story through events and discoveries
 
 The game has no dialogue or characters. Story emerges through:
-- **Event flavor text**: each ecological event carries 1–3 sentences of voice.
+- **Event flavor text**: each ecological event carries 1–3 sentences of voice. Events span four scopes — world (drought, climate shift), kingdom (oxygenation event for plantae), niche (host immune response for parasites), species (specific to a pack like Lichen's "the alga starves first"). Each scope has its own event pool; an active run rolls from the union of pools its scopes belong to.
 - **Discovery log**: every prestige, niche unlock, kingdom unlock, and rare event milestone adds a short entry to a browsable log.
 - **Discoveries: 12/57** counter pulls players who care about lore.
+- **Generations counter**: the title screen shows total prestiges as a single number with an evolving descriptor that changes by threshold — "Pioneers" (1–5) → "Settled Colonies" (6–20) → "Networked Life" (21–100) → "The Anthropocene Watches" (101+). Cheap to implement; sells the long-arc identity.
 
 Tone: **mythic + scientific**. Like Carl Sagan writing for poets. Grounded in real biology, but observed at a scale and through a voice that makes it feel weighty.
 

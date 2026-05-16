@@ -23,11 +23,15 @@ Self-contained, paste-into-an-agent task instructions for the project.
 
 ### Tier 1 — Make the MVP a real game
 - `phase_8/` — Niche system. **Complete.** 9 briefs (00–08). Smoke test passed 2026-05-16. Symbiosis-kingdom regression fix landed in `prestige_system.gd` + `prestige_screen.gd`.
-- `phase_9/` — Interconnected progression web + discovery log scaffold. **In progress.** 10 briefs (00–09). Locked: single scrollable canvas tree UI, hard `requires_kingdom_played` gate, discovery log with all 4 trigger sources, locked entries hidden (denominator-only), Claude authors entry voice text directly in brief 07.
-- `phase_10/` — Symbiosis reframe + Animal kingdom foundation. *Not yet written.*
+- `phase_9/` — Interconnected progression web + discovery log scaffold. **In progress.** 10 briefs (00–09). Brief 07 (28 discovery entries) implemented + integration audit landed (parasitic_plantae canonical id + run_started kingdom fire). Locked: single scrollable canvas tree UI, hard `requires_kingdom_played` gate, discovery log with all 4 trigger sources, locked entries hidden (denominator-only), Claude authors entry voice text directly in brief 07.
+- `phase_10/` — Symbiosis reframe + Animal foundation + niche signatures + stub resources. *Reshaped 2026-05-16 after Phase 9 mechanics-vs-vision review. Not yet written.* Locked: layered-lifeform foundation (Lichen as first 2-layer pack), pre-authored species packs (no free combination), per-niche signature mechanics for parasite plantae + mycorrhizal fungi, 6 stub resources introduced.
 
-### Tier 2 — Era + ecosystem progression
-- `phase_11/`–`phase_14/` — Eras, ecosystems, more niches and symbiotic species. *Not yet written.*
+### Tier 2 — World feedback + eras
+- `phase_11/` — **World feedback layer** *(new, inserted 2026-05-16)*. Active-event interventions, tile history, soft prestige goal, generations counter. *Brief next per planning.*
+- `phase_12/` — Era system + ecosystem selector (was Phase 11).
+- `phase_13/` — Ecosystem-specific biomes + events + graphics (was Phase 12). Includes axis-scoped events (`EventData.scope`).
+- `phase_14/` — Predator + Scavenger niches; Cordyceps; Coral (first 3-layer pack) (was Phase 13).
+- `phase_15/` — More layered species packs (Termite Mound, Mycorrhizal Forest) (was Phase 14).
 
 ### Tier 3 — Aspirational
 See `docs/ROADMAP.md`. Briefs only after Tier 2 ships.

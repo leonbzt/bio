@@ -19,11 +19,11 @@ Self-contained, paste-into-an-agent task instructions for the project.
 - `phase_4/` — Prestige. **Complete.** 9 briefs (00–08).
 - `phase_5/` — Fungi. **Complete.** 9 briefs (00–08).
 - `phase_6/` — Symbiosis. **Complete.** 8 briefs (00–07).
-- `phase_7/` — Polish + release. **In progress.** 9 briefs (00–08).
+- `phase_7/` — Polish + release. **Partially complete (deferred).** 9 briefs (00–08). Shipped: 01 cleanup, 02 drought/cool_spell, 03 audio SFX, 04 audio music, 05 save robustness. **Brief 06 (perf) partial.** **Briefs 07 (balance) + 08 (release readiness) skipped** — release readiness deferred until Tier 1 lands; balance pass deferred to a post-Tier-1 polish window.
 
 ### Tier 1 — Make the MVP a real game
-- `phase_8/` — Niche system. **In progress.** 9 briefs (00–08). Locked: Parasite plantae as test-bed, one-node-per-niche unlock gating.
-- `phase_9/` — Interconnected progression web. *Not yet written.*
+- `phase_8/` — Niche system. **Complete.** 9 briefs (00–08). Smoke test passed 2026-05-16. Symbiosis-kingdom regression fix landed in `prestige_system.gd` + `prestige_screen.gd`.
+- `phase_9/` — Interconnected progression web + discovery log scaffold. **In progress.** 10 briefs (00–09). Locked: single scrollable canvas tree UI, hard `requires_kingdom_played` gate, discovery log with all 4 trigger sources, locked entries hidden (denominator-only), Claude authors entry voice text directly in brief 07.
 - `phase_10/` — Symbiosis reframe + Animal kingdom foundation. *Not yet written.*
 
 ### Tier 2 — Era + ecosystem progression

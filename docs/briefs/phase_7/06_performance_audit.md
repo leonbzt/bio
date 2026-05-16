@@ -1,5 +1,7 @@
 # Brief 06 — Performance audit + targeted optimizations
 
+> **Status (deferred)**: this brief was only **partially** completed. Spot checks passed on the dev device but the formal device-perf pass (release APK on Pixel-class hardware, baseline measurement, cold-start timing) was skipped. Revisit after Phase 10 lands, before any beta. See `docs/ROADMAP.md` for rationale.
+
 **Suggested agent**: do this yourself with ChatGPT as a sounding board for fixes. Profiling can't be agent-automated.
 
 Read first:

@@ -65,7 +65,10 @@ func start_run(kingdom_id: StringName, niche_id: StringName = &"") -> void:
 	if not is_kingdom_unlocked(kingdom_id):
 		return
 	var resolved_niche: StringName = _resolve_niche(kingdom_id, niche_id)
-	if resolved_niche == &"":
+	# Symbiosis has no niches of its own; sub-systems fall back to defaults
+	# per kingdom (plantae→photosynthesizer, fungi→decomposer). Phase 10 removes
+	# the symbiosis kingdom entirely; until then, allow empty niche_id through.
+	if resolved_niche == &"" and kingdom_id != &"symbiosis":
 		push_error("PrestigeSystem: no valid niche for kingdom %s" % String(kingdom_id))
 		return
 	GameState.current_kingdom_id = kingdom_id

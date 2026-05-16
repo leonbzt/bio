@@ -101,6 +101,11 @@ func _on_kingdom_button_pressed(kingdom_id: StringName) -> void:
 		_close()
 		return
 	var niches: Array = _prestige_system.get_niches_for_kingdom(kingdom_id, true)
+	if niches.is_empty():
+		# Kingdoms with no niches (currently only symbiosis) start directly.
+		_prestige_system.start_run(kingdom_id)
+		_close()
+		return
 	if niches.size() == 1:
 		_prestige_system.start_run(kingdom_id, niches[0].id)
 		_close()

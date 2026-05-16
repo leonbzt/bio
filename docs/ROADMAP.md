@@ -20,9 +20,26 @@ Single-player Android-first build. Plantae + Fungi + Symbiosis (as a kingdom), p
 | 4 | Prestige + flat evolution tree + kingdom selection | ✅ |
 | 5 | Fungi kingdom, dual-layer tiles, corpse decay, spore infection | ✅ |
 | 6 | Symbiosis (as kingdom), layer toggle, growth bonus, mutualism | ✅ |
-| 7 | Polish: cleanup, drought/cool_spell, audio, backups, perf, balance, release | 🔄 |
+| 7 | Polish: cleanup, drought/cool_spell, audio, backups, perf, balance, release | 🔄 partial — see notes below |
 
 **Exit**: 5 testers complete a plantae → fungi → symbiosis cycle on the internal-test track.
+
+### Phase 7 status (as of Phase 8 plan)
+
+| Brief | Status | Notes |
+|---|---|---|
+| 01 cleanup nits | ✅ | Shipped |
+| 02 drought / cool_spell handlers | ✅ | Shipped via `AmbientModifierSystem` |
+| 03 audio SFX | ✅ | Shipped |
+| 04 audio music | ✅ | Crossfading per kingdom |
+| 05 save robustness | ✅ | Tmp + backup rotation |
+| 06 performance audit | 🟡 partial | Spot-checked, no formal device-perf pass |
+| 07 balance pass | ⏭ skipped | Deferred to post-Tier-1 polish window |
+| 08 release readiness | ⏭ skipped | Internal-beta release deferred until Tier 1 lands |
+
+**Why this is OK**: Tier 1 (Phases 8–10) reshapes the play loop substantially (niches, the cross-kingdom progression web, symbiosis reframe, animals). Balancing or shipping a beta of the pre-niche game would burn time on numbers that are about to change. The Phase 7 exit criterion ("5 testers complete plant → fungi → symbiosis") is parked, not abandoned. Revisit after Phase 10's Lichen run + Animal foundation prove out — that's the new "first releasable surface area".
+
+**What this means for testers**: no public/internal beta until after Phase 10. Solo dev-testing on personal device(s) only through Tier 1.
 
 ---
 
@@ -46,15 +63,26 @@ The single highest-leverage addition. See `NICHES.md`.
 
 **Exit**: each kingdom has at least 2 niches playable. Carnivore plantae plays measurably differently from Photosynthesizer plantae.
 
-### Phase 9 — Interconnected progression web *(planned)*
-See `PROGRESSION_WEB.md`.
+### Phase 9 — Interconnected progression web *(in progress, 10 briefs written 2026-05-16)*
+See `PROGRESSION_WEB.md` and `STORY_AND_TONE.md`.
+
+**Locked decisions (2026-05-16)**:
+- Tree UI: single scrollable canvas, no tabs.
+- `requires_kingdom_played`: hard purchase gate.
+- Discovery log fires on all four sources: kingdom unlocks, niche first-play, evolution-node purchases, event first-fires + milestones.
+- Locked entries are hidden; only the denominator hints at total count.
+- Discovery entry voice text is authored by Claude directly in brief 07 (no Kilo flavor pass).
+- No tree-node refunds / respec.
 
 **Deliverables**:
+- Save schema v5 → v6: `meta.discovery_log`, `meta.kingdoms_played`, `meta.niches_played`, `run.event_first_fires_seen`.
 - `EvolutionNodeData` gains `wing`, `tier`, `requires_kingdom_played` fields.
-- Existing 8 nodes tagged with wings/tiers.
-- ~10–15 new cross-kingdom nodes authored to seed the web.
-- Tree visualization UI redo: wings as columns, prereq lines drawn across, locked-but-visible nodes for teasing.
-- Discovery log scaffold (see `STORY_AND_TONE.md`) with entries for every kingdom/niche/event milestone.
+- Existing 10 nodes tagged with wings/tiers.
+- 12 new cross-kingdom nodes authored (~50% of mid+ tier nodes are cross-wing).
+- Tree visualization UI: single scrollable canvas, wings as columns, prereq lines drawn via `Control._draw()`, lines colored by destination wing, gated nodes show informative tooltip.
+- `DiscoveryLog` autoload + `EventBus.discovery_unlocked` signal + trigger wiring for all four sources.
+- 28 authored discovery entries (above the ≥25 target) in mythic-scientific voice.
+- Discovery log UI: pause-menu entry with denominator, full-screen overlay grouped by category, HUD toast on unlock.
 
 **Exit**: a fungi run is mechanically rewarding for a plantae-focused player and vice versa. Discovery log has ≥ 25 entries.
 
@@ -126,8 +154,8 @@ These are documented in `GAME_VISION.md` under "Deferred / aspirational" and ref
 - **Graphics are tied to content phases, not separate "polish" phases.** Niche icons in 8 and 10. Era visual identity in 11 and 12. Animation polish stays Tier 3.
 - **Cross-kingdom features unlock incrementally.** Niches first (within-kingdom variety), then the web (between-kingdom progression), then eras (across-time progression), then worlds (across-place progression).
 
-## Open questions for the user before Phase 8 starts
+## Open questions for the user before Phase 10 starts
 
-1. **Which niche to prototype first?** Plantae Carnivore is the most visceral mechanically. Fungi Mycorrhizal would test the symbiosis reframe simultaneously. Plantae Parasite has the most novel colonization rule (place on others). Pick one as the "test bed" for the niche system; the others fall in faster once the pattern is set.
-2. **Niche-unlock gating**: are niches unlocked one-by-one (per evolution-tree node), or do you unlock the *concept* of niches once and then individual niches become available as you play? The former is more roguelike; the latter is more accessible.
-3. **For the Animal foundation in Phase 10**, do you want Herbivore animals to *be* the existing herbivore-wave agents (so the wave is now a hostile playable kingdom on the other side), or a separate stat-block? Reusing them is cleaner; separating is more flexible.
+1. **Animal Herbivore reuse**: do you want Herbivore animals to *be* the existing herbivore-wave agents (so the wave is now a hostile playable kingdom on the other side), or a separate stat-block? Reusing them is cleaner; separating is more flexible.
+2. **Lichen as a species vs. a "kingdom-shaped" mode**: when Lichen is the active species, does the player still pick a niche, or is Lichen its own (niche-less) play mode? Phase 9 scaffolds `lichen_heritage`; Phase 10 needs to land the answer.
+3. **Animal niche set for Phase 10**: Herbivore is locked. Should Phase 10 also ship Predator, or save it for Tier 2 with Cordyceps? Reach vs. depth in the same window.

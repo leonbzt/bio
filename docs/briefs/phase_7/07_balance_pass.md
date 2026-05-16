@@ -1,5 +1,7 @@
 # Brief 07 — Balance pass
 
+> **Status (skipped — deferred)**: balancing the pre-niche game would tune numbers about to change in Tier 1. Revisit after Phase 10 (post-Lichen + Animal foundation) when the play loop is closer to its shipping shape. See `docs/ROADMAP.md` for rationale.
+
 **Suggested agent**: do this yourself. Kilo can be used to suggest numeric variations from a rubric, but the actual "does this feel good" decision is yours.
 
 Read first:

@@ -1,5 +1,7 @@
 # Brief 08 — Release readiness: Play Console internal beta
 
+> **Status (skipped — deferred)**: internal-beta release deferred until Tier 1 ships. Releasing the pre-niche MVP would invite testers to a play loop that's about to change substantially. Revisit after Phase 10 (Lichen + Animal foundation). The keystore generation, version bumping, and Play Console listing steps remain valid when you do come back. See `docs/ROADMAP.md` for rationale.
+
 **Suggested agent**: do this yourself. ChatGPT for any error troubleshooting.
 
 Read first:

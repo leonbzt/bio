@@ -11,7 +11,9 @@ Read first:
 
 ## Goal
 Wire `DiscoveryLog` to listen for the four trigger sources locked in phase 9:
-1. **Kingdom unlock** — `EventBus.evolution_node_unlocked` fires; if that node has `grants_kingdoms`, fire one discovery entry per granted kingdom (category `&"kingdom"`, trigger_id = kingdom_id).
+1. **Kingdom unlock** — fires via two paths, idempotent via `unlock()`:
+   - `EventBus.evolution_node_unlocked` for node-granted kingdoms (fungi, symbiosis, animals).
+   - `EventBus.run_started(kingdom_id)` for default-unlocked kingdoms with no granting node (plantae). Listening to `run_started` for all kingdoms makes the logic uniform; node-granted kingdoms are no-ops on `run_started` because their entry already unlocked.
 2. **Niche first-play** — `EventBus.niche_changed(niche_id)` fires; first time the player plays a given niche, fire a discovery (category `&"niche"`, trigger_id = niche_id).
 3. **Evolution node purchase** — `EventBus.evolution_node_unlocked(node_id)` fires; fire one discovery (category `&"node"`, trigger_id = node_id). The same signal drives the kingdom-unlock fire above; both can fire on a single purchase if both entries exist.
 4. **Event first-fire + milestones** — `EventBus.event_resolved(event_id, outcome)` fires; if this is the first fire of this event in the current run, fire a discovery (category `&"event"`). Milestones (5 prestiges, first cross-wing node, etc.) fire via direct calls from `PrestigeSystem`.

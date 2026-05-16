@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 6
+const SAVE_VERSION: int = 7
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -166,6 +166,20 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 			var run: Dictionary = old["run"]
 			if not run.has("event_first_fires_seen"):
 				run["event_first_fires_seen"] = []
+	if from_version < 7:
+		# v6 -> v7: niche id rename parasite_plantae -> parasitic_plantae (matches
+		# colonization_rule string and unlock node id; was inconsistent in v6).
+		if old.has("run") and old["run"] is Dictionary:
+			var run: Dictionary = old["run"]
+			if String(run.get("niche_id", "")) == "parasite_plantae":
+				run["niche_id"] = "parasitic_plantae"
+		if old.has("meta") and old["meta"] is Dictionary:
+			var meta: Dictionary = old["meta"]
+			var played: Array = meta.get("niches_played", []) as Array
+			for i in played.size():
+				if String(played[i]) == "parasite_plantae":
+					played[i] = "parasitic_plantae"
+			meta["niches_played"] = played
 	return old
 
 

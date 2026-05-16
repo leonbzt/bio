@@ -1,6 +1,6 @@
 extends Node
 
-const PARASITE_NICHE_ID: StringName = &"parasite_plantae"
+const PARASITE_NICHE_ID: StringName = &"parasitic_plantae"
 const NEIGHBOR_THRESHOLD: int = 2
 const MAX_DECAY_TICKS: int = 30
 

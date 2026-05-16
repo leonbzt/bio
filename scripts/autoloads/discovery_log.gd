@@ -24,6 +24,7 @@ func _enter_tree() -> void:
 	EventBus.niche_changed.connect(_on_niche_changed)
 	EventBus.event_resolved.connect(_on_event_resolved)
 	EventBus.prestige_triggered.connect(_on_prestige_triggered)
+	EventBus.run_started.connect(_on_run_started)
 
 
 func _ready() -> void:
@@ -146,6 +147,18 @@ func _on_event_resolved(event_id: StringName, _outcome: StringName) -> void:
 		unlock(entry)
 	else:
 		SaveSystem.save_now()
+
+
+func _on_run_started(kingdom_id: StringName) -> void:
+	# Kingdom entries fire on first play of each kingdom. This is the only path
+	# for default-unlocked kingdoms (plantae) that are never granted by a node;
+	# for node-granted kingdoms (fungi, symbiosis) the entry already fired on
+	# node purchase and this is a no-op via unlock()'s idempotency.
+	if kingdom_id == &"":
+		return
+	var entry := find_entry_for_trigger(&"kingdom", kingdom_id)
+	if entry != &"":
+		unlock(entry)
 
 
 func _on_prestige_triggered(_summary: Dictionary) -> void:

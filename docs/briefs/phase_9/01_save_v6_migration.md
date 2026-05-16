@@ -1,4 +1,13 @@
-# Brief 01 — Save schema v5 → v6
+# Brief 01 — Save schema v5 → v6 (and a follow-on v6 → v7 for niche-id rename)
+
+> **Note (2026-05-16, post-impl)**: brief 07 review surfaced an internal id inconsistency
+> — the parasite plantae niche shipped in v6 with id `&"parasite_plantae"` but the
+> colonization-rule key and unlock-node id already used `&"parasitic_plantae"`. The
+> canonical id was retroactively unified to `&"parasitic_plantae"`. A v6 → v7
+> micro-migration (also implemented in `save_system.gd`) rewrites
+> `run.niche_id` and any `meta.niches_played` entries from `parasite_plantae` to
+> `parasitic_plantae`. Save version is now 7.
+
 
 **Suggested agent**: ChatGPT 5.2 via Copilot. **Route diff to Claude** — save format change.
 

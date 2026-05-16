@@ -291,7 +291,7 @@ class_name DiscoveryEntry extends Resource
 ### `NicheData` (Phase 8+)
 ```gdscript
 class_name NicheData extends Resource
-@export var id: StringName                        # &"photosynthesizer", &"parasite_plantae", etc.
+@export var id: StringName                        # &"photosynthesizer", &"parasitic_plantae", etc.
 @export var display_name: String
 @export var description: String
 @export var kingdom_id: StringName                # which kingdom this niche belongs to
@@ -314,7 +314,7 @@ Each gameplay system is a single `.gd` script attached to a node under `world.ts
 | `PlantColonization` | `scripts/systems/plant_colonization.gd` | `tile_tapped` (when kingdom is plantae, or symbiosis with placement_target=plantae) | — (calls TerritorySystem) |
 | `FungiColonization` | `scripts/systems/fungi_colonization.gd` | `tile_tapped` (when kingdom is fungi, or symbiosis with placement_target=fungi) | — (calls TerritorySystem) |
 | `ColonizationRulesRegistry` | `scripts/systems/colonization_rules_registry.gd` (autoload, Phase 8+) | — | `evaluate(rule, coord, kingdom_id, species, niche) -> {valid: bool, cost: Dictionary, data: Dictionary}`. Built-in rules: `&"adjacent_empty"`, `&"fungi_substrate"`, `&"parasitic_plantae"`, `&"mycorrhizal_fungi"`. Returned `data` is merged into the new tile's `data` dict (e.g. `parasite_decay_ticks`). |
-| `ParasiteDecaySystem` | `scripts/systems/parasite_decay_system.gd` (Phase 8+) | `tick`, `replay_started`, `replay_finished` | calls `TerritorySystem.remove_surface(coord, &"parasite_wither")` when a parasitic plantae tile has < 2 neighbors for 30 consecutive ticks. Inactive when current niche ≠ `&"parasite_plantae"`. |
+| `ParasiteDecaySystem` | `scripts/systems/parasite_decay_system.gd` (Phase 8+) | `tick`, `replay_started`, `replay_finished` | calls `TerritorySystem.remove_surface(coord, &"parasite_wither")` when a parasitic plantae tile has < 2 neighbors for 30 consecutive ticks. Inactive when current niche ≠ `&"parasitic_plantae"`. |
 | `CorpseSystem` | `scripts/systems/corpse_system.gd` | `organism_died`, `tick`, `run_loaded` | `organism_spawned` (for corpses), `organism_died` (when corpse fully decays) |
 | `TileInputRouter` | `scripts/systems/tile_input_router.gd` | raw input | `tile_tapped` |
 | `GrowthSystem` | `scripts/systems/growth_system.gd` | `tick` | `resource_changed` (via Ledger) |

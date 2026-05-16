@@ -188,7 +188,7 @@ func _get_symbiosis_bonus() -> float:
 
 
 func _get_niche_yield_multiplier() -> float:
-	if GameState.current_niche_id == &"parasite_plantae":
+	if GameState.current_niche_id == &"parasitic_plantae":
 		return 2.0
 	return 1.0
 

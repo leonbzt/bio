@@ -5,7 +5,7 @@
 
 [resource]
 script = ExtResource("1")
-id = &"parasite_plantae"
+id = &"parasitic_plantae"
 display_name = "Parasitic"
 description = "Spread cheap, grow fast, wither alone. Strength is in the network."
 kingdom_id = &"plantae"

@@ -277,6 +277,7 @@ Each gameplay system is a single `.gd` script attached to a node under `world.ts
 | `TerritorySystem` | `scripts/systems/territory_system.gd` | `run_loaded` | `tile_colonized`, `tile_lost` (via public mutators called by colonization systems) |
 | `PlantColonization` | `scripts/systems/plant_colonization.gd` | `tile_tapped` (when kingdom is plantae, or symbiosis with placement_target=plantae) | — (calls TerritorySystem) |
 | `FungiColonization` | `scripts/systems/fungi_colonization.gd` | `tile_tapped` (when kingdom is fungi, or symbiosis with placement_target=fungi) | — (calls TerritorySystem) |
+| `ColonizationRulesRegistry` | `scripts/systems/colonization_rules_registry.gd` (autoload, Phase 8+) | — | provides per-niche `is_valid_target(coord)` + `get_cost()` lookups |
 | `CorpseSystem` | `scripts/systems/corpse_system.gd` | `organism_died`, `tick`, `run_loaded` | `organism_spawned` (for corpses), `organism_died` (when corpse fully decays) |
 | `TileInputRouter` | `scripts/systems/tile_input_router.gd` | raw input | `tile_tapped` |
 | `GrowthSystem` | `scripts/systems/growth_system.gd` | `tick` | `resource_changed` (via Ledger) |

@@ -22,7 +22,7 @@ Self-contained, paste-into-an-agent task instructions for the project.
 - `phase_7/` — Polish + release. **In progress.** 9 briefs (00–08).
 
 ### Tier 1 — Make the MVP a real game
-- `phase_8/` — Niche system. *Not yet written. Awaiting Phase 7 completion + open-question answers in ROADMAP.md.*
+- `phase_8/` — Niche system. **In progress.** 9 briefs (00–08). Locked: Parasite plantae as test-bed, one-node-per-niche unlock gating.
 - `phase_9/` — Interconnected progression web. *Not yet written.*
 - `phase_10/` — Symbiosis reframe + Animal kingdom foundation. *Not yet written.*
 

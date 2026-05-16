@@ -33,36 +33,50 @@ func _on_run_loaded(_save_version: int) -> void:
 			var surface_owner: StringName = StringName(entry.get("surface_owner", ""))
 			var subsurface_owner: StringName = StringName(entry.get("subsurface_owner", ""))
 			var data: Dictionary = entry.get("data", {}) as Dictionary
+			var surface_variant: StringName = StringName(data.get("surface_variant", ""))
+			var subsurface_variant: StringName = StringName(data.get("subsurface_variant", ""))
 			_tiles[coord] = {
 				"surface_owner": surface_owner,
 				"subsurface_owner": subsurface_owner,
 				"data": data
 			}
 			if surface_owner != &"" and _tile_grid.has_method("set_surface_owner"):
-				_tile_grid.set_surface_owner(coord, surface_owner)
+				_tile_grid.set_surface_owner(coord, surface_owner, surface_variant)
 			if subsurface_owner != &"" and _tile_grid.has_method("set_subsurface_owner"):
-				_tile_grid.set_subsurface_owner(coord, subsurface_owner)
+				_tile_grid.set_subsurface_owner(coord, subsurface_owner, subsurface_variant)
 
 
-func add_surface(coord: Vector2i, kingdom_id: StringName) -> bool:
+func add_surface(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> bool:
 	var entry: Dictionary = _ensure_entry(coord)
 	if entry.get("surface_owner", &"") != &"":
 		return false
 	entry["surface_owner"] = kingdom_id
+	var data: Dictionary = entry.get("data", {}) as Dictionary
+	if variant != &"":
+		data["surface_variant"] = String(variant)
+	else:
+		data.erase("surface_variant")
+	entry["data"] = data
 	if _tile_grid.has_method("set_surface_owner"):
-		_tile_grid.set_surface_owner(coord, kingdom_id)
+		_tile_grid.set_surface_owner(coord, kingdom_id, variant)
 	_sync_run_save()
 	EventBus.tile_colonized.emit(coord, kingdom_id)
 	return true
 
 
-func add_subsurface(coord: Vector2i, kingdom_id: StringName) -> bool:
+func add_subsurface(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> bool:
 	var entry: Dictionary = _ensure_entry(coord)
 	if entry.get("subsurface_owner", &"") != &"":
 		return false
 	entry["subsurface_owner"] = kingdom_id
+	var data: Dictionary = entry.get("data", {}) as Dictionary
+	if variant != &"":
+		data["subsurface_variant"] = String(variant)
+	else:
+		data.erase("subsurface_variant")
+	entry["data"] = data
 	if _tile_grid.has_method("set_subsurface_owner"):
-		_tile_grid.set_subsurface_owner(coord, kingdom_id)
+		_tile_grid.set_subsurface_owner(coord, kingdom_id, variant)
 	_sync_run_save()
 	EventBus.tile_colonized.emit(coord, kingdom_id)
 	return true
@@ -76,6 +90,9 @@ func remove_surface(coord: Vector2i, cause: StringName) -> void:
 	if prev == &"":
 		return
 	entry["surface_owner"] = &""
+	var data: Dictionary = entry.get("data", {}) as Dictionary
+	data.erase("surface_variant")
+	entry["data"] = data
 	if _tile_grid.has_method("set_surface_owner"):
 		_tile_grid.set_surface_owner(coord, &"")
 	_gc_if_empty(coord)
@@ -91,6 +108,9 @@ func remove_subsurface(coord: Vector2i, cause: StringName) -> void:
 	if prev == &"":
 		return
 	entry["subsurface_owner"] = &""
+	var data: Dictionary = entry.get("data", {}) as Dictionary
+	data.erase("subsurface_variant")
+	entry["data"] = data
 	if _tile_grid.has_method("set_subsurface_owner"):
 		_tile_grid.set_subsurface_owner(coord, &"")
 	_gc_if_empty(coord)
@@ -145,6 +165,21 @@ func reset_run() -> void:
 	if _tile_grid.has_method("clear_owned"):
 		_tile_grid.clear_owned()
 	_sync_run_save()
+
+
+func set_tile_data(coord: Vector2i, key: String, value: Variant) -> void:
+	var entry: Dictionary = _ensure_entry(coord)
+	var data: Dictionary = entry.get("data", {}) as Dictionary
+	data[key] = value
+	entry["data"] = data
+	_sync_run_save()
+
+
+func get_tile_data(coord: Vector2i, key: String, default = null) -> Variant:
+	if not _tiles.has(coord):
+		return default
+	var data: Dictionary = _tiles[coord].get("data", {}) as Dictionary
+	return data.get(key, default)
 
 
 func _ensure_entry(coord: Vector2i) -> Dictionary:

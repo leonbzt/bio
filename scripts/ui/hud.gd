@@ -44,12 +44,14 @@ const VISIBLE_RESOURCES_BY_KINGDOM := {
 }
 
 const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
+const NICHE_INDEX_PATH: String = "res://data/niches/_index.tres"
 
 @onready var _labels_container: HBoxContainer = $Bar/Margin/ResourcesRow/Resources
 @onready var _tick_indicator: ColorRect = $TickIndicator
 @onready var _toxin_button: Button = $ToxinBloomButton
 @onready var _pause_button: Button = $PauseButton
 @onready var _layer_toggle: Button = $LayerToggle
+@onready var _niche_badge: Label = $NicheBadge
 @onready var _toast_panel: PanelContainer = $EventToast
 @onready var _toast_title: Label = $EventToast/ToastContent/ToastTitle
 @onready var _toast_body: Label = $EventToast/ToastContent/ToastBody
@@ -64,6 +66,7 @@ const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
 var _labels: Dictionary[StringName, Label] = {}
 var _is_replaying: bool = false
 var _events_by_id: Dictionary[StringName, EventData] = {}
+var _niches_by_id: Dictionary[StringName, NicheData] = {}
 var _toast_event_id: StringName = StringName()
 var _toast_tween: Tween = null
 var _toxin_cost: float = 50.0
@@ -73,6 +76,7 @@ func _ready() -> void:
 	_bind_labels()
 	_sync_labels()
 	_build_event_index()
+	_build_niche_index()
 	_setup_toxin_button()
 	_pause_button.pressed.connect(_on_pause_pressed)
 	_layer_toggle.pressed.connect(_on_layer_toggle_pressed)
@@ -86,9 +90,11 @@ func _ready() -> void:
 	EventBus.placement_target_changed.connect(_on_placement_target_changed)
 	EventBus.run_started.connect(_on_run_started)
 	EventBus.run_loaded.connect(_on_run_loaded_for_layer)
+	EventBus.niche_changed.connect(_on_niche_changed)
 	_refresh_layer_toggle_visibility()
 	_refresh_layer_toggle_label()
 	_refresh_resource_visibility()
+	_refresh_niche_badge()
 
 
 func _bind_labels() -> void:
@@ -137,12 +143,18 @@ func _on_run_started(_kingdom_id: StringName) -> void:
 	_refresh_layer_toggle_visibility()
 	_refresh_layer_toggle_label()
 	_refresh_resource_visibility()
+	_refresh_niche_badge()
 
 
 func _on_run_loaded_for_layer(_save_version: int) -> void:
 	_refresh_layer_toggle_visibility()
 	_refresh_layer_toggle_label()
 	_refresh_resource_visibility()
+	_refresh_niche_badge()
+
+
+func _on_niche_changed(_niche_id: StringName) -> void:
+	_refresh_niche_badge()
 
 
 func _refresh_layer_toggle_visibility() -> void:
@@ -232,6 +244,17 @@ func _build_event_index() -> void:
 		_events_by_id[event_data.id] = event_data
 
 
+func _build_niche_index() -> void:
+	_niches_by_id.clear()
+	var index := load(NICHE_INDEX_PATH)
+	if index == null or not (index is NicheIndex):
+		return
+	for niche in (index as NicheIndex).niches:
+		if niche == null:
+			continue
+		_niches_by_id[niche.id] = niche
+
+
 func _on_event_started(event_id: StringName, _payload: Dictionary) -> void:
 	_toast_event_id = event_id
 	var title: String = String(event_id)
@@ -272,3 +295,12 @@ func _hide_toast() -> void:
 	_toast_tween.tween_callback(func() -> void:
 		_toast_panel.visible = false
 	)
+
+
+func _refresh_niche_badge() -> void:
+	var niche_id: StringName = GameState.current_niche_id
+	if niche_id == &"" or not _niches_by_id.has(niche_id):
+		_niche_badge.visible = false
+		return
+	_niche_badge.text = _niches_by_id[niche_id].display_name
+	_niche_badge.visible = true

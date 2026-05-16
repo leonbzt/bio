@@ -1,12 +1,13 @@
 extends Node
 
 const KINGDOM_ID: StringName = &"plantae"
-const BASE_COLONIZE_COST: float = 5.0
-
 @onready var _territory: Node = get_node("../TerritorySystem")
+
+var _niches_by_id: Dictionary[StringName, NicheData] = {}
 
 
 func _ready() -> void:
+	_build_niche_index()
 	EventBus.tile_tapped.connect(_on_tile_tapped)
 
 
@@ -15,34 +16,30 @@ func _on_tile_tapped(coord: Vector2i) -> void:
 		return
 	if not _is_active():
 		return
-	if _territory.get_surface_owner(coord) != &"":
+	var niche: NicheData = _get_active_niche()
+	if niche == null:
 		return
-	var owned: Array[Vector2i] = _territory.get_surface_owned_coords(KINGDOM_ID)
-	if owned.size() > 0 and not _is_adjacent_to_owned_surface(coord, owned):
+	var species: SpeciesData = _get_species_for_niche(niche)
+	if species == null:
 		return
-	if owned.size() > 0:
-		if not ResourceLedger.spend_bundle(_get_cost()):
-			return
-	var ok: bool = _territory.add_surface(coord, KINGDOM_ID)
+	var result: Dictionary = ColonizationRulesRegistry.evaluate(
+		niche.colonization_rule,
+		coord,
+		KINGDOM_ID,
+		species,
+		niche
+	)
+	if not result.get("valid", false):
+		return
+	var cost: Dictionary = result.get("cost", {}) as Dictionary
+	if not cost.is_empty() and not ResourceLedger.spend_bundle(cost):
+		return
+	var ok: bool = _territory.add_surface(coord, KINGDOM_ID, niche.tile_variant)
 	if ok:
+		var data_extras: Dictionary = result.get("data", {}) as Dictionary
+		for key in data_extras.keys():
+			_territory.set_tile_data(coord, String(key), data_extras[key])
 		SaveSystem.save_now()
-
-
-func _is_adjacent_to_owned_surface(coord: Vector2i, owned: Array[Vector2i]) -> bool:
-	var owned_map: Dictionary = {}
-	for item in owned:
-		owned_map[item] = true
-	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		if owned_map.has(coord + offset):
-			return true
-	return false
-
-
-func _get_cost() -> Dictionary:
-	var cost: float = BASE_COLONIZE_COST
-	if MetaModifiers.is_unlocked(&"thrifty_growth"):
-		cost = 4.0
-	return {ResourceLedger.BIOMASS: cost}
 
 
 func _is_active() -> bool:
@@ -51,3 +48,34 @@ func _is_active() -> bool:
 	if GameState.current_kingdom_id == &"symbiosis" and GameState.placement_target == KINGDOM_ID:
 		return true
 	return false
+
+
+func _build_niche_index() -> void:
+	_niches_by_id.clear()
+	var index := load("res://data/niches/_index.tres")
+	if index == null or not (index is NicheIndex):
+		push_error("PlantColonization: missing niche index")
+		return
+	for niche in (index as NicheIndex).niches:
+		if niche == null:
+			continue
+		_niches_by_id[niche.id] = niche
+
+
+func _get_active_niche() -> NicheData:
+	if GameState.current_niche_id != &"" and _niches_by_id.has(GameState.current_niche_id):
+		var current: NicheData = _niches_by_id[GameState.current_niche_id]
+		if current.kingdom_id == KINGDOM_ID:
+			return current
+	for niche in _niches_by_id.values():
+		if niche.kingdom_id == KINGDOM_ID:
+			return niche
+	push_error("PlantColonization: no niche available for kingdom %s" % String(KINGDOM_ID))
+	return null
+
+
+func _get_species_for_niche(niche: NicheData) -> SpeciesData:
+	if niche.species_options.is_empty():
+		push_error("PlantColonization: niche %s has no species" % String(niche.id))
+		return null
+	return niche.species_options[0]

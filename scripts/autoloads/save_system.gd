@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 4
+const SAVE_VERSION: int = 5
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -139,6 +139,19 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 						t["surface_owner"] = ""
 					if not t.has("subsurface_owner"):
 						t["subsurface_owner"] = ""
+	if from_version < 5:
+		# v4 -> v5: add niche_id to run; tile.data may carry parasite_decay_ticks.
+		if old.has("run") and old["run"] is Dictionary:
+			var run: Dictionary = old["run"]
+			if not run.has("niche_id"):
+				var kingdom_id: String = String(run.get("kingdom_id", ""))
+				match kingdom_id:
+					"plantae":
+						run["niche_id"] = "photosynthesizer"
+					"fungi":
+						run["niche_id"] = "decomposer"
+					_:
+						run["niche_id"] = ""
 	return old
 
 
@@ -157,6 +170,7 @@ func _build_default_save() -> Dictionary:
 		},
 		"run": {
 			"kingdom_id": "",
+			"niche_id": "",
 			"run_seed": 0,
 			"tick_count": 0,
 			"resources": {},
@@ -221,5 +235,6 @@ func _apply_loaded(data: Dictionary) -> void:
 	GameState.run_save = data.get("run", {})
 	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
 	GameState.current_kingdom_id = StringName(run.get("kingdom_id", ""))
+	GameState.current_niche_id = StringName(run.get("niche_id", ""))
 	GameState.last_save_unix = int(data.get("saved_at_unix", 0))
 	EventBus.run_loaded.emit(int(data.get("save_version", SAVE_VERSION)))

@@ -1,0 +1,1351 @@
+diff --git a/data/evolution_tree/_index.tres b/data/evolution_tree/_index.tres
+index 21a2adb..23f34a0 100644
+--- a/data/evolution_tree/_index.tres
++++ b/data/evolution_tree/_index.tres
+@@ -1,4 +1,4 @@
+-[gd_resource type="Resource" script_class="EvolutionTreeIndex" load_steps=10 format=3]
++[gd_resource type="Resource" script_class="EvolutionTreeIndex" load_steps=12 format=3]
+ 
+ [ext_resource type="Script" path="res://scripts/data/evolution_tree_index.gd" id="1"]
+ [ext_resource type="Resource" path="res://data/evolution_tree/thrifty_growth.tres" id="2"]
+@@ -9,7 +9,9 @@
+ [ext_resource type="Resource" path="res://data/evolution_tree/unlock_symbiosis.tres" id="7"]
+ [ext_resource type="Resource" path="res://data/evolution_tree/mutualism.tres" id="8"]
+ [ext_resource type="Resource" path="res://data/evolution_tree/wood_wide_web.tres" id="9"]
++[ext_resource type="Resource" path="res://data/evolution_tree/unlock_parasitic_plantae.tres" id="10"]
++[ext_resource type="Resource" path="res://data/evolution_tree/unlock_mycorrhizal_fungi.tres" id="11"]
+ 
+ [resource]
+ script = ExtResource("1")
+-nodes = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9")])
++nodes = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11")])
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index 7fb312d..fadcb4c 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -64,6 +64,7 @@ signal placement_target_changed(target: StringName)
+ 
+ # Run lifecycle
+ signal run_started(kingdom_id: StringName)
++signal niche_changed(niche_id: StringName)
+ signal prestige_triggered(summary: Dictionary)
+ signal run_loaded(save_version: int)
+ 
+@@ -113,6 +114,7 @@ Emits `EventBus.resource_changed` after every mutation.
+ 
+ ```gdscript
+ var current_kingdom_id: StringName     # which kingdom this run plays
++var current_niche_id: StringName       # which niche this run plays
+ var run_seed: int                       # for deterministic events
+ var is_run_active: bool
+ 
+diff --git a/project.godot b/project.godot
+index 99e80ee..0845a2f 100644
+--- a/project.godot
++++ b/project.godot
+@@ -24,6 +24,7 @@ GameState="*uid://mknppk4abx6d"
+ SaveSystem="*uid://r37lbu6qtf3v"
+ AudioManager="*uid://chdw6nqbv1uxx"
+ PrestigeSystem="res://scripts/systems/prestige_system.gd"
++ColonizationRulesRegistry="res://scripts/systems/colonization_rules_registry.gd"
+ 
+ [display]
+ 
+diff --git a/scenes/ui/hud.tscn b/scenes/ui/hud.tscn
+index 8a43392..572ea5e 100644
+--- a/scenes/ui/hud.tscn
++++ b/scenes/ui/hud.tscn
+@@ -59,6 +59,16 @@ offset_right = 64.0
+ offset_bottom = 40.0
+ text = "Menu"
+ 
++[node name="NicheBadge" type="Label" parent="."]
++visible = false
++anchor_left = 0.5
++anchor_right = 0.5
++offset_left = -70.0
++offset_top = 4.0
++offset_right = 70.0
++offset_bottom = 20.0
++text = "Photosynthesizer"
++
+ [node name="ToxinBloomButton" type="Button" parent="."]
+ anchor_left = 1.0
+ anchor_top = 1.0
+diff --git a/scenes/world/world.tscn b/scenes/world/world.tscn
+index ac96956..60b82d8 100644
+--- a/scenes/world/world.tscn
++++ b/scenes/world/world.tscn
+@@ -19,6 +19,7 @@
+ [ext_resource type="Script" path="res://scripts/systems/fungi_colonization.gd" id="18"]
+ [ext_resource type="Script" path="res://scripts/systems/spore_infection_handler.gd" id="19"]
+ [ext_resource type="Script" path="res://scripts/systems/ambient_modifier_system.gd" id="20"]
++[ext_resource type="Script" path="res://scripts/systems/parasite_decay_system.gd" id="21"]
+ 
+ [node name="World" type="Node2D"]
+ 
+@@ -67,6 +68,9 @@ script = ExtResource("19")
+ [node name="AmbientModifierSystem" type="Node" parent="Systems"]
+ script = ExtResource("20")
+ 
++[node name="ParasiteDecaySystem" type="Node" parent="Systems"]
++script = ExtResource("21")
++
+ [node name="AbilitySystem" type="Node" parent="Systems"]
+ script = ExtResource("12")
+ 
+diff --git a/scripts/autoloads/event_bus.gd b/scripts/autoloads/event_bus.gd
+index 8ed56d9..5da9631 100644
+--- a/scripts/autoloads/event_bus.gd
++++ b/scripts/autoloads/event_bus.gd
+@@ -37,6 +37,7 @@ signal placement_target_changed(target: StringName)
+ 
+ # Run lifecycle
+ signal run_started(kingdom_id: StringName)
++signal niche_changed(niche_id: StringName)
+ signal prestige_triggered(summary: Dictionary)
+ signal run_loaded(save_version: int)
+ 
+diff --git a/scripts/autoloads/game_state.gd b/scripts/autoloads/game_state.gd
+index 275be4a..2c7b053 100644
+--- a/scripts/autoloads/game_state.gd
++++ b/scripts/autoloads/game_state.gd
+@@ -6,6 +6,7 @@ extends Node
+ ##
+ 
+ var current_kingdom_id: StringName = &""
++var current_niche_id: StringName = &""
+ var run_seed: int = 0
+ var is_run_active: bool = false
+ var last_save_unix: int = 0
+diff --git a/scripts/autoloads/save_system.gd b/scripts/autoloads/save_system.gd
+index 23f12ad..d2f7c27 100644
+--- a/scripts/autoloads/save_system.gd
++++ b/scripts/autoloads/save_system.gd
+@@ -5,7 +5,7 @@ extends Node
+ ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
+ ##
+ 
+-const SAVE_VERSION: int = 4
++const SAVE_VERSION: int = 5
+ const SAVE_PATH: String = "user://save.json"
+ const TEMP_PATH: String = "user://save.json.tmp"
+ const BACKUP_PATH: String = "user://save.json.bak"
+@@ -139,6 +139,19 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
+ 						t["surface_owner"] = ""
+ 					if not t.has("subsurface_owner"):
+ 						t["subsurface_owner"] = ""
++	if from_version < 5:
++		# v4 -> v5: add niche_id to run; tile.data may carry parasite_decay_ticks.
++		if old.has("run") and old["run"] is Dictionary:
++			var run: Dictionary = old["run"]
++			if not run.has("niche_id"):
++				var kingdom_id: String = String(run.get("kingdom_id", ""))
++				match kingdom_id:
++					"plantae":
++						run["niche_id"] = "photosynthesizer"
++					"fungi":
++						run["niche_id"] = "decomposer"
++					_:
++						run["niche_id"] = ""
+ 	return old
+ 
+ 
+@@ -157,6 +170,7 @@ func _build_default_save() -> Dictionary:
+ 		},
+ 		"run": {
+ 			"kingdom_id": "",
++			"niche_id": "",
+ 			"run_seed": 0,
+ 			"tick_count": 0,
+ 			"resources": {},
+@@ -221,5 +235,6 @@ func _apply_loaded(data: Dictionary) -> void:
+ 	GameState.run_save = data.get("run", {})
+ 	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+ 	GameState.current_kingdom_id = StringName(run.get("kingdom_id", ""))
++	GameState.current_niche_id = StringName(run.get("niche_id", ""))
+ 	GameState.last_save_unix = int(data.get("saved_at_unix", 0))
+ 	EventBus.run_loaded.emit(int(data.get("save_version", SAVE_VERSION)))
+diff --git a/scripts/entities/tile_grid.gd b/scripts/entities/tile_grid.gd
+index 977207e..6a26ba3 100644
+--- a/scripts/entities/tile_grid.gd
++++ b/scripts/entities/tile_grid.gd
+@@ -7,6 +7,8 @@ const SOURCE_ID: int = 0
+ const ATLAS_BASE: Vector2i = Vector2i(0, 0)
+ const ATLAS_PLANTAE: Vector2i = Vector2i(1, 0)
+ const ATLAS_FUNGI: Vector2i = Vector2i(2, 0)
++const ATLAS_PARASITE_PLANTAE: Vector2i = Vector2i(3, 0)
++const ATLAS_MYCORRHIZAL_FUNGI: Vector2i = Vector2i(4, 0)
+ 
+ const LAYER_BASE: int = 0
+ const LAYER_SURFACE: int = 1
+@@ -34,6 +36,8 @@ func _build_tileset() -> TileSet:
+ 	atlas.create_tile(ATLAS_BASE)
+ 	atlas.create_tile(ATLAS_PLANTAE)
+ 	atlas.create_tile(ATLAS_FUNGI)
++	atlas.create_tile(ATLAS_PARASITE_PLANTAE)
++	atlas.create_tile(ATLAS_MYCORRHIZAL_FUNGI)
+ 
+ 	return set
+ 
+@@ -44,7 +48,7 @@ func _build_atlas_texture() -> Texture2D:
+ 		return tile_texture
+ 	base_image.convert(Image.FORMAT_RGBA8)
+ 
+-	var atlas_image := Image.create(TILE_SIZE * 3, TILE_SIZE, false, Image.FORMAT_RGBA8)
++	var atlas_image := Image.create(TILE_SIZE * 5, TILE_SIZE, false, Image.FORMAT_RGBA8)
+ 	var rect := Rect2i(0, 0, TILE_SIZE, TILE_SIZE)
+ 	atlas_image.blit_rect(base_image, rect, Vector2i(0, 0))
+ 
+@@ -62,14 +66,32 @@ func _build_atlas_texture() -> Texture2D:
+ 	atlas_image.blit_rect(overlay, rect, Vector2i(TILE_SIZE, 0))
+ 
+ 	var fungi := base_image.duplicate()
+-	var fungi_fill: Color = Color8(0x7a, 0x5f, 0xa8, 160)
+-	var fungi_border: Color = Color8(0x63, 0x4c, 0x87, 220)
++	var fungi_fill: Color = Color8(0x7a, 0x5f, 0xa8, 255)
++	var fungi_border: Color = Color8(0x63, 0x4c, 0x87, 255)
+ 	for y in range(TILE_SIZE):
+ 		for x in range(TILE_SIZE):
+ 			var is_border: bool = x == 0 or y == 0 or x == TILE_SIZE - 1 or y == TILE_SIZE - 1
+ 			fungi.set_pixel(x, y, fungi_border if is_border else fungi_fill)
+ 	atlas_image.blit_rect(fungi, rect, Vector2i(TILE_SIZE * 2, 0))
+ 
++	var parasite := base_image.duplicate()
++	var parasite_fill: Color = Color8(0xa8, 0x42, 0x5f, 255)
++	var parasite_border: Color = Color8(0x86, 0x33, 0x4a, 255)
++	for y in range(TILE_SIZE):
++		for x in range(TILE_SIZE):
++			var is_parasite_border: bool = x == 0 or y == 0 or x == TILE_SIZE - 1 or y == TILE_SIZE - 1
++			parasite.set_pixel(x, y, parasite_border if is_parasite_border else parasite_fill)
++	atlas_image.blit_rect(parasite, rect, Vector2i(TILE_SIZE * 3, 0))
++
++	var mycorrhizal := base_image.duplicate()
++	var mycorrhizal_fill: Color = Color8(0x5f, 0xa8, 0x88, 255)
++	var mycorrhizal_border: Color = Color8(0x4a, 0x86, 0x6d, 255)
++	for y in range(TILE_SIZE):
++		for x in range(TILE_SIZE):
++			var is_mycorrhizal_border: bool = x == 0 or y == 0 or x == TILE_SIZE - 1 or y == TILE_SIZE - 1
++			mycorrhizal.set_pixel(x, y, mycorrhizal_border if is_mycorrhizal_border else mycorrhizal_fill)
++	atlas_image.blit_rect(mycorrhizal, rect, Vector2i(TILE_SIZE * 4, 0))
++
+ 	return ImageTexture.create_from_image(atlas_image)
+ 
+ 
+@@ -80,18 +102,20 @@ func _populate() -> void:
+ 			set_cell(LAYER_BASE, Vector2i(x, y), SOURCE_ID, ATLAS_BASE)
+ 
+ 
+-func set_surface_owner(coord: Vector2i, kingdom_id: StringName) -> void:
++func set_surface_owner(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> void:
+ 	if String(kingdom_id) == "":
+ 		erase_cell(LAYER_SURFACE, coord)
+ 	elif kingdom_id == &"plantae":
+-		set_cell(LAYER_SURFACE, coord, SOURCE_ID, ATLAS_PLANTAE)
++		var atlas: Vector2i = ATLAS_PARASITE_PLANTAE if variant == &"parasite" else ATLAS_PLANTAE
++		set_cell(LAYER_SURFACE, coord, SOURCE_ID, atlas)
+ 
+ 
+-func set_subsurface_owner(coord: Vector2i, kingdom_id: StringName) -> void:
++func set_subsurface_owner(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> void:
+ 	if String(kingdom_id) == "":
+ 		erase_cell(LAYER_SUBSURFACE, coord)
+ 	elif kingdom_id == &"fungi":
+-		set_cell(LAYER_SUBSURFACE, coord, SOURCE_ID, ATLAS_FUNGI)
++		var atlas: Vector2i = ATLAS_MYCORRHIZAL_FUNGI if variant == &"mycorrhizal" else ATLAS_FUNGI
++		set_cell(LAYER_SUBSURFACE, coord, SOURCE_ID, atlas)
+ 
+ 
+ func clear_owned() -> void:
+diff --git a/scripts/systems/fungi_colonization.gd b/scripts/systems/fungi_colonization.gd
+index 85dbff4..899cf5c 100644
+--- a/scripts/systems/fungi_colonization.gd
++++ b/scripts/systems/fungi_colonization.gd
+@@ -1,18 +1,13 @@
+ extends Node
+ 
+ const KINGDOM_ID: StringName = &"fungi"
+-const SPECIES_PATH: String = "res://data/species/mycelium_thread.tres"
+-
+ @onready var _territory: Node = get_node("../TerritorySystem")
+-@onready var _corpses: Node = get_node("../CorpseSystem")
+ 
+-var _species: SpeciesData
++var _niches_by_id: Dictionary[StringName, NicheData] = {}
+ 
+ 
+ func _ready() -> void:
+-	_species = load(SPECIES_PATH) as SpeciesData
+-	if _species == null:
+-		push_error("FungiColonization: missing %s" % SPECIES_PATH)
++	_build_niche_index()
+ 	EventBus.tile_tapped.connect(_on_tile_tapped)
+ 
+ 
+@@ -21,56 +16,66 @@ func _on_tile_tapped(coord: Vector2i) -> void:
+ 		return
+ 	if not _is_active():
+ 		return
+-	if _species == null:
++	var niche: NicheData = _get_active_niche()
++	if niche == null:
+ 		return
+-	if _territory.get_subsurface_owner(coord) != &"":
++	var species: SpeciesData = _get_species_for_niche(niche)
++	if species == null:
+ 		return
+-	if not _is_substrate_valid(coord):
++	var result: Dictionary = ColonizationRulesRegistry.evaluate(
++		niche.colonization_rule,
++		coord,
++		KINGDOM_ID,
++		species,
++		niche
++	)
++	if not result.get("valid", false):
+ 		return
+-
+-	var owned: Array[Vector2i] = _territory.get_subsurface_owned_coords(KINGDOM_ID)
+-	if owned.size() > 0:
+-		var cost: Dictionary = _get_cost()
+-		if not ResourceLedger.spend_bundle(cost):
+-			return
+-
+-	var ok: bool = _territory.add_subsurface(coord, KINGDOM_ID)
++	var cost: Dictionary = result.get("cost", {}) as Dictionary
++	if not cost.is_empty() and not ResourceLedger.spend_bundle(cost):
++		return
++	var ok: bool = _territory.add_subsurface(coord, KINGDOM_ID, niche.tile_variant)
+ 	if ok:
++		var data_extras: Dictionary = result.get("data", {}) as Dictionary
++		for key in data_extras.keys():
++			_territory.set_tile_data(coord, String(key), data_extras[key])
+ 		SaveSystem.save_now()
+ 
+ 
+-func _is_substrate_valid(coord: Vector2i) -> bool:
+-	var owned: Array[Vector2i] = _territory.get_subsurface_owned_coords(KINGDOM_ID)
+-	if owned.is_empty():
+-		return true
+-	if _territory.get_surface_owner(coord) == &"plantae":
+-		return true
+-	if _corpses.has_method("is_corpse_at") and _corpses.is_corpse_at(coord):
+-		return true
+-
+-	var owned_set: Dictionary = {}
+-	for c in owned:
+-		owned_set[c] = true
+-	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+-		if owned_set.has(coord + offset):
+-			return true
+-	return false
+-
+-
+-func _get_cost() -> Dictionary:
+-	var cost: Dictionary = _species.colonize_cost.duplicate()
+-	var discount: float = 0.0
+-	for t in _species.base_traits:
+-		discount += float(t.modifiers.get("colonize_cost", 0.0))
+-	if discount != 0.0:
+-		for key in cost.keys():
+-			cost[key] = maxf(0.0, float(cost[key]) * (1.0 + discount))
+-	return cost
+-
+-
+ func _is_active() -> bool:
+ 	if GameState.current_kingdom_id == KINGDOM_ID:
+ 		return true
+ 	if GameState.current_kingdom_id == &"symbiosis" and GameState.placement_target == KINGDOM_ID:
+ 		return true
+ 	return false
++
++
++func _build_niche_index() -> void:
++	_niches_by_id.clear()
++	var index := load("res://data/niches/_index.tres")
++	if index == null or not (index is NicheIndex):
++		push_error("FungiColonization: missing niche index")
++		return
++	for niche in (index as NicheIndex).niches:
++		if niche == null:
++			continue
++		_niches_by_id[niche.id] = niche
++
++
++func _get_active_niche() -> NicheData:
++	if GameState.current_niche_id != &"" and _niches_by_id.has(GameState.current_niche_id):
++		var current: NicheData = _niches_by_id[GameState.current_niche_id]
++		if current.kingdom_id == KINGDOM_ID:
++			return current
++	for niche in _niches_by_id.values():
++		if niche.kingdom_id == KINGDOM_ID:
++			return niche
++	push_error("FungiColonization: no niche available for kingdom %s" % String(KINGDOM_ID))
++	return null
++
++
++func _get_species_for_niche(niche: NicheData) -> SpeciesData:
++	if niche.species_options.is_empty():
++		push_error("FungiColonization: niche %s has no species" % String(niche.id))
++		return null
++	return niche.species_options[0]
+diff --git a/scripts/systems/growth_system.gd b/scripts/systems/growth_system.gd
+index 99e77f5..7c1c997 100644
+--- a/scripts/systems/growth_system.gd
++++ b/scripts/systems/growth_system.gd
+@@ -100,8 +100,11 @@ func _apply_yields(
+ 				if biome == null:
+ 					continue
+ 				per_tile *= biome.sunlight_per_tick * sun_mult
++				per_tile *= _get_niche_yield_multiplier()
+ 				per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
+ 				per_tile *= meta_mult
++				if _is_tile_mycorrhizal_boosted(coord):
++					per_tile *= 1.30
+ 			elif resource_key == &"decay":
+ 				per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
+ 			elif resource_key == &"spores":
+@@ -150,3 +153,15 @@ func _get_symbiosis_bonus() -> float:
+ 	if MetaModifiers.is_unlocked(&"mutualism"):
+ 		return 0.50
+ 	return 0.30
++
++
++func _get_niche_yield_multiplier() -> float:
++	if GameState.current_niche_id == &"parasite_plantae":
++		return 2.0
++	return 1.0
++
++
++func _is_tile_mycorrhizal_boosted(coord: Vector2i) -> bool:
++	if GameState.current_niche_id != &"mycorrhizal_fungi":
++		return false
++	return _territory.get_surface_owner(coord) == &"plantae" and _territory.get_subsurface_owner(coord) == &"fungi"
+diff --git a/scripts/systems/plant_colonization.gd b/scripts/systems/plant_colonization.gd
+index d4e0c52..7d1b76d 100644
+--- a/scripts/systems/plant_colonization.gd
++++ b/scripts/systems/plant_colonization.gd
+@@ -1,12 +1,13 @@
+ extends Node
+ 
+ const KINGDOM_ID: StringName = &"plantae"
+-const BASE_COLONIZE_COST: float = 5.0
+-
+ @onready var _territory: Node = get_node("../TerritorySystem")
+ 
++var _niches_by_id: Dictionary[StringName, NicheData] = {}
++
+ 
+ func _ready() -> void:
++	_build_niche_index()
+ 	EventBus.tile_tapped.connect(_on_tile_tapped)
+ 
+ 
+@@ -15,39 +16,66 @@ func _on_tile_tapped(coord: Vector2i) -> void:
+ 		return
+ 	if not _is_active():
+ 		return
+-	if _territory.get_surface_owner(coord) != &"":
++	var niche: NicheData = _get_active_niche()
++	if niche == null:
++		return
++	var species: SpeciesData = _get_species_for_niche(niche)
++	if species == null:
++		return
++	var result: Dictionary = ColonizationRulesRegistry.evaluate(
++		niche.colonization_rule,
++		coord,
++		KINGDOM_ID,
++		species,
++		niche
++	)
++	if not result.get("valid", false):
+ 		return
+-	var owned: Array[Vector2i] = _territory.get_surface_owned_coords(KINGDOM_ID)
+-	if owned.size() > 0 and not _is_adjacent_to_owned_surface(coord, owned):
++	var cost: Dictionary = result.get("cost", {}) as Dictionary
++	if not cost.is_empty() and not ResourceLedger.spend_bundle(cost):
+ 		return
+-	if owned.size() > 0:
+-		if not ResourceLedger.spend_bundle(_get_cost()):
+-			return
+-	var ok: bool = _territory.add_surface(coord, KINGDOM_ID)
++	var ok: bool = _territory.add_surface(coord, KINGDOM_ID, niche.tile_variant)
+ 	if ok:
++		var data_extras: Dictionary = result.get("data", {}) as Dictionary
++		for key in data_extras.keys():
++			_territory.set_tile_data(coord, String(key), data_extras[key])
+ 		SaveSystem.save_now()
+ 
+ 
+-func _is_adjacent_to_owned_surface(coord: Vector2i, owned: Array[Vector2i]) -> bool:
+-	var owned_map: Dictionary = {}
+-	for item in owned:
+-		owned_map[item] = true
+-	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+-		if owned_map.has(coord + offset):
+-			return true
+-	return false
+-
+-
+-func _get_cost() -> Dictionary:
+-	var cost: float = BASE_COLONIZE_COST
+-	if MetaModifiers.is_unlocked(&"thrifty_growth"):
+-		cost = 4.0
+-	return {ResourceLedger.BIOMASS: cost}
+-
+-
+ func _is_active() -> bool:
+ 	if GameState.current_kingdom_id == KINGDOM_ID:
+ 		return true
+ 	if GameState.current_kingdom_id == &"symbiosis" and GameState.placement_target == KINGDOM_ID:
+ 		return true
+ 	return false
++
++
++func _build_niche_index() -> void:
++	_niches_by_id.clear()
++	var index := load("res://data/niches/_index.tres")
++	if index == null or not (index is NicheIndex):
++		push_error("PlantColonization: missing niche index")
++		return
++	for niche in (index as NicheIndex).niches:
++		if niche == null:
++			continue
++		_niches_by_id[niche.id] = niche
++
++
++func _get_active_niche() -> NicheData:
++	if GameState.current_niche_id != &"" and _niches_by_id.has(GameState.current_niche_id):
++		var current: NicheData = _niches_by_id[GameState.current_niche_id]
++		if current.kingdom_id == KINGDOM_ID:
++			return current
++	for niche in _niches_by_id.values():
++		if niche.kingdom_id == KINGDOM_ID:
++			return niche
++	push_error("PlantColonization: no niche available for kingdom %s" % String(KINGDOM_ID))
++	return null
++
++
++func _get_species_for_niche(niche: NicheData) -> SpeciesData:
++	if niche.species_options.is_empty():
++		push_error("PlantColonization: niche %s has no species" % String(niche.id))
++		return null
++	return niche.species_options[0]
+diff --git a/scripts/systems/prestige_system.gd b/scripts/systems/prestige_system.gd
+index e005907..7a08aa5 100644
+--- a/scripts/systems/prestige_system.gd
++++ b/scripts/systems/prestige_system.gd
+@@ -61,12 +61,18 @@ func purchase_node(node_id: StringName) -> bool:
+ 	return true
+ 
+ 
+-func start_run(kingdom_id: StringName) -> void:
++func start_run(kingdom_id: StringName, niche_id: StringName = &"") -> void:
+ 	if not is_kingdom_unlocked(kingdom_id):
+ 		return
++	var resolved_niche: StringName = _resolve_niche(kingdom_id, niche_id)
++	if resolved_niche == &"":
++		push_error("PrestigeSystem: no valid niche for kingdom %s" % String(kingdom_id))
++		return
+ 	GameState.current_kingdom_id = kingdom_id
++	GameState.current_niche_id = resolved_niche
+ 	if GameState.run_save is Dictionary:
+ 		GameState.run_save["kingdom_id"] = String(kingdom_id)
++		GameState.run_save["niche_id"] = String(resolved_niche)
+ 	GameState.run_seed = randi()
+ 	GameState.is_run_active = true
+ 	if kingdom_id == &"symbiosis":
+@@ -74,10 +80,39 @@ func start_run(kingdom_id: StringName) -> void:
+ 	else:
+ 		GameState.placement_target = kingdom_id
+ 	EventBus.placement_target_changed.emit(GameState.placement_target)
++	EventBus.niche_changed.emit(resolved_niche)
+ 	EventBus.run_started.emit(kingdom_id)
+ 	SaveSystem.save_now()
+ 
+ 
++func _resolve_niche(kingdom_id: StringName, requested: StringName) -> StringName:
++	var niches: Array[NicheData] = get_niches_for_kingdom(kingdom_id, true)
++	if niches.is_empty():
++		return &""
++	if requested != &"":
++		for niche in niches:
++			if niche.id == requested:
++				return requested
++	return niches[0].id
++
++
++func get_niches_for_kingdom(kingdom_id: StringName, only_unlocked: bool = true) -> Array[NicheData]:
++	var index := load("res://data/niches/_index.tres")
++	if index == null or not (index is NicheIndex):
++		return []
++	var result: Array[NicheData] = []
++	for niche in (index as NicheIndex).niches:
++		if niche == null:
++			continue
++		if niche.kingdom_id != kingdom_id:
++			continue
++		if only_unlocked and niche.unlock_node_id != &"":
++			if not MetaModifiers.is_unlocked(niche.unlock_node_id):
++				continue
++		result.append(niche)
++	return result
++
++
+ func is_node_unlocked(node_id: StringName) -> bool:
+ 	var tree: Dictionary = GameState.meta_save.get("evolution_tree", {})
+ 	return bool(tree.get(String(node_id), false))
+@@ -138,6 +173,7 @@ func _update_meta_stats(reward: int, earned_this_run: float) -> void:
+ func _reset_run_state() -> void:
+ 	var fresh_run := {
+ 		"kingdom_id": "",
++		"niche_id": "",
+ 		"run_seed": 0,
+ 		"tick_count": 0,
+ 		"resources": {},
+@@ -154,6 +190,8 @@ func _reset_run_state() -> void:
+ 	GameState.run_save = fresh_run
+ 	GameState.is_run_active = false
+ 	GameState.current_kingdom_id = &""
++	GameState.current_niche_id = &""
+ 	GameState.placement_target = &""
+ 	ResourceLedger.reset_run()
++	EventBus.niche_changed.emit(&"")
+ 	EventBus.run_loaded.emit(SaveSystem.SAVE_VERSION)
+diff --git a/scripts/systems/territory_system.gd b/scripts/systems/territory_system.gd
+index 66500d7..92d3a0e 100644
+--- a/scripts/systems/territory_system.gd
++++ b/scripts/systems/territory_system.gd
+@@ -33,36 +33,50 @@ func _on_run_loaded(_save_version: int) -> void:
+ 			var surface_owner: StringName = StringName(entry.get("surface_owner", ""))
+ 			var subsurface_owner: StringName = StringName(entry.get("subsurface_owner", ""))
+ 			var data: Dictionary = entry.get("data", {}) as Dictionary
++			var surface_variant: StringName = StringName(data.get("surface_variant", ""))
++			var subsurface_variant: StringName = StringName(data.get("subsurface_variant", ""))
+ 			_tiles[coord] = {
+ 				"surface_owner": surface_owner,
+ 				"subsurface_owner": subsurface_owner,
+ 				"data": data
+ 			}
+ 			if surface_owner != &"" and _tile_grid.has_method("set_surface_owner"):
+-				_tile_grid.set_surface_owner(coord, surface_owner)
++				_tile_grid.set_surface_owner(coord, surface_owner, surface_variant)
+ 			if subsurface_owner != &"" and _tile_grid.has_method("set_subsurface_owner"):
+-				_tile_grid.set_subsurface_owner(coord, subsurface_owner)
++				_tile_grid.set_subsurface_owner(coord, subsurface_owner, subsurface_variant)
+ 
+ 
+-func add_surface(coord: Vector2i, kingdom_id: StringName) -> bool:
++func add_surface(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> bool:
+ 	var entry: Dictionary = _ensure_entry(coord)
+ 	if entry.get("surface_owner", &"") != &"":
+ 		return false
+ 	entry["surface_owner"] = kingdom_id
++	var data: Dictionary = entry.get("data", {}) as Dictionary
++	if variant != &"":
++		data["surface_variant"] = String(variant)
++	else:
++		data.erase("surface_variant")
++	entry["data"] = data
+ 	if _tile_grid.has_method("set_surface_owner"):
+-		_tile_grid.set_surface_owner(coord, kingdom_id)
++		_tile_grid.set_surface_owner(coord, kingdom_id, variant)
+ 	_sync_run_save()
+ 	EventBus.tile_colonized.emit(coord, kingdom_id)
+ 	return true
+ 
+ 
+-func add_subsurface(coord: Vector2i, kingdom_id: StringName) -> bool:
++func add_subsurface(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> bool:
+ 	var entry: Dictionary = _ensure_entry(coord)
+ 	if entry.get("subsurface_owner", &"") != &"":
+ 		return false
+ 	entry["subsurface_owner"] = kingdom_id
++	var data: Dictionary = entry.get("data", {}) as Dictionary
++	if variant != &"":
++		data["subsurface_variant"] = String(variant)
++	else:
++		data.erase("subsurface_variant")
++	entry["data"] = data
+ 	if _tile_grid.has_method("set_subsurface_owner"):
+-		_tile_grid.set_subsurface_owner(coord, kingdom_id)
++		_tile_grid.set_subsurface_owner(coord, kingdom_id, variant)
+ 	_sync_run_save()
+ 	EventBus.tile_colonized.emit(coord, kingdom_id)
+ 	return true
+@@ -76,6 +90,9 @@ func remove_surface(coord: Vector2i, cause: StringName) -> void:
+ 	if prev == &"":
+ 		return
+ 	entry["surface_owner"] = &""
++	var data: Dictionary = entry.get("data", {}) as Dictionary
++	data.erase("surface_variant")
++	entry["data"] = data
+ 	if _tile_grid.has_method("set_surface_owner"):
+ 		_tile_grid.set_surface_owner(coord, &"")
+ 	_gc_if_empty(coord)
+@@ -91,6 +108,9 @@ func remove_subsurface(coord: Vector2i, cause: StringName) -> void:
+ 	if prev == &"":
+ 		return
+ 	entry["subsurface_owner"] = &""
++	var data: Dictionary = entry.get("data", {}) as Dictionary
++	data.erase("subsurface_variant")
++	entry["data"] = data
+ 	if _tile_grid.has_method("set_subsurface_owner"):
+ 		_tile_grid.set_subsurface_owner(coord, &"")
+ 	_gc_if_empty(coord)
+@@ -147,6 +167,21 @@ func reset_run() -> void:
+ 	_sync_run_save()
+ 
+ 
++func set_tile_data(coord: Vector2i, key: String, value: Variant) -> void:
++	var entry: Dictionary = _ensure_entry(coord)
++	var data: Dictionary = entry.get("data", {}) as Dictionary
++	data[key] = value
++	entry["data"] = data
++	_sync_run_save()
++
++
++func get_tile_data(coord: Vector2i, key: String, default = null) -> Variant:
++	if not _tiles.has(coord):
++		return default
++	var data: Dictionary = _tiles[coord].get("data", {}) as Dictionary
++	return data.get(key, default)
++
++
+ func _ensure_entry(coord: Vector2i) -> Dictionary:
+ 	if not _tiles.has(coord):
+ 		_tiles[coord] = {
+diff --git a/scripts/ui/hud.gd b/scripts/ui/hud.gd
+index f7e2ddf..0c80be6 100644
+--- a/scripts/ui/hud.gd
++++ b/scripts/ui/hud.gd
+@@ -44,12 +44,14 @@ const VISIBLE_RESOURCES_BY_KINGDOM := {
+ }
+ 
+ const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
++const NICHE_INDEX_PATH: String = "res://data/niches/_index.tres"
+ 
+ @onready var _labels_container: HBoxContainer = $Bar/Margin/ResourcesRow/Resources
+ @onready var _tick_indicator: ColorRect = $TickIndicator
+ @onready var _toxin_button: Button = $ToxinBloomButton
+ @onready var _pause_button: Button = $PauseButton
+ @onready var _layer_toggle: Button = $LayerToggle
++@onready var _niche_badge: Label = $NicheBadge
+ @onready var _toast_panel: PanelContainer = $EventToast
+ @onready var _toast_title: Label = $EventToast/ToastContent/ToastTitle
+ @onready var _toast_body: Label = $EventToast/ToastContent/ToastBody
+@@ -64,6 +66,7 @@ const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
+ var _labels: Dictionary[StringName, Label] = {}
+ var _is_replaying: bool = false
+ var _events_by_id: Dictionary[StringName, EventData] = {}
++var _niches_by_id: Dictionary[StringName, NicheData] = {}
+ var _toast_event_id: StringName = StringName()
+ var _toast_tween: Tween = null
+ var _toxin_cost: float = 50.0
+@@ -73,6 +76,7 @@ func _ready() -> void:
+ 	_bind_labels()
+ 	_sync_labels()
+ 	_build_event_index()
++	_build_niche_index()
+ 	_setup_toxin_button()
+ 	_pause_button.pressed.connect(_on_pause_pressed)
+ 	_layer_toggle.pressed.connect(_on_layer_toggle_pressed)
+@@ -86,9 +90,11 @@ func _ready() -> void:
+ 	EventBus.placement_target_changed.connect(_on_placement_target_changed)
+ 	EventBus.run_started.connect(_on_run_started)
+ 	EventBus.run_loaded.connect(_on_run_loaded_for_layer)
++	EventBus.niche_changed.connect(_on_niche_changed)
+ 	_refresh_layer_toggle_visibility()
+ 	_refresh_layer_toggle_label()
+ 	_refresh_resource_visibility()
++	_refresh_niche_badge()
+ 
+ 
+ func _bind_labels() -> void:
+@@ -137,12 +143,18 @@ func _on_run_started(_kingdom_id: StringName) -> void:
+ 	_refresh_layer_toggle_visibility()
+ 	_refresh_layer_toggle_label()
+ 	_refresh_resource_visibility()
++	_refresh_niche_badge()
+ 
+ 
+ func _on_run_loaded_for_layer(_save_version: int) -> void:
+ 	_refresh_layer_toggle_visibility()
+ 	_refresh_layer_toggle_label()
+ 	_refresh_resource_visibility()
++	_refresh_niche_badge()
++
++
++func _on_niche_changed(_niche_id: StringName) -> void:
++	_refresh_niche_badge()
+ 
+ 
+ func _refresh_layer_toggle_visibility() -> void:
+@@ -232,6 +244,17 @@ func _build_event_index() -> void:
+ 		_events_by_id[event_data.id] = event_data
+ 
+ 
++func _build_niche_index() -> void:
++	_niches_by_id.clear()
++	var index := load(NICHE_INDEX_PATH)
++	if index == null or not (index is NicheIndex):
++		return
++	for niche in (index as NicheIndex).niches:
++		if niche == null:
++			continue
++		_niches_by_id[niche.id] = niche
++
++
+ func _on_event_started(event_id: StringName, _payload: Dictionary) -> void:
+ 	_toast_event_id = event_id
+ 	var title: String = String(event_id)
+@@ -272,3 +295,12 @@ func _hide_toast() -> void:
+ 	_toast_tween.tween_callback(func() -> void:
+ 		_toast_panel.visible = false
+ 	)
++
++
++func _refresh_niche_badge() -> void:
++	var niche_id: StringName = GameState.current_niche_id
++	if niche_id == &"" or not _niches_by_id.has(niche_id):
++		_niche_badge.visible = false
++		return
++	_niche_badge.text = _niches_by_id[niche_id].display_name
++	_niche_badge.visible = true
+diff --git a/scripts/ui/prestige_screen.gd b/scripts/ui/prestige_screen.gd
+index 50103e1..a25fb4a 100644
+--- a/scripts/ui/prestige_screen.gd
++++ b/scripts/ui/prestige_screen.gd
+@@ -13,6 +13,7 @@ extends Control
+ @onready var _kingdom_buttons: VBoxContainer = $Content/KingdomSection/KingdomButtons
+ 
+ var _prestige_system: Node = null
++var _active_kingdom_id: StringName = &""
+ 
+ 
+ func _ready() -> void:
+@@ -86,9 +87,47 @@ func _refresh_kingdoms() -> void:
+ 	for kingdom_id in kingdoms:
+ 		var button := Button.new()
+ 		button.text = "Begin run as %s" % String(kingdom_id).capitalize()
++		button.pressed.connect(func() -> void:
++			_on_kingdom_button_pressed(StringName(kingdom_id))
++		)
++		_kingdom_buttons.add_child(button)
++
++
++func _on_kingdom_button_pressed(kingdom_id: StringName) -> void:
++	if _prestige_system == null:
++		return
++	if not _prestige_system.has_method("get_niches_for_kingdom"):
++		_prestige_system.start_run(kingdom_id)
++		_close()
++		return
++	var niches: Array = _prestige_system.get_niches_for_kingdom(kingdom_id, true)
++	if niches.size() == 1:
++		_prestige_system.start_run(kingdom_id, niches[0].id)
++		_close()
++		return
++	_show_niche_subview(kingdom_id, niches)
++
++
++func _show_niche_subview(kingdom_id: StringName, niches: Array) -> void:
++	_active_kingdom_id = kingdom_id
++	for child in _kingdom_buttons.get_children():
++		child.queue_free()
++
++	var back := Button.new()
++	back.text = "Back"
++	back.pressed.connect(func() -> void:
++		_refresh_kingdoms()
++	)
++	_kingdom_buttons.add_child(back)
++
++	for niche in niches:
++		if niche == null:
++			continue
++		var button := Button.new()
++		button.text = "%s - %s" % [niche.display_name, niche.description]
+ 		button.pressed.connect(func() -> void:
+ 			if _prestige_system != null:
+-				_prestige_system.start_run(StringName(kingdom_id))
++				_prestige_system.start_run(kingdom_id, niche.id)
+ 			_close()
+ 		)
+ 		_kingdom_buttons.add_child(button)
+diff --git a/tests/test_save_system.gd b/tests/test_save_system.gd
+index 85c4ef7..2c33d4d 100644
+--- a/tests/test_save_system.gd
++++ b/tests/test_save_system.gd
+@@ -125,3 +125,38 @@ func test_migrate_v0_cascades_to_current() -> void:
+ 	assert_true(migrated["run"].has("biome_map"))
+ 	assert_true(migrated["meta"]["unlocked_kingdoms"].has("plantae"))
+ 	assert_true(migrated["run"].has("statistics"))
++	assert_eq(migrated["run"]["niche_id"], "photosynthesizer")
++
++
++func test_migrate_v4_adds_niche_id() -> void:
++	var v4 := {
++		"save_version": 4,
++		"meta": {"unlocked_kingdoms": ["plantae"], "evolution_tree": {}, "statistics": {}},
++		"run": {
++			"kingdom_id": "plantae",
++			"tiles": [{"coord": [1, 1], "surface_owner": "plantae", "subsurface_owner": "", "data": {}}],
++			"resources": {},
++			"biome_map": {},
++			"organisms": [],
++			"active_events": [],
++			"statistics": {
++				"total_biomass_earned": 0.0,
++				"tiles_colonized": 0,
++				"waves_defeated": 0
++			}
++		}
++	}
++
++	var migrated := SaveSystem.migrate(v4, 4)
++	assert_eq(migrated["run"]["niche_id"], "photosynthesizer")
++
++
++func test_migrate_v4_fungi_default_niche() -> void:
++	var v4_fungi := {
++		"save_version": 4,
++		"meta": {},
++		"run": {"kingdom_id": "fungi"}
++	}
++
++	var migrated := SaveSystem.migrate(v4_fungi, 4)
++	assert_eq(migrated["run"]["niche_id"], "decomposer")
+diff --git a/scripts/data/niche_data.gd b/scripts/data/niche_data.gd
+new file mode 100644
+index 0000000..4fa0541
+--- /dev/null
++++ b/scripts/data/niche_data.gd
+@@ -0,0 +1,20 @@
++class_name NicheData
++extends Resource
++
++@export var id: StringName = &""
++@export var display_name: String = ""
++@export var description: String = ""
++@export var kingdom_id: StringName = &""
++@export var species_options: Array[SpeciesData] = []
++
++# Identifies the colonization rule this niche uses.
++@export var colonization_rule: StringName = &""
++
++# Cost override. If empty, falls back to species.colonize_cost.
++@export var cost_override: Dictionary = {}
++
++# Which evolution-tree node grants this niche. Empty = default niche.
++@export var unlock_node_id: StringName = &""
++
++# Optional visual variant key used by tile rendering.
++@export var tile_variant: StringName = &""
+diff --git a/scripts/data/niche_index.gd b/scripts/data/niche_index.gd
+new file mode 100644
+index 0000000..a08c417
+--- /dev/null
++++ b/scripts/data/niche_index.gd
+@@ -0,0 +1,4 @@
++class_name NicheIndex
++extends Resource
++
++@export var niches: Array[NicheData] = []
+diff --git a/scripts/systems/colonization_rules_registry.gd b/scripts/systems/colonization_rules_registry.gd
+new file mode 100644
+index 0000000..2d09550
+--- /dev/null
++++ b/scripts/systems/colonization_rules_registry.gd
+@@ -0,0 +1,183 @@
++extends Node
++
++# Returns {"valid": bool, "cost": Dictionary, "data": Dictionary}.
++func evaluate(rule: StringName, coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
++	match rule:
++		&"adjacent_empty":
++			return _rule_adjacent_empty(coord, kingdom_id, species, niche)
++		&"fungi_substrate":
++			return _rule_fungi_substrate(coord, kingdom_id, species, niche)
++		&"parasitic_plantae":
++			return _rule_parasitic_plantae(coord, kingdom_id, species, niche)
++		&"mycorrhizal_fungi":
++			return _rule_mycorrhizal_fungi(coord, kingdom_id, species, niche)
++		_:
++			push_warning("ColonizationRulesRegistry: unknown rule %s" % String(rule))
++			return {"valid": false, "cost": {}, "data": {}}
++
++
++func _rule_adjacent_empty(coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
++	var territory: Node = _get_territory()
++	if territory == null:
++		return {"valid": false, "cost": {}, "data": {}}
++	if territory.get_surface_owner(coord) != &"":
++		return {"valid": false, "cost": {}, "data": {}}
++
++	var owned: Array[Vector2i] = territory.get_surface_owned_coords(kingdom_id)
++	if owned.size() > 0:
++		var owned_set: Dictionary = {}
++		for c in owned:
++			owned_set[c] = true
++		var has_neighbor: bool = false
++		for n in neighbors(coord):
++			if owned_set.has(n):
++				has_neighbor = true
++				break
++		if not has_neighbor:
++			return {"valid": false, "cost": {}, "data": {}}
++
++	var cost: Dictionary
++	if not niche.cost_override.is_empty():
++		cost = niche.cost_override.duplicate()
++	else:
++		cost = species.colonize_cost.duplicate()
++	if MetaModifiers.is_unlocked(&"thrifty_growth"):
++		for k in cost.keys():
++			cost[k] = maxf(0.0, float(cost[k]) - 1.0)
++	if owned.is_empty():
++		cost = {}
++
++	return {"valid": true, "cost": cost, "data": {}}
++
++
++func _rule_fungi_substrate(coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
++	var territory: Node = _get_territory()
++	if territory == null:
++		return {"valid": false, "cost": {}, "data": {}}
++	if territory.get_subsurface_owner(coord) != &"":
++		return {"valid": false, "cost": {}, "data": {}}
++
++	var owned: Array[Vector2i] = territory.get_subsurface_owned_coords(kingdom_id)
++	if owned.is_empty():
++		return {"valid": true, "cost": {}, "data": {}}
++	if territory.get_surface_owner(coord) == &"plantae":
++		return {"valid": true, "cost": _apply_trait_cost_modifiers(_resolve_cost(species, niche), species), "data": {}}
++	if _is_corpse_at(coord):
++		return {"valid": true, "cost": _apply_trait_cost_modifiers(_resolve_cost(species, niche), species), "data": {}}
++
++	var owned_set: Dictionary = {}
++	for c in owned:
++		owned_set[c] = true
++	for offset in neighbors(coord):
++		if owned_set.has(offset):
++			return {"valid": true, "cost": _apply_trait_cost_modifiers(_resolve_cost(species, niche), species), "data": {}}
++
++	return {"valid": false, "cost": {}, "data": {}}
++
++
++func _rule_parasitic_plantae(coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
++	var territory: Node = _get_territory()
++	if territory == null:
++		return {"valid": false, "cost": {}, "data": {}}
++	if territory.get_surface_owner(coord) != &"":
++		return {"valid": false, "cost": {}, "data": {}}
++
++	var owned: Array[Vector2i] = territory.get_surface_owned_coords(kingdom_id)
++	if owned.is_empty():
++		return {"valid": true, "cost": {}, "data": {"parasite_decay_ticks": 30}}
++
++	var has_neighbor: bool = false
++	for n in neighbors(coord):
++		if territory.get_surface_owner(n) != &"" or territory.get_subsurface_owner(n) != &"":
++			has_neighbor = true
++			break
++	if not has_neighbor:
++		return {"valid": false, "cost": {}, "data": {}}
++
++	var cost: Dictionary = _resolve_cost(species, niche)
++	if MetaModifiers.is_unlocked(&"thrifty_growth"):
++		for k in cost.keys():
++			cost[k] = maxf(0.0, float(cost[k]) - 1.0)
++
++	return {"valid": true, "cost": cost, "data": {"parasite_decay_ticks": 30}}
++
++
++func _rule_mycorrhizal_fungi(coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
++	var territory: Node = _get_territory()
++	if territory == null:
++		return {"valid": false, "cost": {}, "data": {}}
++	if territory.get_subsurface_owner(coord) != &"":
++		return {"valid": false, "cost": {}, "data": {}}
++
++	var owned: Array[Vector2i] = territory.get_subsurface_owned_coords(kingdom_id)
++	var plant_at_or_adjacent: bool = territory.get_surface_owner(coord) == &"plantae"
++	if not plant_at_or_adjacent:
++		for n in neighbors(coord):
++			if territory.get_surface_owner(n) == &"plantae":
++				plant_at_or_adjacent = true
++				break
++
++	if owned.is_empty():
++		if not plant_at_or_adjacent:
++			return {"valid": false, "cost": {}, "data": {}}
++		return {"valid": true, "cost": {}, "data": {}}
++
++	var owned_set: Dictionary = {}
++	for c in owned:
++		owned_set[c] = true
++	var has_neighbor: bool = plant_at_or_adjacent
++	if not has_neighbor:
++		for n in neighbors(coord):
++			if owned_set.has(n):
++				has_neighbor = true
++				break
++	if not has_neighbor:
++		return {"valid": false, "cost": {}, "data": {}}
++
++	var cost: Dictionary = _apply_trait_cost_modifiers(_resolve_cost(species, niche), species)
++	return {"valid": true, "cost": cost, "data": {}}
++
++
++func neighbors(coord: Vector2i) -> Array[Vector2i]:
++	return [
++		coord + Vector2i.LEFT,
++		coord + Vector2i.RIGHT,
++		coord + Vector2i.UP,
++		coord + Vector2i.DOWN
++	]
++
++
++func _get_territory() -> Node:
++	return get_tree().root.get_node_or_null("World/Systems/TerritorySystem")
++
++
++func _get_corpses() -> Node:
++	return get_tree().root.get_node_or_null("World/Systems/CorpseSystem")
++
++
++func _is_corpse_at(coord: Vector2i) -> bool:
++	var corpses: Node = _get_corpses()
++	if corpses == null:
++		return false
++	if corpses.has_method("is_corpse_at"):
++		return corpses.is_corpse_at(coord)
++	return false
++
++
++func _resolve_cost(species: SpeciesData, niche: NicheData) -> Dictionary:
++	if not niche.cost_override.is_empty():
++		return niche.cost_override.duplicate()
++	return species.colonize_cost.duplicate()
++
++
++func _apply_trait_cost_modifiers(cost: Dictionary, species: SpeciesData) -> Dictionary:
++	var total_modifier: float = 0.0
++	for trait_item in species.base_traits:
++		if trait_item == null:
++			continue
++		total_modifier += float(trait_item.modifiers.get("colonize_cost", 0.0))
++	if total_modifier == 0.0:
++		return cost
++	for key in cost.keys():
++		cost[key] = maxf(0.0, float(cost[key]) * (1.0 + total_modifier))
++	return cost
+diff --git a/scripts/systems/parasite_decay_system.gd b/scripts/systems/parasite_decay_system.gd
+new file mode 100644
+index 0000000..0f9ef01
+--- /dev/null
++++ b/scripts/systems/parasite_decay_system.gd
+@@ -0,0 +1,50 @@
++extends Node
++
++const PARASITE_NICHE_ID: StringName = &"parasite_plantae"
++const NEIGHBOR_THRESHOLD: int = 2
++const MAX_DECAY_TICKS: int = 30
++
++@onready var _territory: Node = get_node("../TerritorySystem")
++var _is_replaying: bool = false
++
++
++func _ready() -> void:
++	EventBus.tick.connect(_on_tick)
++	EventBus.replay_started.connect(func(_n): _is_replaying = true)
++	EventBus.replay_finished.connect(func(): _is_replaying = false)
++
++
++func _on_tick(_delta: float) -> void:
++	if _is_replaying:
++		return
++	if GameState.current_niche_id != PARASITE_NICHE_ID:
++		return
++
++	var owned: Array[Vector2i] = _territory.get_surface_owned_coords(&"plantae")
++	if owned.size() <= 1:
++		return
++
++	var owned_set: Dictionary = {}
++	for c in owned:
++		owned_set[c] = true
++
++	var to_remove: Array[Vector2i] = []
++	for coord in owned:
++		var neighbor_count: int = 0
++		for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
++			if owned_set.has(coord + offset):
++				neighbor_count += 1
++
++		var ticks: int = int(_territory.get_tile_data(coord, "parasite_decay_ticks", MAX_DECAY_TICKS))
++		if neighbor_count >= NEIGHBOR_THRESHOLD:
++			if ticks < MAX_DECAY_TICKS:
++				_territory.set_tile_data(coord, "parasite_decay_ticks", MAX_DECAY_TICKS)
++		else:
++			ticks -= 1
++			if ticks <= 0:
++				to_remove.append(coord)
++			else:
++				_territory.set_tile_data(coord, "parasite_decay_ticks", ticks)
++
++	for coord in to_remove:
++		_territory.remove_surface(coord, &"parasite_wither")
+diff --git a/data/niches/_index.tres b/data/niches/_index.tres
+new file mode 100644
+index 0000000..aba4131
+--- /dev/null
++++ b/data/niches/_index.tres
+@@ -0,0 +1,11 @@
++[gd_resource type="Resource" script_class="NicheIndex" load_steps=6 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/niche_index.gd" id="1"]
++[ext_resource type="Resource" path="res://data/niches/photosynthesizer.tres" id="2"]
++[ext_resource type="Resource" path="res://data/niches/decomposer.tres" id="3"]
++[ext_resource type="Resource" path="res://data/niches/parasite_plantae.tres" id="4"]
++[ext_resource type="Resource" path="res://data/niches/mycorrhizal_fungi.tres" id="5"]
++
++[resource]
++script = ExtResource("1")
++niches = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")])
+diff --git a/data/niches/photosynthesizer.tres b/data/niches/photosynthesizer.tres
+new file mode 100644
+index 0000000..8c3cc87
+--- /dev/null
++++ b/data/niches/photosynthesizer.tres
+@@ -0,0 +1,16 @@
++[gd_resource type="Resource" script_class="NicheData" load_steps=3 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/niche_data.gd" id="1"]
++[ext_resource type="Resource" path="res://data/species/pioneer_grass.tres" id="2"]
++
++[resource]
++script = ExtResource("1")
++id = &"photosynthesizer"
++display_name = "Photosynthesizer"
++description = "Convert sunlight into biomass. The basic plantae playstyle."
++kingdom_id = &"plantae"
++species_options = Array[Resource]([ExtResource("2")])
++colonization_rule = &"adjacent_empty"
++cost_override = {}
++unlock_node_id = &""
++tile_variant = &""
+diff --git a/data/niches/decomposer.tres b/data/niches/decomposer.tres
+new file mode 100644
+index 0000000..9c2c783
+--- /dev/null
++++ b/data/niches/decomposer.tres
+@@ -0,0 +1,16 @@
++[gd_resource type="Resource" script_class="NicheData" load_steps=3 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/niche_data.gd" id="1"]
++[ext_resource type="Resource" path="res://data/species/mycelium_thread.tres" id="2"]
++
++[resource]
++script = ExtResource("1")
++id = &"decomposer"
++display_name = "Decomposer"
++description = "Feed on the dead. Spread through corpses and networks."
++kingdom_id = &"fungi"
++species_options = Array[Resource]([ExtResource("2")])
++colonization_rule = &"fungi_substrate"
++cost_override = {}
++unlock_node_id = &""
++tile_variant = &""
+diff --git a/data/niches/parasite_plantae.tres b/data/niches/parasite_plantae.tres
+new file mode 100644
+index 0000000..29a6bc6
+--- /dev/null
++++ b/data/niches/parasite_plantae.tres
+@@ -0,0 +1,18 @@
++[gd_resource type="Resource" script_class="NicheData" load_steps=3 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/niche_data.gd" id="1"]
++[ext_resource type="Resource" path="res://data/species/pioneer_grass.tres" id="2"]
++
++[resource]
++script = ExtResource("1")
++id = &"parasite_plantae"
++display_name = "Parasitic"
++description = "Spread cheap, grow fast, wither alone. Strength is in the network."
++kingdom_id = &"plantae"
++species_options = Array[Resource]([ExtResource("2")])
++colonization_rule = &"parasitic_plantae"
++cost_override = {
++"biomass": 3.0
++}
++unlock_node_id = &"unlock_parasitic_plantae"
++tile_variant = &"parasite"
+diff --git a/data/niches/mycorrhizal_fungi.tres b/data/niches/mycorrhizal_fungi.tres
+new file mode 100644
+index 0000000..7ff7725
+--- /dev/null
++++ b/data/niches/mycorrhizal_fungi.tres
+@@ -0,0 +1,18 @@
++[gd_resource type="Resource" script_class="NicheData" load_steps=3 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/niche_data.gd" id="1"]
++[ext_resource type="Resource" path="res://data/species/mycelium_thread.tres" id="2"]
++
++[resource]
++script = ExtResource("1")
++id = &"mycorrhizal_fungi"
++display_name = "Mycorrhizal"
++description = "Bind to roots. Trade nutrients for sugar. Shine when paired."
++kingdom_id = &"fungi"
++species_options = Array[Resource]([ExtResource("2")])
++colonization_rule = &"mycorrhizal_fungi"
++cost_override = {
++"spores": 2.0
++}
++unlock_node_id = &"unlock_mycorrhizal_fungi"
++tile_variant = &"mycorrhizal"
+diff --git a/data/evolution_tree/unlock_parasitic_plantae.tres b/data/evolution_tree/unlock_parasitic_plantae.tres
+new file mode 100644
+index 0000000..a94a1bb
+--- /dev/null
++++ b/data/evolution_tree/unlock_parasitic_plantae.tres
+@@ -0,0 +1,15 @@
++[gd_resource type="Resource" script_class="EvolutionNodeData" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/evolution_node_data.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"unlock_parasitic_plantae"
++display_name = "Mistletoe Heritage"
++description = "Discover the parasitic way. Plants that live off other plants."
++prerequisites = [&"thrifty_growth"]
++meta_cost = {
++"evolution_points": 8
++}
++grants_traits = []
++grants_kingdoms = []
+diff --git a/data/evolution_tree/unlock_mycorrhizal_fungi.tres b/data/evolution_tree/unlock_mycorrhizal_fungi.tres
+new file mode 100644
+index 0000000..3aeb670
+--- /dev/null
++++ b/data/evolution_tree/unlock_mycorrhizal_fungi.tres
+@@ -0,0 +1,15 @@
++[gd_resource type="Resource" script_class="EvolutionNodeData" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/evolution_node_data.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"unlock_mycorrhizal_fungi"
++display_name = "Root Whisperer"
++description = "Learn the language of root and hypha."
++prerequisites = [&"unlock_fungi"]
++meta_cost = {
++"evolution_points": 8
++}
++grants_traits = []
++grants_kingdoms = []

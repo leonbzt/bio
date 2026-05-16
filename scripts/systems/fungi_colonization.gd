@@ -1,18 +1,13 @@
 extends Node
 
 const KINGDOM_ID: StringName = &"fungi"
-const SPECIES_PATH: String = "res://data/species/mycelium_thread.tres"
-
 @onready var _territory: Node = get_node("../TerritorySystem")
-@onready var _corpses: Node = get_node("../CorpseSystem")
 
-var _species: SpeciesData
+var _niches_by_id: Dictionary[StringName, NicheData] = {}
 
 
 func _ready() -> void:
-	_species = load(SPECIES_PATH) as SpeciesData
-	if _species == null:
-		push_error("FungiColonization: missing %s" % SPECIES_PATH)
+	_build_niche_index()
 	EventBus.tile_tapped.connect(_on_tile_tapped)
 
 
@@ -21,51 +16,30 @@ func _on_tile_tapped(coord: Vector2i) -> void:
 		return
 	if not _is_active():
 		return
-	if _species == null:
+	var niche: NicheData = _get_active_niche()
+	if niche == null:
 		return
-	if _territory.get_subsurface_owner(coord) != &"":
+	var species: SpeciesData = _get_species_for_niche(niche)
+	if species == null:
 		return
-	if not _is_substrate_valid(coord):
+	var result: Dictionary = ColonizationRulesRegistry.evaluate(
+		niche.colonization_rule,
+		coord,
+		KINGDOM_ID,
+		species,
+		niche
+	)
+	if not result.get("valid", false):
 		return
-
-	var owned: Array[Vector2i] = _territory.get_subsurface_owned_coords(KINGDOM_ID)
-	if owned.size() > 0:
-		var cost: Dictionary = _get_cost()
-		if not ResourceLedger.spend_bundle(cost):
-			return
-
-	var ok: bool = _territory.add_subsurface(coord, KINGDOM_ID)
+	var cost: Dictionary = result.get("cost", {}) as Dictionary
+	if not cost.is_empty() and not ResourceLedger.spend_bundle(cost):
+		return
+	var ok: bool = _territory.add_subsurface(coord, KINGDOM_ID, niche.tile_variant)
 	if ok:
+		var data_extras: Dictionary = result.get("data", {}) as Dictionary
+		for key in data_extras.keys():
+			_territory.set_tile_data(coord, String(key), data_extras[key])
 		SaveSystem.save_now()
-
-
-func _is_substrate_valid(coord: Vector2i) -> bool:
-	var owned: Array[Vector2i] = _territory.get_subsurface_owned_coords(KINGDOM_ID)
-	if owned.is_empty():
-		return true
-	if _territory.get_surface_owner(coord) == &"plantae":
-		return true
-	if _corpses.has_method("is_corpse_at") and _corpses.is_corpse_at(coord):
-		return true
-
-	var owned_set: Dictionary = {}
-	for c in owned:
-		owned_set[c] = true
-	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		if owned_set.has(coord + offset):
-			return true
-	return false
-
-
-func _get_cost() -> Dictionary:
-	var cost: Dictionary = _species.colonize_cost.duplicate()
-	var discount: float = 0.0
-	for t in _species.base_traits:
-		discount += float(t.modifiers.get("colonize_cost", 0.0))
-	if discount != 0.0:
-		for key in cost.keys():
-			cost[key] = maxf(0.0, float(cost[key]) * (1.0 + discount))
-	return cost
 
 
 func _is_active() -> bool:
@@ -74,3 +48,34 @@ func _is_active() -> bool:
 	if GameState.current_kingdom_id == &"symbiosis" and GameState.placement_target == KINGDOM_ID:
 		return true
 	return false
+
+
+func _build_niche_index() -> void:
+	_niches_by_id.clear()
+	var index := load("res://data/niches/_index.tres")
+	if index == null or not (index is NicheIndex):
+		push_error("FungiColonization: missing niche index")
+		return
+	for niche in (index as NicheIndex).niches:
+		if niche == null:
+			continue
+		_niches_by_id[niche.id] = niche
+
+
+func _get_active_niche() -> NicheData:
+	if GameState.current_niche_id != &"" and _niches_by_id.has(GameState.current_niche_id):
+		var current: NicheData = _niches_by_id[GameState.current_niche_id]
+		if current.kingdom_id == KINGDOM_ID:
+			return current
+	for niche in _niches_by_id.values():
+		if niche.kingdom_id == KINGDOM_ID:
+			return niche
+	push_error("FungiColonization: no niche available for kingdom %s" % String(KINGDOM_ID))
+	return null
+
+
+func _get_species_for_niche(niche: NicheData) -> SpeciesData:
+	if niche.species_options.is_empty():
+		push_error("FungiColonization: niche %s has no species" % String(niche.id))
+		return null
+	return niche.species_options[0]

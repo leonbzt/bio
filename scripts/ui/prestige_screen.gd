@@ -13,6 +13,7 @@ extends Control
 @onready var _kingdom_buttons: VBoxContainer = $Content/KingdomSection/KingdomButtons
 
 var _prestige_system: Node = null
+var _active_kingdom_id: StringName = &""
 
 
 func _ready() -> void:
@@ -87,8 +88,46 @@ func _refresh_kingdoms() -> void:
 		var button := Button.new()
 		button.text = "Begin run as %s" % String(kingdom_id).capitalize()
 		button.pressed.connect(func() -> void:
+			_on_kingdom_button_pressed(StringName(kingdom_id))
+		)
+		_kingdom_buttons.add_child(button)
+
+
+func _on_kingdom_button_pressed(kingdom_id: StringName) -> void:
+	if _prestige_system == null:
+		return
+	if not _prestige_system.has_method("get_niches_for_kingdom"):
+		_prestige_system.start_run(kingdom_id)
+		_close()
+		return
+	var niches: Array = _prestige_system.get_niches_for_kingdom(kingdom_id, true)
+	if niches.size() == 1:
+		_prestige_system.start_run(kingdom_id, niches[0].id)
+		_close()
+		return
+	_show_niche_subview(kingdom_id, niches)
+
+
+func _show_niche_subview(kingdom_id: StringName, niches: Array) -> void:
+	_active_kingdom_id = kingdom_id
+	for child in _kingdom_buttons.get_children():
+		child.queue_free()
+
+	var back := Button.new()
+	back.text = "Back"
+	back.pressed.connect(func() -> void:
+		_refresh_kingdoms()
+	)
+	_kingdom_buttons.add_child(back)
+
+	for niche in niches:
+		if niche == null:
+			continue
+		var button := Button.new()
+		button.text = "%s - %s" % [niche.display_name, niche.description]
+		button.pressed.connect(func() -> void:
 			if _prestige_system != null:
-				_prestige_system.start_run(StringName(kingdom_id))
+				_prestige_system.start_run(kingdom_id, niche.id)
 			_close()
 		)
 		_kingdom_buttons.add_child(button)

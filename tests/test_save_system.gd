@@ -125,3 +125,38 @@ func test_migrate_v0_cascades_to_current() -> void:
 	assert_true(migrated["run"].has("biome_map"))
 	assert_true(migrated["meta"]["unlocked_kingdoms"].has("plantae"))
 	assert_true(migrated["run"].has("statistics"))
+	assert_eq(migrated["run"]["niche_id"], "photosynthesizer")
+
+
+func test_migrate_v4_adds_niche_id() -> void:
+	var v4 := {
+		"save_version": 4,
+		"meta": {"unlocked_kingdoms": ["plantae"], "evolution_tree": {}, "statistics": {}},
+		"run": {
+			"kingdom_id": "plantae",
+			"tiles": [{"coord": [1, 1], "surface_owner": "plantae", "subsurface_owner": "", "data": {}}],
+			"resources": {},
+			"biome_map": {},
+			"organisms": [],
+			"active_events": [],
+			"statistics": {
+				"total_biomass_earned": 0.0,
+				"tiles_colonized": 0,
+				"waves_defeated": 0
+			}
+		}
+	}
+
+	var migrated := SaveSystem.migrate(v4, 4)
+	assert_eq(migrated["run"]["niche_id"], "photosynthesizer")
+
+
+func test_migrate_v4_fungi_default_niche() -> void:
+	var v4_fungi := {
+		"save_version": 4,
+		"meta": {},
+		"run": {"kingdom_id": "fungi"}
+	}
+
+	var migrated := SaveSystem.migrate(v4_fungi, 4)
+	assert_eq(migrated["run"]["niche_id"], "decomposer")

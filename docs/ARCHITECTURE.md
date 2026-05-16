@@ -64,6 +64,7 @@ signal placement_target_changed(target: StringName)
 
 # Run lifecycle
 signal run_started(kingdom_id: StringName)
+signal niche_changed(niche_id: StringName)
 signal prestige_triggered(summary: Dictionary)
 signal run_loaded(save_version: int)
 
@@ -113,6 +114,7 @@ Emits `EventBus.resource_changed` after every mutation.
 
 ```gdscript
 var current_kingdom_id: StringName     # which kingdom this run plays
+var current_niche_id: StringName       # which niche this run plays
 var run_seed: int                       # for deterministic events
 var is_run_active: bool
 

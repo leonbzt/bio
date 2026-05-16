@@ -24,6 +24,7 @@ GameState="*uid://mknppk4abx6d"
 SaveSystem="*uid://r37lbu6qtf3v"
 AudioManager="*uid://chdw6nqbv1uxx"
 PrestigeSystem="res://scripts/systems/prestige_system.gd"
+ColonizationRulesRegistry="res://scripts/systems/colonization_rules_registry.gd"
 
 [display]
 

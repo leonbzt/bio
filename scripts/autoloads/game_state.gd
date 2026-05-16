@@ -6,6 +6,7 @@ extends Node
 ##
 
 var current_kingdom_id: StringName = &""
+var current_niche_id: StringName = &""
 var run_seed: int = 0
 var is_run_active: bool = false
 var last_save_unix: int = 0

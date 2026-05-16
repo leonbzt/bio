@@ -59,6 +59,16 @@ offset_right = 64.0
 offset_bottom = 40.0
 text = "Menu"
 
+[node name="NicheBadge" type="Label" parent="."]
+visible = false
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -70.0
+offset_top = 4.0
+offset_right = 70.0
+offset_bottom = 20.0
+text = "Photosynthesizer"
+
 [node name="ToxinBloomButton" type="Button" parent="."]
 anchor_left = 1.0
 anchor_top = 1.0

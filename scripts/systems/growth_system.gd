@@ -100,8 +100,11 @@ func _apply_yields(
 				if biome == null:
 					continue
 				per_tile *= biome.sunlight_per_tick * sun_mult
+				per_tile *= _get_niche_yield_multiplier()
 				per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
 				per_tile *= meta_mult
+				if _is_tile_mycorrhizal_boosted(coord):
+					per_tile *= 1.30
 			elif resource_key == &"decay":
 				per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
 			elif resource_key == &"spores":
@@ -150,3 +153,15 @@ func _get_symbiosis_bonus() -> float:
 	if MetaModifiers.is_unlocked(&"mutualism"):
 		return 0.50
 	return 0.30
+
+
+func _get_niche_yield_multiplier() -> float:
+	if GameState.current_niche_id == &"parasite_plantae":
+		return 2.0
+	return 1.0
+
+
+func _is_tile_mycorrhizal_boosted(coord: Vector2i) -> bool:
+	if GameState.current_niche_id != &"mycorrhizal_fungi":
+		return false
+	return _territory.get_surface_owner(coord) == &"plantae" and _territory.get_subsurface_owner(coord) == &"fungi"

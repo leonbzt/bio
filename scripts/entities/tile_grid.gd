@@ -7,6 +7,8 @@ const SOURCE_ID: int = 0
 const ATLAS_BASE: Vector2i = Vector2i(0, 0)
 const ATLAS_PLANTAE: Vector2i = Vector2i(1, 0)
 const ATLAS_FUNGI: Vector2i = Vector2i(2, 0)
+const ATLAS_PARASITE_PLANTAE: Vector2i = Vector2i(3, 0)
+const ATLAS_MYCORRHIZAL_FUNGI: Vector2i = Vector2i(4, 0)
 
 const LAYER_BASE: int = 0
 const LAYER_SURFACE: int = 1
@@ -34,6 +36,8 @@ func _build_tileset() -> TileSet:
 	atlas.create_tile(ATLAS_BASE)
 	atlas.create_tile(ATLAS_PLANTAE)
 	atlas.create_tile(ATLAS_FUNGI)
+	atlas.create_tile(ATLAS_PARASITE_PLANTAE)
+	atlas.create_tile(ATLAS_MYCORRHIZAL_FUNGI)
 
 	return set
 
@@ -44,7 +48,7 @@ func _build_atlas_texture() -> Texture2D:
 		return tile_texture
 	base_image.convert(Image.FORMAT_RGBA8)
 
-	var atlas_image := Image.create(TILE_SIZE * 3, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	var atlas_image := Image.create(TILE_SIZE * 5, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	var rect := Rect2i(0, 0, TILE_SIZE, TILE_SIZE)
 	atlas_image.blit_rect(base_image, rect, Vector2i(0, 0))
 
@@ -62,13 +66,31 @@ func _build_atlas_texture() -> Texture2D:
 	atlas_image.blit_rect(overlay, rect, Vector2i(TILE_SIZE, 0))
 
 	var fungi := base_image.duplicate()
-	var fungi_fill: Color = Color8(0x7a, 0x5f, 0xa8, 160)
-	var fungi_border: Color = Color8(0x63, 0x4c, 0x87, 220)
+	var fungi_fill: Color = Color8(0x7a, 0x5f, 0xa8, 255)
+	var fungi_border: Color = Color8(0x63, 0x4c, 0x87, 255)
 	for y in range(TILE_SIZE):
 		for x in range(TILE_SIZE):
 			var is_border: bool = x == 0 or y == 0 or x == TILE_SIZE - 1 or y == TILE_SIZE - 1
 			fungi.set_pixel(x, y, fungi_border if is_border else fungi_fill)
 	atlas_image.blit_rect(fungi, rect, Vector2i(TILE_SIZE * 2, 0))
+
+	var parasite := base_image.duplicate()
+	var parasite_fill: Color = Color8(0xa8, 0x42, 0x5f, 255)
+	var parasite_border: Color = Color8(0x86, 0x33, 0x4a, 255)
+	for y in range(TILE_SIZE):
+		for x in range(TILE_SIZE):
+			var is_parasite_border: bool = x == 0 or y == 0 or x == TILE_SIZE - 1 or y == TILE_SIZE - 1
+			parasite.set_pixel(x, y, parasite_border if is_parasite_border else parasite_fill)
+	atlas_image.blit_rect(parasite, rect, Vector2i(TILE_SIZE * 3, 0))
+
+	var mycorrhizal := base_image.duplicate()
+	var mycorrhizal_fill: Color = Color8(0x5f, 0xa8, 0x88, 255)
+	var mycorrhizal_border: Color = Color8(0x4a, 0x86, 0x6d, 255)
+	for y in range(TILE_SIZE):
+		for x in range(TILE_SIZE):
+			var is_mycorrhizal_border: bool = x == 0 or y == 0 or x == TILE_SIZE - 1 or y == TILE_SIZE - 1
+			mycorrhizal.set_pixel(x, y, mycorrhizal_border if is_mycorrhizal_border else mycorrhizal_fill)
+	atlas_image.blit_rect(mycorrhizal, rect, Vector2i(TILE_SIZE * 4, 0))
 
 	return ImageTexture.create_from_image(atlas_image)
 
@@ -80,18 +102,20 @@ func _populate() -> void:
 			set_cell(LAYER_BASE, Vector2i(x, y), SOURCE_ID, ATLAS_BASE)
 
 
-func set_surface_owner(coord: Vector2i, kingdom_id: StringName) -> void:
+func set_surface_owner(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> void:
 	if String(kingdom_id) == "":
 		erase_cell(LAYER_SURFACE, coord)
 	elif kingdom_id == &"plantae":
-		set_cell(LAYER_SURFACE, coord, SOURCE_ID, ATLAS_PLANTAE)
+		var atlas: Vector2i = ATLAS_PARASITE_PLANTAE if variant == &"parasite" else ATLAS_PLANTAE
+		set_cell(LAYER_SURFACE, coord, SOURCE_ID, atlas)
 
 
-func set_subsurface_owner(coord: Vector2i, kingdom_id: StringName) -> void:
+func set_subsurface_owner(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> void:
 	if String(kingdom_id) == "":
 		erase_cell(LAYER_SUBSURFACE, coord)
 	elif kingdom_id == &"fungi":
-		set_cell(LAYER_SUBSURFACE, coord, SOURCE_ID, ATLAS_FUNGI)
+		var atlas: Vector2i = ATLAS_MYCORRHIZAL_FUNGI if variant == &"mycorrhizal" else ATLAS_FUNGI
+		set_cell(LAYER_SUBSURFACE, coord, SOURCE_ID, atlas)
 
 
 func clear_owned() -> void:

@@ -37,6 +37,7 @@ signal placement_target_changed(target: StringName)
 
 # Run lifecycle
 signal run_started(kingdom_id: StringName)
+signal niche_changed(niche_id: StringName)
 signal prestige_triggered(summary: Dictionary)
 signal run_loaded(save_version: int)
 

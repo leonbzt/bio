@@ -61,12 +61,18 @@ func purchase_node(node_id: StringName) -> bool:
 	return true
 
 
-func start_run(kingdom_id: StringName) -> void:
+func start_run(kingdom_id: StringName, niche_id: StringName = &"") -> void:
 	if not is_kingdom_unlocked(kingdom_id):
 		return
+	var resolved_niche: StringName = _resolve_niche(kingdom_id, niche_id)
+	if resolved_niche == &"":
+		push_error("PrestigeSystem: no valid niche for kingdom %s" % String(kingdom_id))
+		return
 	GameState.current_kingdom_id = kingdom_id
+	GameState.current_niche_id = resolved_niche
 	if GameState.run_save is Dictionary:
 		GameState.run_save["kingdom_id"] = String(kingdom_id)
+		GameState.run_save["niche_id"] = String(resolved_niche)
 	GameState.run_seed = randi()
 	GameState.is_run_active = true
 	if kingdom_id == &"symbiosis":
@@ -74,8 +80,37 @@ func start_run(kingdom_id: StringName) -> void:
 	else:
 		GameState.placement_target = kingdom_id
 	EventBus.placement_target_changed.emit(GameState.placement_target)
+	EventBus.niche_changed.emit(resolved_niche)
 	EventBus.run_started.emit(kingdom_id)
 	SaveSystem.save_now()
+
+
+func _resolve_niche(kingdom_id: StringName, requested: StringName) -> StringName:
+	var niches: Array[NicheData] = get_niches_for_kingdom(kingdom_id, true)
+	if niches.is_empty():
+		return &""
+	if requested != &"":
+		for niche in niches:
+			if niche.id == requested:
+				return requested
+	return niches[0].id
+
+
+func get_niches_for_kingdom(kingdom_id: StringName, only_unlocked: bool = true) -> Array[NicheData]:
+	var index := load("res://data/niches/_index.tres")
+	if index == null or not (index is NicheIndex):
+		return []
+	var result: Array[NicheData] = []
+	for niche in (index as NicheIndex).niches:
+		if niche == null:
+			continue
+		if niche.kingdom_id != kingdom_id:
+			continue
+		if only_unlocked and niche.unlock_node_id != &"":
+			if not MetaModifiers.is_unlocked(niche.unlock_node_id):
+				continue
+		result.append(niche)
+	return result
 
 
 func is_node_unlocked(node_id: StringName) -> bool:
@@ -138,6 +173,7 @@ func _update_meta_stats(reward: int, earned_this_run: float) -> void:
 func _reset_run_state() -> void:
 	var fresh_run := {
 		"kingdom_id": "",
+		"niche_id": "",
 		"run_seed": 0,
 		"tick_count": 0,
 		"resources": {},
@@ -154,6 +190,8 @@ func _reset_run_state() -> void:
 	GameState.run_save = fresh_run
 	GameState.is_run_active = false
 	GameState.current_kingdom_id = &""
+	GameState.current_niche_id = &""
 	GameState.placement_target = &""
 	ResourceLedger.reset_run()
+	EventBus.niche_changed.emit(&"")
 	EventBus.run_loaded.emit(SaveSystem.SAVE_VERSION)

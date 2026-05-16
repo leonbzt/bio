@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_niche_mycorrhizal_fungi"
+title = "The Underground Market"
+body = "Sugar from the roots above, in exchange for water and phosphorus from the dark below.
+No one wrote this contract. It is older than writing."
+category = &"niche"
+trigger_id = &"mycorrhizal_fungi"

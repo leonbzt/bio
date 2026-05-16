@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_kingdom_plantae"
+title = "The First Deal"
+body = "You unfurl. The light meets the chlorophyll meets the carbon and the carbon stays.
+This is the first deal you made with the world."
+category = &"kingdom"
+trigger_id = &"plantae"

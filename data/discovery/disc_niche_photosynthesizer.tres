@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_niche_photosynthesizer"
+title = "Photons and Patience"
+body = "The sun arrives at every leaf for free. The work is in being there to catch it.
+You learn that growth is mostly about holding still in the right place."
+category = &"niche"
+trigger_id = &"photosynthesizer"

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_node_pioneer_resilience"
+title = "The First to Arrive"
+body = "Bare rock. Acid soil. Light too bright or barely there.
+Pioneers do not find good places. They make them."
+category = &"node"
+trigger_id = &"pioneer_resilience"

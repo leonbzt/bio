@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_node_insectivory"
+title = "The Plants That Eat"
+body = "Where the soil is poor, some plants learned to wait, sticky and patient, for what would land on them.
+You become a kind of plant the herbivores did not predict."
+category = &"node"
+trigger_id = &"insectivory"

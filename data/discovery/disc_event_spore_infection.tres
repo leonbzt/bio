@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_event_spore_infection"
+title = "Carried on the Wind"
+body = "A spore is a possibility you cannot see, wrapped in a coat thinner than rumor.
+Some land where nothing waits. Some land where everything is ready."
+category = &"event"
+trigger_id = &"spore_infection"

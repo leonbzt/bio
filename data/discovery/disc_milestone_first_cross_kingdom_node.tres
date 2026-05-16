@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_milestone_first_cross_kingdom_node"
+title = "Across the Border"
+body = "The first time you applied what one kingdom taught you to a problem in another.
+This is how new kingdoms are born — not from purity, but from the bridge between."
+category = &"milestone"
+trigger_id = &"first_cross_kingdom_node"

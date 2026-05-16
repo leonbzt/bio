@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_milestone_prestige_5"
+title = "Five Lives Lived"
+body = "Five times now you have grown, persisted, and returned to substrate.
+The world keeps no statue of you. But it remembers, in soil chemistry, that you passed through."
+category = &"milestone"
+trigger_id = &"prestige_5"

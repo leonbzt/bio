@@ -180,12 +180,6 @@ Each row is one `.tres` file at `data/discovery/<id>.tres`. The body text below 
 > A fungus that grows around an alga, sheltering it. An alga that feeds the fungus in return.
 > Together they live on stone, where neither could have survived alone. You are about to be both.
 
-**`disc_node_photosynthetic_network.tres`** — category `&"node"`, trigger_id `&"photosynthetic_network"`
-> *Title:* Light Made Common
->
-> The tall trees catch what the short ones cannot. Then the network shares it.
-> Hierarchy becomes irrelevant when the wires reach everyone.
-
 ### Milestone entries
 
 **`disc_milestone_prestige_5.tres`** — category `&"milestone"`, trigger_id `&"prestige_5"`
@@ -249,6 +243,6 @@ Append all 28 ext_resource lines to `data/discovery/_index.tres` and list them i
 ## Out of scope
 - UI rendering (brief 08).
 - Toast notifications on unlock (brief 08 wires those).
-- Entries for nodes not in the list above (e.g. `mutualism`, `unlock_parasitic_plantae`, `unlock_mycorrhizal_fungi`, `unlock_animals`, `endophytic_bridge`, `symbiotic_generosity`, `saprophytic_efficiency_ii`) — deferred. The 28 above are the most narratively load-bearing. The rest can land in Phase 11 or whenever a voice rewrite pass happens.
+- Entries for nodes not in the list above (e.g. `mutualism`, `unlock_parasitic_plantae`, `unlock_mycorrhizal_fungi`, `unlock_animals`, `endophytic_bridge`, `symbiotic_generosity`, `saprophytic_efficiency_ii`, `photosynthetic_network`) — deferred. The 28 above are the most narratively load-bearing. The rest can land in Phase 11 or whenever a voice rewrite pass happens.
 - Era-transition entries (Phase 11).
 - Species-first-played entries (Phase 10+).

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_node_wood_wide_web"
+title = "The Network You Did Not Build"
+body = "Sugar flows from the strong tree to the dying one. Nutrients flow up to where they are needed most.
+The fungi are the postal service. No one ever paid them in anything but sugar."
+category = &"node"
+trigger_id = &"wood_wide_web"

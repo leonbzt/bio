@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_node_toxin_potency"
+title = "Bitter By Design"
+body = "The plants that survived being eaten were the ones that tasted wrong.
+You sharpen the lesson."
+category = &"node"
+trigger_id = &"toxin_potency"

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_kingdom_symbiosis"
+title = "Two Lives, One Body"
+body = "What if the cell that ate the bacterium did not finish eating?
+What if it kept the bacterium, fed it, asked it to stay?
+Most of what you are was once a deal between strangers."
+category = &"kingdom"
+trigger_id = &"symbiosis"

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_milestone_prestige_50"
+title = "Fifty Beginnings"
+body = "Half a hundred starts. The biosphere does not count its restarts either.
+Mass extinctions, ice ages, the asteroid: each was a prestige the world did not name."
+category = &"milestone"
+trigger_id = &"prestige_50"

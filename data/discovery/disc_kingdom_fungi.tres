@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_kingdom_fungi"
+title = "The Decomposers Were Already Here"
+body = "They were waiting. Threading the dark places between roots, eating the dead of things that died before they had names.
+They wait for everything."
+category = &"kingdom"
+trigger_id = &"fungi"

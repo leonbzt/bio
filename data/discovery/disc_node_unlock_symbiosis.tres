@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_node_unlock_symbiosis"
+title = "The Word for Two"
+body = "Symbiosis. From the Greek for \"living together.\"
+The word arrived only recently. The thing it names is older than most of life."
+category = &"node"
+trigger_id = &"unlock_symbiosis"

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_node_drought_resilience"
+title = "The Lesson the Dry Years Taught"
+body = "Thicker cuticles. Deeper roots. Stomata that close before the sun gets cruel.
+The drought did not break you. It only edited what you carry forward."
+category = &"node"
+trigger_id = &"drought_resilience"

@@ -117,22 +117,30 @@ func _apply_yields(
 		for coord in coords:
 			var per_tile: float = base_yield * base_mult
 			if resource_key == &"biomass":
-				var biome: BiomeData = _nutrients.get_biome_at(coord)
-				if biome == null:
-					continue
-				var local_sun_mult := sun_mult
-				if _is_tile_warmed(coord) and _ambient.has_method("get_event_multiplier"):
-					var cool_mult: float = float(_ambient.get_event_multiplier(&"cool_spell", &"sunlight_multiplier"))
-					if cool_mult > 0.0:
-						local_sun_mult = sun_mult / cool_mult
-				per_tile *= biome.sunlight_per_tick * local_sun_mult
-				per_tile *= _get_niche_yield_multiplier()
-				per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
-				per_tile *= meta_mult
-				if kingdom_id == &"plantae" and MetaModifiers.is_unlocked(&"soil_memory"):
-					per_tile *= 1.15
-				if _is_tile_mycorrhizal_bonded(coord):
-					per_tile *= 1.20
+				if kingdom_id == &"fungi":
+					# Fungi convert substrate to biomass via decomposition,
+					# not photosynthesis. Skip the sunlight + biome multipliers
+					# and apply a flat per-tile yield modulated by traits + bonds.
+					per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
+					if _is_tile_mycorrhizal_bonded(coord):
+						per_tile *= 1.20
+				else:
+					var biome: BiomeData = _nutrients.get_biome_at(coord)
+					if biome == null:
+						continue
+					var local_sun_mult := sun_mult
+					if _is_tile_warmed(coord) and _ambient.has_method("get_event_multiplier"):
+						var cool_mult: float = float(_ambient.get_event_multiplier(&"cool_spell", &"sunlight_multiplier"))
+						if cool_mult > 0.0:
+							local_sun_mult = sun_mult / cool_mult
+					per_tile *= biome.sunlight_per_tick * local_sun_mult
+					per_tile *= _get_niche_yield_multiplier()
+					per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
+					per_tile *= meta_mult
+					if kingdom_id == &"plantae" and MetaModifiers.is_unlocked(&"soil_memory"):
+						per_tile *= 1.15
+					if _is_tile_mycorrhizal_bonded(coord):
+						per_tile *= 1.20
 			elif resource_key == &"decay":
 				per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
 				if _is_tile_mycorrhizal_bonded(coord):

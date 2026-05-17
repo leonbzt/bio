@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EcosystemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ecosystem_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"dev_forest_edge"
+display_name = "Forest Edge"
+description = "Where the tall things end and the open ground begins. The herd that wandered through has not gone far."
+era_id = &"devonian"
+completion_criterion = &"events_survived"
+completion_target = 2.0
+completion_required_niche = &""
+completion_required_kingdom = &"plantae"
+unlock_text = "Movement at the edge of your territory. Mouths. Stomachs."
+complete_text = "Two waves came and went. You are still here, and so is what you made."
+biome_preference = &"forest_edge"

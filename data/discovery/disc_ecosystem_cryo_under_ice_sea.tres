@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_ecosystem_cryo_under_ice_sea"
+title = "What the Sea Will Remember"
+body = "Three hundred units of decay, gathered under a frozen lid.
+When the ice goes — and it will — the spores will rise with it."
+category = &"ecosystem"
+trigger_id = &"cryo_under_ice_sea"

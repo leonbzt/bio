@@ -44,6 +44,11 @@ signal run_loaded(save_version: int)
 signal goal_progress_changed(progress: Dictionary)
 signal goal_met()
 
+# Era + ecosystem (Phase 12)
+signal era_transition_started(from_era: StringName, to_era: StringName)
+signal ecosystem_completed(ecosystem_id: StringName)
+signal era_changed(era_id: StringName)
+
 # Offline progress
 signal replay_started(total_ticks: int)
 signal replay_finished()

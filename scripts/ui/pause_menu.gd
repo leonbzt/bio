@@ -3,6 +3,7 @@ extends Control
 @export var prestige_scene: PackedScene
 
 @onready var _prestige_button: Button = $Panel/VBox/PrestigeButton
+@onready var _world_map_button: Button = $Panel/VBox/WorldMapButton
 @onready var _resume_button: Button = $Panel/VBox/ResumeButton
 @onready var _reset_button: Button = $Panel/VBox/ResetSaveButton
 @onready var _reset_dialog: ConfirmationDialog = $ResetDialog
@@ -10,6 +11,7 @@ extends Control
 
 func _ready() -> void:
 	_prestige_button.pressed.connect(_on_prestige_pressed)
+	_world_map_button.pressed.connect(_on_world_map_pressed)
 	_resume_button.pressed.connect(_on_resume_pressed)
 	_reset_button.pressed.connect(_on_reset_pressed)
 	_reset_dialog.confirmed.connect(_on_reset_confirmed)
@@ -80,6 +82,17 @@ func _on_prestige_pressed() -> void:
 		screen.setup(prestige_system)
 	get_parent().add_child(screen)
 	visible = false
+
+
+func _on_world_map_pressed() -> void:
+	var scene := load("res://scenes/ui/world_map.tscn")
+	if scene == null or not (scene is PackedScene):
+		return
+	var map := (scene as PackedScene).instantiate()
+	if map == null:
+		return
+	get_parent().add_child(map)
+	close()
 
 
 func _on_resume_pressed() -> void:

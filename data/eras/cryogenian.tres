@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EraData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/era_data.gd" id="1"]
+[ext_resource type="Resource" path="res://data/ecosystems/cryo_polar_ice.tres" id="2"]
+[ext_resource type="Resource" path="res://data/ecosystems/cryo_volcanic_vent.tres" id="3"]
+[ext_resource type="Resource" path="res://data/ecosystems/cryo_under_ice_sea.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+id = &"cryogenian"
+display_name = "Cryogenian"
+description = "Ice covers most of the world. Light is dim. The first life that survives here will be fungi — extremophiles, decomposers, the patient kind."
+available_kingdoms = [&"fungi"]
+ecosystems = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4")])
+tint_color = Color(0.72, 0.85, 1.0, 0.15)
+transition_narrative = ""
+unlock_requires_prev_era = &""

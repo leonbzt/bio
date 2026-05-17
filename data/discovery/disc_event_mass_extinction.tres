@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_event_mass_extinction"
+title = "The Wave That Erased the Drafts"
+body = "Most of what was built is not. The world goes on.
+So do you, in some form — smaller, older, beginning again. This is how new things become possible."
+category = &"event"
+trigger_id = &"mass_extinction"

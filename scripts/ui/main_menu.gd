@@ -14,6 +14,7 @@ const STRINGS := {
 const WORLD_SCENE: String = "res://scenes/world/world.tscn"
 const MENU_SCENE: String = "res://scenes/main/main_menu.tscn"
 const PRESTIGE_SCENE: String = "res://scenes/ui/prestige_screen.tscn"
+const WORLD_MAP_SCENE: String = "res://scenes/ui/world_map.tscn"
 
 @onready var _title: Label = $CenterContainer/VBoxContainer/Title
 @onready var _generations_label: Label = $CenterContainer/VBoxContainer/GenerationsLabel
@@ -84,6 +85,22 @@ func _has_active_run() -> bool:
 
 
 func _open_kingdom_select() -> void:
+	# Phase 12: route through the world map first; that flow eventually
+	# instantiates prestige_screen with skip_to_kingdom_select after the
+	# player picks an ecosystem.
+	var scene := load(WORLD_MAP_SCENE)
+	if scene == null or not (scene is PackedScene):
+		_open_prestige_directly()
+		return
+	var map := (scene as PackedScene).instantiate()
+	if map == null:
+		_open_prestige_directly()
+		return
+	add_child(map)
+
+
+func _open_prestige_directly() -> void:
+	# Legacy / fallback path if world_map is missing.
 	var scene := load(PRESTIGE_SCENE)
 	if scene == null or not (scene is PackedScene):
 		return

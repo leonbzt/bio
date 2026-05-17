@@ -67,6 +67,9 @@ func purchase_node(node_id: StringName) -> bool:
 func start_run(kingdom_id: StringName, niche_id: StringName = &"") -> void:
 	if not is_kingdom_unlocked(kingdom_id):
 		return
+	if not _is_kingdom_available_in_current_era(kingdom_id):
+		push_warning("PrestigeSystem: kingdom %s is not available in the current era" % String(kingdom_id))
+		return
 	var resolved_niche: StringName = _resolve_niche(kingdom_id, niche_id)
 	if resolved_niche == &"":
 		push_error("PrestigeSystem: no valid niche for kingdom %s" % String(kingdom_id))
@@ -88,6 +91,20 @@ func start_run(kingdom_id: StringName, niche_id: StringName = &"") -> void:
 	EventBus.run_started.emit(kingdom_id)
 	_apply_conditional_start_bonus(resolved_niche)
 	SaveSystem.save_now()
+
+
+func _is_kingdom_available_in_current_era(kingdom_id: StringName) -> bool:
+	if not has_node("/root/EraSystem"):
+		return true
+	var era_system: Node = get_node("/root/EraSystem")
+	if not era_system.has_method("get_current_era"):
+		return true
+	var era: EraData = era_system.get_current_era()
+	if era == null:
+		return true
+	if era.available_kingdoms.is_empty():
+		return true
+	return era.available_kingdoms.has(kingdom_id)
 
 
 func _resolve_niche(kingdom_id: StringName, requested: StringName) -> StringName:

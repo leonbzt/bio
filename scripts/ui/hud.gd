@@ -95,6 +95,7 @@ func _ready() -> void:
 	EventBus.run_loaded.connect(_on_run_loaded_for_layer)
 	EventBus.niche_changed.connect(_on_niche_changed)
 	EventBus.evolution_node_unlocked.connect(func(_id): _refresh_abilities())
+	EventBus.era_transition_started.connect(_on_era_transition_started)
 	_refresh_layer_toggle_visibility()
 	_refresh_layer_toggle_state()
 	_refresh_resource_visibility()
@@ -308,6 +309,22 @@ func _is_layered_run() -> bool:
 		if system != null and system.has_method("get"):
 			return bool(system.get("is_layered"))
 	return false
+
+
+func _on_era_transition_started(_from_era: StringName, to_era: StringName) -> void:
+	if not has_node("/root/EraSystem"):
+		return
+	var era_system: Node = get_node("/root/EraSystem")
+	if not era_system.has_method("get_era"):
+		return
+	var era: EraData = era_system.get_era(to_era)
+	if era == null or era.transition_narrative == "":
+		return
+	var scene := preload("res://scenes/ui/era_transition.tscn")
+	var transition := scene.instantiate()
+	if transition.has_method("setup"):
+		transition.setup(era.transition_narrative)
+	get_parent().add_child(transition)
 
 
 func _refresh_abilities() -> void:

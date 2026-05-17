@@ -39,6 +39,9 @@ text = "Paused"
 [node name="PrestigeButton" type="Button" parent="Panel/VBox"]
 text = "Prestige"
 
+[node name="WorldMapButton" type="Button" parent="Panel/VBox"]
+text = "World Map"
+
 [node name="ResumeButton" type="Button" parent="Panel/VBox"]
 text = "Resume"
 

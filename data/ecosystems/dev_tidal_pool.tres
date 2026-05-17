@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EcosystemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ecosystem_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"dev_tidal_pool"
+display_name = "Tidal Pool"
+description = "Salt water at the edge of land. The first plants test what the air does to their leaves."
+era_id = &"devonian"
+completion_criterion = &"tiles_colonized"
+completion_target = 30.0
+completion_required_niche = &""
+completion_required_kingdom = &"plantae"
+unlock_text = "You unfurl. The light meets the chlorophyll meets the carbon and the carbon stays."
+complete_text = "Thirty leaves. The pool is yours. The dry land is what comes next."
+biome_preference = &"grassland"

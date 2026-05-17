@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EraData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/era_data.gd" id="1"]
+[ext_resource type="Resource" path="res://data/ecosystems/dev_tidal_pool.tres" id="2"]
+[ext_resource type="Resource" path="res://data/ecosystems/dev_forest_edge.tres" id="3"]
+[ext_resource type="Resource" path="res://data/ecosystems/dev_inland_swamp.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+id = &"devonian"
+display_name = "Devonian"
+description = "The ice retreated. Something climbed out of the water with a structure that could hold itself up. Plants. Fungi. The first animals."
+available_kingdoms = [&"plantae", &"fungi", &"animals"]
+ecosystems = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4")])
+tint_color = Color(0.65, 0.9, 0.55, 0.1)
+transition_narrative = "For ages, ice. The fungi held on in cracks and crevices, eating the dead of things that died before they had names.
+
+Then the warm. The seas opened. Something climbed out of the water with a structure that could hold itself up.
+
+You are about to be a plant. You have never been a plant before.
+
+Begin again."
+unlock_requires_prev_era = &"cryogenian"

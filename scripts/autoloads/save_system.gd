@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 10
+const SAVE_VERSION: int = 11
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -214,6 +214,28 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 				if not resources.has(key):
 					resources[key] = 0.0
 			run["resources"] = resources
+	if from_version < 11:
+		# v10 -> v11: era + ecosystem state.
+		if old.has("meta") and old["meta"] is Dictionary:
+			var meta: Dictionary = old["meta"]
+			if not meta.has("current_era_id"):
+				meta["current_era_id"] = "cryogenian"
+			if not meta.has("current_ecosystem_id"):
+				meta["current_ecosystem_id"] = "cryo_polar_ice"
+			if not meta.has("ecosystem_completions"):
+				meta["ecosystem_completions"] = {}
+			if not meta.has("eras_unlocked"):
+				meta["eras_unlocked"] = ["cryogenian"]
+			# Cryogenian only allows fungi — ensure the player has fungi
+			# unlocked so they have something to play in the new era.
+			var unlocked: Array = meta.get("unlocked_kingdoms", []) as Array
+			if not unlocked.has("fungi"):
+				unlocked.append("fungi")
+				meta["unlocked_kingdoms"] = unlocked
+			var tree: Dictionary = meta.get("evolution_tree", {}) as Dictionary
+			if not bool(tree.get("unlock_fungi", false)):
+				tree["unlock_fungi"] = true
+				meta["evolution_tree"] = tree
 	return old
 
 
@@ -222,11 +244,15 @@ func _build_default_save() -> Dictionary:
 		"save_version": SAVE_VERSION,
 		"saved_at_unix": Time.get_unix_time_from_system(),
 		"meta": {
-			"unlocked_kingdoms": ["plantae"],
-			"evolution_tree": {},
+			"unlocked_kingdoms": ["plantae", "fungi"],
+			"evolution_tree": {"unlock_fungi": true},
 			"discovery_log": {},
 			"kingdoms_played": [],
 			"niches_played": [],
+			"current_era_id": "cryogenian",
+			"current_ecosystem_id": "cryo_polar_ice",
+			"ecosystem_completions": {},
+			"eras_unlocked": ["cryogenian"],
 			"statistics": {
 				"prestige_count": 0,
 				"evolution_points_balance": 0,

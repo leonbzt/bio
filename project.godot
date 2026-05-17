@@ -27,6 +27,7 @@ PrestigeSystem="*uid://kyg2ovmw6r6g"
 DiscoveryLog="*uid://dyo5ieebjjabt"
 RunGoalSystem="*uid://b4l5r2ae3kfpa"
 MultiLayerPlacementSystem="*uid://pjh8k2w6m1v0t"
+EraSystem="*res://scripts/autoloads/era_system.gd"
 ColonizationRulesRegistry="*uid://q2r2gbhtvobq"
 
 [display]

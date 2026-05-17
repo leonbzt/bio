@@ -69,6 +69,18 @@ func _refresh_kingdoms() -> void:
 	for child in _kingdom_buttons.get_children():
 		child.queue_free()
 	var kingdoms: Array = GameState.meta_save.get("unlocked_kingdoms", [])
+	# Phase 12: filter by current era's available_kingdoms.
+	var era: EraData = null
+	if has_node("/root/EraSystem"):
+		var era_system: Node = get_node("/root/EraSystem")
+		if era_system.has_method("get_current_era"):
+			era = era_system.get_current_era()
+	if era != null and not era.available_kingdoms.is_empty():
+		var filtered: Array = []
+		for kid in kingdoms:
+			if era.available_kingdoms.has(StringName(kid)):
+				filtered.append(kid)
+		kingdoms = filtered
 	for kingdom_id in kingdoms:
 		var button := Button.new()
 		button.text = "Begin run as %s" % String(kingdom_id).capitalize()
@@ -76,6 +88,10 @@ func _refresh_kingdoms() -> void:
 			_on_kingdom_button_pressed(StringName(kingdom_id))
 		)
 		_kingdom_buttons.add_child(button)
+	if kingdoms.is_empty():
+		var label := Label.new()
+		label.text = "No kingdoms available in this era."
+		_kingdom_buttons.add_child(label)
 
 
 func _on_kingdom_button_pressed(kingdom_id: StringName) -> void:

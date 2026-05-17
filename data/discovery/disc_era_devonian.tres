@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_era_devonian"
+title = "The Warm Returns"
+body = "The ice retreated. The water that was always there opened to the light.
+Something rose from it with a structure that could hold itself up. You are about to be that thing."
+category = &"era"
+trigger_id = &"devonian"

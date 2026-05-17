@@ -25,6 +25,10 @@ func _enter_tree() -> void:
 	EventBus.event_resolved.connect(_on_event_resolved)
 	EventBus.prestige_triggered.connect(_on_prestige_triggered)
 	EventBus.run_started.connect(_on_run_started)
+	# Phase 12 wiring: era + ecosystem + first-era-transition milestone.
+	EventBus.era_changed.connect(_on_era_changed)
+	EventBus.ecosystem_completed.connect(_on_ecosystem_completed)
+	EventBus.era_transition_started.connect(_on_era_transition_started)
 
 
 func _ready() -> void:
@@ -170,6 +174,36 @@ func _on_prestige_triggered(_summary: Dictionary) -> void:
 			var entry := find_entry_for_trigger(&"milestone", milestone_id)
 			if entry != &"":
 				unlock(entry)
+
+
+# Phase 12 wiring -----------------------------------------------------------
+
+func _on_era_changed(era_id: StringName) -> void:
+	if era_id == &"":
+		return
+	var entry := find_entry_for_trigger(&"era", era_id)
+	if entry != &"":
+		unlock(entry)
+
+
+func _on_ecosystem_completed(ecosystem_id: StringName) -> void:
+	if ecosystem_id == &"":
+		return
+	var entry := find_entry_for_trigger(&"ecosystem", ecosystem_id)
+	if entry != &"":
+		unlock(entry)
+
+
+func _on_era_transition_started(_from: StringName, _to: StringName) -> void:
+	var milestone := find_entry_for_trigger(&"milestone", &"first_era_transition")
+	if milestone != &"":
+		unlock(milestone)
+	# Also fire the destination era's entry now (the era_changed signal also
+	# does this when set_current_ecosystem switches eras, but a fresh-load
+	# cold-start might miss it).
+	var era_entry := find_entry_for_trigger(&"era", _to)
+	if era_entry != &"":
+		unlock(era_entry)
 
 
 func _lookup_node(node_id: StringName) -> EvolutionNodeData:

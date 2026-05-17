@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EcosystemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ecosystem_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"cryo_polar_ice"
+display_name = "Polar Ice Cap"
+description = "Thin sun. Thick ice. The fungi here live in the gaps between freezings."
+era_id = &"cryogenian"
+completion_criterion = &"events_survived"
+completion_target = 3.0
+completion_required_niche = &""
+completion_required_kingdom = &"fungi"
+unlock_text = "The cold is older than thought. What survives it survives by waiting."
+complete_text = "Three winters held. The ice did not name you, but you remained."
+biome_preference = &"rich_soil"

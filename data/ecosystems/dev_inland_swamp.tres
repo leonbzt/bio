@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EcosystemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ecosystem_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"dev_inland_swamp"
+display_name = "Inland Swamp"
+description = "Wet. Decomposing. Crowded. The kind of place where two kingdoms learn to share a body."
+era_id = &"devonian"
+completion_criterion = &"biomass_earned"
+completion_target = 500.0
+completion_required_niche = &"lichen"
+completion_required_kingdom = &""
+unlock_text = "Where the water sits, the fungi find the plants. The bargain follows."
+complete_text = "Five hundred units of compounded partnership. The swamp itself is your monument."
+biome_preference = &"rich_soil"

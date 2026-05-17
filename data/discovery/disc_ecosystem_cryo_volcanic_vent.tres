@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_ecosystem_cryo_volcanic_vent"
+title = "The Warmth Below"
+body = "Twenty bodies arranged around a single seam of heat.
+Civilization, defined down — a small one, made of patience."
+category = &"ecosystem"
+trigger_id = &"cryo_volcanic_vent"

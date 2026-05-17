@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="DiscoveryIndex" load_steps=30 format=3]
+[gd_resource type="Resource" script_class="DiscoveryIndex" load_steps=40 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/discovery_index.gd" id="1"]
 [ext_resource type="Resource" path="res://data/discovery/disc_kingdom_plantae.tres" id="2"]
@@ -29,7 +29,17 @@
 [ext_resource type="Resource" path="res://data/discovery/disc_milestone_prestige_25.tres" id="27"]
 [ext_resource type="Resource" path="res://data/discovery/disc_milestone_prestige_50.tres" id="28"]
 [ext_resource type="Resource" path="res://data/discovery/disc_milestone_first_cross_kingdom_node.tres" id="29"]
+[ext_resource type="Resource" path="res://data/discovery/disc_era_cryogenian.tres" id="30"]
+[ext_resource type="Resource" path="res://data/discovery/disc_era_devonian.tres" id="31"]
+[ext_resource type="Resource" path="res://data/discovery/disc_ecosystem_cryo_polar_ice.tres" id="32"]
+[ext_resource type="Resource" path="res://data/discovery/disc_ecosystem_cryo_volcanic_vent.tres" id="33"]
+[ext_resource type="Resource" path="res://data/discovery/disc_ecosystem_cryo_under_ice_sea.tres" id="34"]
+[ext_resource type="Resource" path="res://data/discovery/disc_ecosystem_dev_tidal_pool.tres" id="35"]
+[ext_resource type="Resource" path="res://data/discovery/disc_ecosystem_dev_forest_edge.tres" id="36"]
+[ext_resource type="Resource" path="res://data/discovery/disc_ecosystem_dev_inland_swamp.tres" id="37"]
+[ext_resource type="Resource" path="res://data/discovery/disc_event_mass_extinction.tres" id="38"]
+[ext_resource type="Resource" path="res://data/discovery/disc_milestone_first_era_transition.tres" id="39"]
 
 [resource]
 script = ExtResource("1")
-entries = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29")])
+entries = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36"), ExtResource("37"), ExtResource("38"), ExtResource("39")])

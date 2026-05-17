@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_ecosystem_cryo_polar_ice"
+title = "Patience as a Strategy"
+body = "Three winters held against you. You held against them.
+The ice keeps a ledger. It noted you."
+category = &"ecosystem"
+trigger_id = &"cryo_polar_ice"

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"mass_extinction"
+display_name = "Mass Extinction"
+description = "Most of what you built is gone. The world goes on without it. So do you, in some form."
+trigger_weight = 0.0
+duration_ticks = 1
+payload = {
+"scope": "world",
+"narrative_only": true
+}

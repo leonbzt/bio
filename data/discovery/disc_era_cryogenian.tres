@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_era_cryogenian"
+title = "The First Cold"
+body = "The world was ice for an age. The fungi that survived it survived by waiting.
+You wait now. The cold remembers everyone who has ever asked it to break."
+category = &"era"
+trigger_id = &"cryogenian"

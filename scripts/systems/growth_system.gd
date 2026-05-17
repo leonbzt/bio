@@ -1,12 +1,15 @@
 extends Node
 
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
+const NICHE_INDEX_PATH: String = "res://data/niches/_index.tres"
 const STARTER_SPECIES_BY_KINGDOM := {
 	&"plantae": &"pioneer_grass",
-	&"fungi": &"mycelium_thread"
+	&"fungi": &"mycelium_thread",
+	&"animals": &"common_grazer"
 }
 
 var _all_species: Dictionary[StringName, SpeciesData] = {}
+var _niches_by_id: Dictionary[StringName, NicheData] = {}
 
 @onready var _territory: Node = get_node("../TerritorySystem")
 @onready var _nutrients: Node = get_node("../NutrientSystem")
@@ -15,6 +18,7 @@ var _all_species: Dictionary[StringName, SpeciesData] = {}
 
 func _ready() -> void:
 	_load_species_index()
+	_load_niche_index()
 	EventBus.tick.connect(_on_tick)
 	EventBus.ability_used.connect(_on_ability_used)
 
@@ -31,54 +35,65 @@ func _load_species_index() -> void:
 		_all_species[species.id] = species
 
 
+func _load_niche_index() -> void:
+	_niches_by_id.clear()
+	var index := load(NICHE_INDEX_PATH)
+	if index == null or not (index is NicheIndex):
+		return
+	for niche in (index as NicheIndex).niches:
+		if niche == null:
+			continue
+		_niches_by_id[niche.id] = niche
+
+
 func _on_tick(_delta_seconds: float) -> void:
 	if _all_species.is_empty():
 		return
 	var kingdom_id: StringName = GameState.current_kingdom_id
-	if kingdom_id == &"plantae" or kingdom_id == &"fungi":
-		_tick_single_kingdom(kingdom_id)
-	elif kingdom_id == &"symbiosis":
-		_tick_symbiosis()
-
-
-func _tick_single_kingdom(kingdom_id: StringName) -> void:
-	var species_id: StringName = STARTER_SPECIES_BY_KINGDOM.get(kingdom_id, StringName())
-	if species_id == StringName():
+	if kingdom_id == &"":
 		return
-	var species: SpeciesData = _all_species.get(species_id, null)
+	_tick_kingdom(kingdom_id)
+
+
+func _resolve_active_species(kingdom_id: StringName) -> SpeciesData:
+	var niche_id: StringName = GameState.current_niche_id
+	if niche_id != &"" and _niches_by_id.has(niche_id):
+		var niche: NicheData = _niches_by_id[niche_id]
+		if not niche.species_options.is_empty():
+			return niche.species_options[0]
+	var fallback: StringName = STARTER_SPECIES_BY_KINGDOM.get(kingdom_id, StringName())
+	if fallback == StringName():
+		return null
+	return _all_species.get(fallback, null)
+
+
+func _get_coords_for_kingdom(kingdom_id: StringName) -> Array[Vector2i]:
+	if kingdom_id == &"fungi":
+		return _territory.get_subsurface_owned_coords(&"fungi")
+	return _territory.get_surface_owned_coords(kingdom_id)
+
+
+func _tick_kingdom(kingdom_id: StringName) -> void:
+	var species: SpeciesData = _resolve_active_species(kingdom_id)
 	if species == null:
 		return
-	var coords: Array[Vector2i]
-	if kingdom_id == &"fungi":
-		coords = _territory.get_subsurface_owned_coords(&"fungi")
-	else:
-		coords = _territory.get_surface_owned_coords(&"plantae")
-	_apply_yields(species, coords, kingdom_id, 1.0)
-
-
-func _tick_symbiosis() -> void:
-	var plant_species: SpeciesData = _all_species.get(&"pioneer_grass", null)
-	var fungi_species: SpeciesData = _all_species.get(&"mycelium_thread", null)
-	if plant_species == null and fungi_species == null:
+	if species.layer_count > 1 and not species.layer_species.is_empty():
+		for layer_id in species.layer_species:
+			var layered_species: SpeciesData = _all_species.get(layer_id, null)
+			if layered_species == null:
+				continue
+			var coords := _get_coords_for_kingdom(layered_species.kingdom_id)
+			_apply_yields(layered_species, coords, layered_species.kingdom_id, 1.0)
 		return
-	var surface_coords: Array[Vector2i] = []
-	var subsurface_coords: Array[Vector2i] = []
-	if plant_species != null:
-		surface_coords = _territory.get_surface_owned_coords(&"plantae")
-	if fungi_species != null:
-		subsurface_coords = _territory.get_subsurface_owned_coords(&"fungi")
-	if plant_species != null:
-		_apply_yields(plant_species, surface_coords, &"plantae", 1.0, true)
-	if fungi_species != null:
-		_apply_yields(fungi_species, subsurface_coords, &"fungi", 1.0, true)
+	var coords := _get_coords_for_kingdom(kingdom_id)
+	_apply_yields(species, coords, kingdom_id, 1.0)
 
 
 func _apply_yields(
 	species: SpeciesData,
 	coords: Array[Vector2i],
 	kingdom_id: StringName,
-	base_mult: float,
-	apply_symbiosis_bonus: bool = false
+	base_mult: float
 ) -> void:
 	if species == null or coords.is_empty():
 		return
@@ -116,19 +131,19 @@ func _apply_yields(
 				per_tile *= meta_mult
 				if kingdom_id == &"plantae" and MetaModifiers.is_unlocked(&"soil_memory"):
 					per_tile *= 1.15
-				if _is_tile_mycorrhizal_boosted(coord):
-					per_tile *= 1.30
+				if _is_tile_mycorrhizal_bonded(coord):
+					per_tile *= 1.20
 			elif resource_key == &"decay":
 				per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
+				if _is_tile_mycorrhizal_bonded(coord):
+					per_tile *= 1.20
 			elif resource_key == &"spores":
 				per_tile *= (1.0 + float(trait_mods.get(&"spore_per_tile", 0.0)))
 
-
-			if apply_symbiosis_bonus and _is_tile_symbiotic(coord):
+			if _is_tile_symbiotic(coord):
 				per_tile *= (1.0 + _get_symbiosis_bonus())
-			elif apply_symbiosis_bonus and MetaModifiers.is_unlocked(&"wood_wide_web"):
-				if _is_adjacent_to_symbiotic(coord):
-					per_tile *= 1.15
+			elif MetaModifiers.is_unlocked(&"wood_wide_web") and _is_adjacent_to_symbiotic(coord):
+				per_tile *= 1.15
 
 			total += per_tile
 		if total > 0.0:
@@ -211,12 +226,8 @@ func _get_symbiosis_bonus() -> float:
 
 
 func _get_niche_yield_multiplier() -> float:
-	if GameState.current_niche_id == &"parasitic_plantae":
-		return 2.0
 	return 1.0
 
 
-func _is_tile_mycorrhizal_boosted(coord: Vector2i) -> bool:
-	if GameState.current_niche_id != &"mycorrhizal_fungi":
-		return false
-	return _territory.get_surface_owner(coord) == &"plantae" and _territory.get_subsurface_owner(coord) == &"fungi"
+func _is_tile_mycorrhizal_bonded(coord: Vector2i) -> bool:
+	return bool(_territory.get_tile_data(coord, "mycorrhizal_bond", false))

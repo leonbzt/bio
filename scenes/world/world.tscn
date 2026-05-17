@@ -20,6 +20,8 @@
 [ext_resource type="Script" path="res://scripts/systems/spore_infection_handler.gd" id="19"]
 [ext_resource type="Script" path="res://scripts/systems/ambient_modifier_system.gd" id="20"]
 [ext_resource type="Script" path="res://scripts/systems/parasite_decay_system.gd" id="21"]
+[ext_resource type="Script" path="res://scripts/systems/animal_colonization.gd" id="22"]
+[ext_resource type="Script" path="res://scripts/systems/parasite_steal_system.gd" id="23"]
 
 [node name="World" type="Node2D"]
 
@@ -42,6 +44,9 @@ script = ExtResource("16")
 
 [node name="FungiColonization" type="Node" parent="Systems"]
 script = ExtResource("18")
+
+[node name="AnimalColonization" type="Node" parent="Systems"]
+script = ExtResource("22")
 
 [node name="TerritorySystem" type="Node" parent="Systems"]
 script = ExtResource("5")
@@ -70,6 +75,9 @@ script = ExtResource("20")
 
 [node name="ParasiteDecaySystem" type="Node" parent="Systems"]
 script = ExtResource("21")
+
+[node name="ParasiteStealSystem" type="Node" parent="Systems"]
+script = ExtResource("23")
 
 [node name="AbilitySystem" type="Node" parent="Systems"]
 script = ExtResource("12")

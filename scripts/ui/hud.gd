@@ -27,12 +27,8 @@ const VISIBLE_RESOURCES_BY_KINGDOM := {
 		ResourceLedger.DECAY,
 		ResourceLedger.SPORES
 	],
-	&"symbiosis": [
-		ResourceLedger.BIOMASS,
-		ResourceLedger.NUTRIENTS,
-		ResourceLedger.SUNLIGHT,
-		ResourceLedger.DECAY,
-		ResourceLedger.SPORES
+	&"animals": [
+		ResourceLedger.BIOMASS
 	],
 	&"": [
 		ResourceLedger.BIOMASS,
@@ -46,12 +42,15 @@ const VISIBLE_RESOURCES_BY_KINGDOM := {
 const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
 const NICHE_INDEX_PATH: String = "res://data/niches/_index.tres"
 
-@onready var _labels_container: HBoxContainer = $Bar/Margin/ResourcesRow/Resources
+@onready var _labels_container: Container = $Bar/Margin/ResourcesRow/Resources
 @onready var _tick_indicator: ColorRect = $TickIndicator
 @onready var _abilities_bar: HBoxContainer = $AbilitiesBar
 @onready var _pause_button: Button = $PauseButton
-@onready var _layer_toggle: Button = $LayerToggle
+@onready var _layer_toggle: HBoxContainer = $LayerToggle
+@onready var _layer_plantae_button: Button = $LayerToggle/PlantaeButton
+@onready var _layer_fungi_button: Button = $LayerToggle/FungiButton
 @onready var _niche_badge: Label = $NicheBadge
+@onready var _mycorrhizal_hint: Label = $MycorrhizalHint
 @onready var _toast_panel: PanelContainer = $EventToast
 @onready var _toast_title: Label = $EventToast/ToastContent/ToastTitle
 @onready var _toast_body: Label = $EventToast/ToastContent/ToastBody
@@ -78,7 +77,12 @@ func _ready() -> void:
 	_build_event_index()
 	_build_niche_index()
 	_pause_button.pressed.connect(_on_pause_pressed)
-	_layer_toggle.pressed.connect(_on_layer_toggle_pressed)
+	_layer_plantae_button.pressed.connect(func() -> void:
+		_set_placement_target(&"plantae")
+	)
+	_layer_fungi_button.pressed.connect(func() -> void:
+		_set_placement_target(&"fungi")
+	)
 	EventBus.resource_changed.connect(_on_resource_changed)
 	EventBus.tick.connect(_on_tick)
 	EventBus.input_mode_changed.connect(_on_input_mode_changed)
@@ -92,7 +96,7 @@ func _ready() -> void:
 	EventBus.niche_changed.connect(_on_niche_changed)
 	EventBus.evolution_node_unlocked.connect(func(_id): _refresh_abilities())
 	_refresh_layer_toggle_visibility()
-	_refresh_layer_toggle_label()
+	_refresh_layer_toggle_state()
 	_refresh_resource_visibility()
 	_refresh_niche_badge()
 	_refresh_abilities()
@@ -142,7 +146,7 @@ func _on_replay_finished() -> void:
 
 func _on_run_started(_kingdom_id: StringName) -> void:
 	_refresh_layer_toggle_visibility()
-	_refresh_layer_toggle_label()
+	_refresh_layer_toggle_state()
 	_refresh_resource_visibility()
 	_refresh_niche_badge()
 	_refresh_abilities()
@@ -150,7 +154,7 @@ func _on_run_started(_kingdom_id: StringName) -> void:
 
 func _on_run_loaded_for_layer(_save_version: int) -> void:
 	_refresh_layer_toggle_visibility()
-	_refresh_layer_toggle_label()
+	_refresh_layer_toggle_state()
 	_refresh_resource_visibility()
 	_refresh_niche_badge()
 	_refresh_abilities()
@@ -162,28 +166,27 @@ func _on_niche_changed(_niche_id: StringName) -> void:
 
 
 func _refresh_layer_toggle_visibility() -> void:
-	_layer_toggle.visible = (GameState.current_kingdom_id == &"symbiosis")
+	_layer_toggle.visible = _is_layered_run()
 
-
-func _on_layer_toggle_pressed() -> void:
-	if GameState.current_kingdom_id != &"symbiosis":
+func _set_placement_target(target: StringName) -> void:
+	if not _is_layered_run():
 		return
-	var next: StringName = &"fungi" if GameState.placement_target == &"plantae" else &"plantae"
-	GameState.placement_target = next
-	EventBus.placement_target_changed.emit(next)
+	GameState.placement_target = target
+	EventBus.placement_target_changed.emit(target)
 
 
 func _on_placement_target_changed(_target: StringName) -> void:
-	_refresh_layer_toggle_label()
+	_refresh_layer_toggle_state()
 
 
-func _refresh_layer_toggle_label() -> void:
-	if GameState.placement_target == &"fungi":
-		_layer_toggle.text = "Layer: Fungi"
-		_layer_toggle.modulate = Color(0.78, 0.55, 0.85)
-	else:
-		_layer_toggle.text = "Layer: Plant"
-		_layer_toggle.modulate = Color(0.55, 0.85, 0.55)
+func _refresh_layer_toggle_state() -> void:
+	var target: StringName = GameState.placement_target
+	var plant_active: bool = target == &"plantae"
+	var fungi_active: bool = target == &"fungi"
+	_layer_plantae_button.disabled = plant_active
+	_layer_fungi_button.disabled = fungi_active
+	_layer_plantae_button.modulate = Color(0.55, 0.85, 0.55) if plant_active else Color(1.0, 1.0, 1.0)
+	_layer_fungi_button.modulate = Color(0.78, 0.55, 0.85) if fungi_active else Color(1.0, 1.0, 1.0)
 
 
 func _refresh_resource_visibility() -> void:
@@ -288,9 +291,23 @@ func _refresh_niche_badge() -> void:
 	var niche_id: StringName = GameState.current_niche_id
 	if niche_id == &"" or not _niches_by_id.has(niche_id):
 		_niche_badge.visible = false
+		_mycorrhizal_hint.visible = false
 		return
 	_niche_badge.text = _niches_by_id[niche_id].display_name
 	_niche_badge.visible = true
+	_mycorrhizal_hint.visible = (niche_id == &"mycorrhizal_fungi")
+
+
+func _is_layered_run() -> bool:
+	if has_node("/root/MultiLayerPlacementSystem"):
+		var system: Node = get_node("/root/MultiLayerPlacementSystem")
+		if system != null and system.has_method("is_layered_run"):
+			return bool(system.is_layered_run())
+		if system != null and system.has_meta("is_layered"):
+			return bool(system.get_meta("is_layered"))
+		if system != null and system.has_method("get"):
+			return bool(system.get("is_layered"))
+	return false
 
 
 func _refresh_abilities() -> void:

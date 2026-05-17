@@ -10,8 +10,25 @@ const SUNLIGHT   := &"sunlight"
 const DECAY      := &"decay"
 const SPORES     := &"spores"
 const PRESSURE   := &"population_pressure"
+const PROTEIN    := &"protein"
+const LIFEFORCE  := &"lifeforce"
+const BLOOD      := &"blood_cohesion"
+const GRAY_MATTER := &"gray_matter"
+const MYCELIAL_STABILITY := &"mycelial_stability"
 
-const _KNOWN_IDS: Array[StringName] = [BIOMASS, NUTRIENTS, SUNLIGHT, DECAY, SPORES, PRESSURE]
+const _KNOWN_IDS: Array[StringName] = [
+	BIOMASS,
+	NUTRIENTS,
+	SUNLIGHT,
+	DECAY,
+	SPORES,
+	PRESSURE,
+	PROTEIN,
+	LIFEFORCE,
+	BLOOD,
+	GRAY_MATTER,
+	MYCELIAL_STABILITY
+]
 
 var _amounts: Dictionary[StringName, float] = {}
 

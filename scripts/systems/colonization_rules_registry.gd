@@ -11,6 +11,8 @@ func evaluate(rule: StringName, coord: Vector2i, kingdom_id: StringName, species
 			return _rule_parasitic_plantae(coord, kingdom_id, species, niche)
 		&"mycorrhizal_fungi":
 			return _rule_mycorrhizal_fungi(coord, kingdom_id, species, niche)
+		&"animal_anchor":
+			return _rule_animal_anchor(coord, kingdom_id, species, niche)
 		_:
 			push_warning("ColonizationRulesRegistry: unknown rule %s" % String(rule))
 			return {"valid": false, "cost": {}, "data": {}}
@@ -115,28 +117,34 @@ func _rule_mycorrhizal_fungi(coord: Vector2i, kingdom_id: StringName, species: S
 	if territory.get_subsurface_owner(coord) != &"":
 		return {"valid": false, "cost": {}, "data": {}}
 
-	var owned: Array[Vector2i] = territory.get_subsurface_owned_coords(kingdom_id)
 	var plant_at_or_adjacent: bool = territory.get_surface_owner(coord) == &"plantae"
 	if not plant_at_or_adjacent:
 		for n in neighbors(coord):
 			if territory.get_surface_owner(n) == &"plantae":
 				plant_at_or_adjacent = true
 				break
+	if not plant_at_or_adjacent:
+		return {"valid": false, "cost": {}, "data": {}}
 
-	if owned.is_empty():
-		if not plant_at_or_adjacent:
-			return {"valid": false, "cost": {}, "data": {}}
-		return {"valid": true, "cost": {}, "data": {}}
+	var cost: Dictionary = _apply_trait_cost_modifiers(_resolve_cost(species, niche), species)
+	var data := {}
+	if territory.get_surface_owner(coord) == &"plantae":
+		data["mycorrhizal_bond"] = true
+	return {"valid": true, "cost": cost, "data": data}
 
-	var owned_set: Dictionary = {}
-	for c in owned:
-		owned_set[c] = true
-	var has_neighbor: bool = plant_at_or_adjacent
-	if not has_neighbor:
-		for n in neighbors(coord):
-			if owned_set.has(n):
-				has_neighbor = true
-				break
+
+func _rule_animal_anchor(coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
+	var territory: Node = _get_territory()
+	if territory == null:
+		return {"valid": false, "cost": {}, "data": {}}
+	if territory.get_surface_owner(coord) != &"":
+		return {"valid": false, "cost": {}, "data": {}}
+
+	var has_neighbor: bool = false
+	for n in neighbors(coord):
+		if territory.get_surface_owner(n) != &"" or territory.get_subsurface_owner(n) != &"":
+			has_neighbor = true
+			break
 	if not has_neighbor:
 		return {"valid": false, "cost": {}, "data": {}}
 

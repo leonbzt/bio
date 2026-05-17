@@ -18,3 +18,13 @@ extends Resource
 
 # Optional visual variant key used by tile rendering.
 @export var tile_variant: StringName = &""
+
+# Layered niches allow multi-layer placement (surface + subsurface).
+@export var expects_layered: bool = false
+
+# Optional parasitic targeting list (for parasitic_plantae niche).
+@export var parasitic_targets: Array[StringName] = []
+
+# Optional conditional start bonus applied by PrestigeSystem.
+@export var conditional_start_bonus: Dictionary = {}
+@export var conditional_start_bonus_requires: StringName = &""

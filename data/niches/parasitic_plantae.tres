@@ -14,5 +14,6 @@ colonization_rule = &"parasitic_plantae"
 cost_override = {
 "biomass": 3.0
 }
+parasitic_targets = [&"plantae", &"fungi"]
 unlock_node_id = &"unlock_parasitic_plantae"
 tile_variant = &"parasite"

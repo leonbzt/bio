@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 9
+const SAVE_VERSION: int = 10
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -193,6 +193,27 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 				run["goal_progress"] = {}
 			if not run.has("goal_met"):
 				run["goal_met"] = false
+	if from_version < 10:
+		# v9 -> v10: retire symbiosis, add stub resources.
+		if old.has("meta") and old["meta"] is Dictionary:
+			var meta: Dictionary = old["meta"]
+			var unlocked: Array = meta.get("unlocked_kingdoms", []) as Array
+			unlocked.erase("symbiosis")
+			meta["unlocked_kingdoms"] = unlocked
+			var played: Array = meta.get("kingdoms_played", []) as Array
+			played.erase("symbiosis")
+			meta["kingdoms_played"] = played
+		if old.has("run") and old["run"] is Dictionary:
+			var run: Dictionary = old["run"]
+			if String(run.get("kingdom_id", "")) == "symbiosis":
+				run["kingdom_id"] = "fungi"
+				run["niche_id"] = "lichen"
+			var resources_raw: Variant = run.get("resources", {})
+			var resources: Dictionary = resources_raw as Dictionary if resources_raw is Dictionary else {}
+			for key in ["protein", "lifeforce", "blood_cohesion", "gray_matter", "mycelial_stability"]:
+				if not resources.has(key):
+					resources[key] = 0.0
+			run["resources"] = resources
 	return old
 
 
@@ -217,7 +238,19 @@ func _build_default_save() -> Dictionary:
 			"niche_id": "",
 			"run_seed": 0,
 			"tick_count": 0,
-			"resources": {},
+			"resources": {
+				"biomass": 0.0,
+				"nutrients": 0.0,
+				"sunlight": 0.0,
+				"decay": 0.0,
+				"spores": 0.0,
+				"population_pressure": 0.0,
+				"protein": 0.0,
+				"lifeforce": 0.0,
+				"blood_cohesion": 0.0,
+				"gray_matter": 0.0,
+				"mycelial_stability": 0.0
+			},
 			"biome_map": {},
 			"tiles": [],
 			"organisms": [],

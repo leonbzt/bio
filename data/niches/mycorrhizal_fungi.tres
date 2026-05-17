@@ -12,7 +12,7 @@ kingdom_id = &"fungi"
 species_options = Array[Resource]([ExtResource("2")])
 colonization_rule = &"mycorrhizal_fungi"
 cost_override = {
-"spores": 2.0
+"spores": 4.0
 }
 unlock_node_id = &"unlock_mycorrhizal_fungi"
 tile_variant = &"mycorrhizal"

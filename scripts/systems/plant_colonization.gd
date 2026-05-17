@@ -46,7 +46,7 @@ func _on_tile_tapped(coord: Vector2i) -> void:
 func _is_active() -> bool:
 	if GameState.current_kingdom_id == KINGDOM_ID:
 		return true
-	if GameState.current_kingdom_id == &"symbiosis" and GameState.placement_target == KINGDOM_ID:
+	if GameState.placement_target == KINGDOM_ID:
 		return true
 	return false
 

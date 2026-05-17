@@ -68,10 +68,7 @@ func start_run(kingdom_id: StringName, niche_id: StringName = &"") -> void:
 	if not is_kingdom_unlocked(kingdom_id):
 		return
 	var resolved_niche: StringName = _resolve_niche(kingdom_id, niche_id)
-	# Symbiosis has no niches of its own; sub-systems fall back to defaults
-	# per kingdom (plantae→photosynthesizer, fungi→decomposer). Phase 10 removes
-	# the symbiosis kingdom entirely; until then, allow empty niche_id through.
-	if resolved_niche == &"" and kingdom_id != &"symbiosis":
+	if resolved_niche == &"":
 		push_error("PrestigeSystem: no valid niche for kingdom %s" % String(kingdom_id))
 		return
 	GameState.current_kingdom_id = kingdom_id
@@ -85,16 +82,11 @@ func start_run(kingdom_id: StringName, niche_id: StringName = &"") -> void:
 			GameState.run_save["spore_distribution_charges"] = 0
 	GameState.run_seed = randi()
 	GameState.is_run_active = true
-	if kingdom_id == &"symbiosis":
-		GameState.placement_target = &"plantae"
-	else:
-		GameState.placement_target = kingdom_id
+	GameState.placement_target = kingdom_id
 	EventBus.placement_target_changed.emit(GameState.placement_target)
 	EventBus.niche_changed.emit(resolved_niche)
 	EventBus.run_started.emit(kingdom_id)
-	if kingdom_id == &"symbiosis" and MetaModifiers.is_unlocked(&"symbiotic_generosity"):
-		ResourceLedger.add(ResourceLedger.BIOMASS, 10.0)
-		ResourceLedger.add(ResourceLedger.NUTRIENTS, 5.0)
+	_apply_conditional_start_bonus(resolved_niche)
 	SaveSystem.save_now()
 
 
@@ -124,6 +116,31 @@ func get_niches_for_kingdom(kingdom_id: StringName, only_unlocked: bool = true) 
 				continue
 		result.append(niche)
 	return result
+
+
+func _get_niche_by_id(niche_id: StringName) -> NicheData:
+	var index := load("res://data/niches/_index.tres")
+	if index == null or not (index is NicheIndex):
+		return null
+	for niche in (index as NicheIndex).niches:
+		if niche != null and niche.id == niche_id:
+			return niche
+	return null
+
+
+func _apply_conditional_start_bonus(niche_id: StringName) -> void:
+	var niche := _get_niche_by_id(niche_id)
+	if niche == null:
+		return
+	if niche.conditional_start_bonus.is_empty():
+		return
+	if niche.conditional_start_bonus_requires != &"" and not MetaModifiers.is_unlocked(niche.conditional_start_bonus_requires):
+		return
+	for key in niche.conditional_start_bonus.keys():
+		var amount: float = float(niche.conditional_start_bonus[key])
+		if amount == 0.0:
+			continue
+		ResourceLedger.add(StringName(key), amount)
 
 
 func is_node_unlocked(node_id: StringName) -> bool:
@@ -221,7 +238,19 @@ func _reset_run_state() -> void:
 		"niche_id": "",
 		"run_seed": 0,
 		"tick_count": 0,
-		"resources": {},
+		"resources": {
+			"biomass": 0.0,
+			"nutrients": 0.0,
+			"sunlight": 0.0,
+			"decay": 0.0,
+			"spores": 0.0,
+			"population_pressure": 0.0,
+			"protein": 0.0,
+			"lifeforce": 0.0,
+			"blood_cohesion": 0.0,
+			"gray_matter": 0.0,
+			"mycelial_stability": 0.0
+		},
 		"biome_map": {},
 		"tiles": [],
 		"organisms": [],

@@ -1,6 +1,6 @@
 extends Node
 
-const KINGDOM_ID: StringName = &"fungi"
+const KINGDOM_ID: StringName = &"animals"
 @onready var _territory: Node = get_node("../TerritorySystem")
 @onready var _rules: Node = get_node("/root/ColonizationRulesRegistry")
 
@@ -35,7 +35,7 @@ func _on_tile_tapped(coord: Vector2i) -> void:
 	var cost: Dictionary = result.get("cost", {}) as Dictionary
 	if not cost.is_empty() and not ResourceLedger.spend_bundle(cost):
 		return
-	var ok: bool = _territory.add_subsurface(coord, KINGDOM_ID, niche.tile_variant)
+	var ok: bool = _territory.add_surface(coord, KINGDOM_ID, niche.tile_variant)
 	if ok:
 		var data_extras: Dictionary = result.get("data", {}) as Dictionary
 		for key in data_extras.keys():
@@ -55,7 +55,7 @@ func _build_niche_index() -> void:
 	_niches_by_id.clear()
 	var index := load("res://data/niches/_index.tres")
 	if index == null or not (index is NicheIndex):
-		push_error("FungiColonization: missing niche index")
+		push_error("AnimalColonization: missing niche index")
 		return
 	for niche in (index as NicheIndex).niches:
 		if niche == null:
@@ -71,12 +71,12 @@ func _get_active_niche() -> NicheData:
 	for niche in _niches_by_id.values():
 		if niche.kingdom_id == KINGDOM_ID:
 			return niche
-	push_error("FungiColonization: no niche available for kingdom %s" % String(KINGDOM_ID))
+	push_error("AnimalColonization: no niche available for kingdom %s" % String(KINGDOM_ID))
 	return null
 
 
 func _get_species_for_niche(niche: NicheData) -> SpeciesData:
 	if niche.species_options.is_empty():
-		push_error("FungiColonization: niche %s has no species" % String(niche.id))
+		push_error("AnimalColonization: niche %s has no species" % String(niche.id))
 		return null
 	return niche.species_options[0]

@@ -75,6 +75,11 @@ extends Resource
 
 # Optional: HP. Structures with hp > 0 can be damaged by events.
 @export var hp: float = 0.0
+
+# Default false: structure dies with the run on prestige.
+# Set true on the small subset designed to leave a footprint across runs
+# (e.g., destroyed-Reef ruins that future runs can build on).
+@export var persists_across_prestige: bool = false
 ```
 
 ### `scripts/autoloads/structure_registry.gd`
@@ -132,15 +137,23 @@ When `GrowthSystem._apply_yields` iterates owned tiles, it should skip cells whe
 | Ecosystem completion (Phase 12) | Some ecosystems require a specific structure to "complete": "Build a Coral Reef in this tidal pool" instead of generic tile/biomass thresholds. |
 | Tile history | When a structure is destroyed, leaves a *ruin* footprint in tile history that persists longer or carries more weight than ordinary tile history. (See ROADMAP § Parked ideas — tile history is also parked; the combination is a Tier 2+ possibility.) |
 
-## Open design questions
+## Locked answers (2026-05-17)
+
+4. **Structure persistence vs. prestige**: **most structures don't persist** (they're run state). A small subset can be flagged `persists_across_prestige: bool = true` (default `false`) for designed-to-survive cases — e.g., the ruins of a destroyed Reef leaving a `meta.persistent_structures` footprint that future runs build on. Use sparingly; persistence is the exception.
+3. **Player anticipation**: **player discovers patterns by finding them, with light guidance.** Not a heavy ghost-preview overlay. Concrete mechanisms (pick one or layer them when implementing):
+   - **Post-formation toast + indexing**: the moment a structure forms, a HUD toast names it ("You built a Fairy Ring!"). The pattern is then added to a player-visible "Structures Index" (pause-menu entry, similar shape to the discovery log). The first formation is a surprise; subsequent formations are deliberate.
+   - **Discovery-log hints**: structure formation triggers a discovery entry whose voice text *hints at related patterns* ("Where the fungi grew in a ring, the soil remembers — and other rings will follow"). Players who read the log get directional nudges without being told the exact pattern.
+   - **"Near completion" subtle pulse**: when the player's last placement was 1–2 tiles away from completing a structure, the candidate cells glow faintly for a few seconds. Off by default; an evolution-tree node (`pattern_intuition` or similar) unlocks it.
+   The first two are content; the third is mechanical and can be unlocked. Together they let players progress from "I keep accidentally building things — what's happening?" to "I know exactly what to plant where."
+
+## Remaining open questions
 
 1. **Pattern matching cost**: 32×48 grid × N structures × per-colonization scan could get expensive. Mitigate by indexing structures by their anchor-cell owner requirement, scanning only matching candidates.
 2. **Multi-layer structures**: a Tree includes both root (subsurface) and canopy (surface). Does the structure occupy both layers as a single entity, or are they separate? Lean: single entity, the pattern spec just references both layers per cell.
-3. **Player anticipation**: how does the player see "I'm one tile away from a structure"? Options: ghost preview overlay on potential anchor cells; a "structures available" panel listing what they could build with their current tile layout; no preview (let the player learn patterns from discovery log).
-4. **Structure persistence vs. prestige**: do structures reset on prestige or persist? Lean: reset (it's run state). Long-arc memory comes from tile history (parked) and discovery log (existing), not structures.
 5. **Movability**: can a structure be moved/relocated, or only built/destroyed? Lean: only built/destroyed. Movement adds huge complexity.
 6. **Stacking**: can multiple structures share cells? Lean: no, mutually exclusive — one cell, one structure.
 7. **Player-driven destruction**: should the player be able to *intentionally* dismantle a structure to free its cells? Lean: yes, via a "Dismantle" ability that returns part of the resource cost. Otherwise structures become permanent commitments.
+8. **Persistence storage shape**: for the special-persistent subset, where does the data live? Lean: `meta.persistent_structures: Array[Dictionary]` mirroring `run.structures` but in meta. On prestige, structures with `persists_across_prestige = true` move from run to meta; on run start they hydrate back from meta into the fresh run.
 
 ## Implementation phasing
 

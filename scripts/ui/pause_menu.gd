@@ -17,6 +17,9 @@ func _ready() -> void:
 	_reset_dialog.dialog_text = "Delete your local save? This cannot be undone."
 	_reset_dialog.ok_button_text = "Reset"
 	_reset_dialog.cancel_button_text = "Cancel"
+	EventBus.goal_met.connect(_on_goal_met)
+	EventBus.run_started.connect(func(_k): _reset_prestige_glow())
+	_reset_prestige_glow()
 
 
 func open() -> void:
@@ -44,6 +47,25 @@ func _update_prestige_label() -> void:
 		_prestige_button.text = "Prestige (earn %d EP)" % reward
 	else:
 		_prestige_button.text = "Prestige"
+
+
+func _on_goal_met() -> void:
+	_start_prestige_glow()
+
+
+func _start_prestige_glow() -> void:
+	var tween := create_tween().set_loops()
+	tween.tween_property(_prestige_button, "modulate", Color(1.0, 0.95, 0.55, 1.0), 0.8)
+	tween.tween_property(_prestige_button, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.8)
+	_prestige_button.set_meta("_glow_tween", tween)
+
+
+func _reset_prestige_glow() -> void:
+	var existing: Variant = _prestige_button.get_meta("_glow_tween", null)
+	if existing is Tween:
+		(existing as Tween).kill()
+	_prestige_button.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_prestige_button.remove_meta("_glow_tween")
 
 
 func _on_prestige_pressed() -> void:

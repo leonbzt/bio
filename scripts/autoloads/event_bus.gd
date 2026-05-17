@@ -41,6 +41,8 @@ signal run_started(kingdom_id: StringName)
 signal niche_changed(niche_id: StringName)
 signal prestige_triggered(summary: Dictionary)
 signal run_loaded(save_version: int)
+signal goal_progress_changed(progress: Dictionary)
+signal goal_met()
 
 # Offline progress
 signal replay_started(total_ticks: int)

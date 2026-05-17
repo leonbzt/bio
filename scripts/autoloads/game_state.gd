@@ -12,6 +12,7 @@ var is_run_active: bool = false
 var last_save_unix: int = 0
 
 const INPUT_MODE_COLONIZE: StringName = &"colonize"
+const INPUT_MODE_TARGET: StringName = &"target_ability"
 var input_mode: StringName = INPUT_MODE_COLONIZE
 
 # Symbiosis runs let the player toggle which layer the next tap targets.

@@ -206,3 +206,36 @@ func test_migrate_v0_cascades_to_v6() -> void:
 	assert_true(migrated["meta"].has("niches_played"))
 	assert_true(migrated["run"].has("event_first_fires_seen"))
 	assert_eq(migrated["run"]["niche_id"], "photosynthesizer")
+
+
+func test_migrate_v8_adds_goal_fields() -> void:
+	var v8 := {
+		"save_version": 8,
+		"meta": {"unlocked_kingdoms": ["plantae"], "evolution_tree": {}, "statistics": {}, "discovery_log": {}, "kingdoms_played": [], "niches_played": []},
+		"run": {
+			"kingdom_id": "plantae",
+			"niche_id": "photosynthesizer",
+			"tiles": [],
+			"resources": {},
+			"biome_map": {},
+			"organisms": [],
+			"active_events": [],
+			"event_first_fires_seen": [],
+			"statistics": {"total_biomass_earned": 0.0, "tiles_colonized": 0, "waves_defeated": 0}
+		}
+	}
+	var migrated := SaveSystem.migrate(v8, 8)
+	assert_true(migrated["run"].has("goal_id"))
+	assert_eq(migrated["run"]["goal_id"], "")
+	assert_true(migrated["run"].has("goal_progress"))
+	assert_eq(migrated["run"]["goal_progress"], {})
+	assert_true(migrated["run"].has("goal_met"))
+	assert_false(migrated["run"]["goal_met"])
+
+
+func test_migrate_v0_cascades_to_v9() -> void:
+	var v0 := {"save_version": 0, "meta": {}, "run": {"kingdom": "plantae"}}
+	var migrated := SaveSystem.migrate(v0, 0)
+	assert_true(migrated["run"].has("goal_id"))
+	assert_eq(migrated["run"]["niche_id"], "photosynthesizer")
+	assert_true(migrated["run"].has("event_first_fires_seen"))

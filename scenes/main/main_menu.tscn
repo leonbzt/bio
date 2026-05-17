@@ -18,6 +18,10 @@ custom_minimum_size = Vector2(240, 0)
 [node name="Title" type="Label" parent="CenterContainer/VBoxContainer"]
 text = ""
 
+[node name="GenerationsLabel" type="Label" parent="CenterContainer/VBoxContainer"]
+visible = false
+text = ""
+
 [node name="PlayButton" type="Button" parent="CenterContainer/VBoxContainer"]
 text = ""
 

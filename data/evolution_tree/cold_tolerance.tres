@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EvolutionNodeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/evolution_node_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"cold_tolerance"
+display_name = "Cold Tolerance"
+description = "Hyphae cluster against the cold and survive what the warm world cannot. Unlocks Bundle during cool spells."
+prerequisites = [&"unlock_fungi"]
+meta_cost = {
+"evolution_points": 8
+}
+grants_traits = []
+grants_kingdoms = []
+wing = &"fungi"
+tier = 2

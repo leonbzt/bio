@@ -68,6 +68,8 @@ signal run_started(kingdom_id: StringName)
 signal niche_changed(niche_id: StringName)
 signal prestige_triggered(summary: Dictionary)
 signal run_loaded(save_version: int)
+signal goal_progress_changed(progress: Dictionary)
+signal goal_met()
 
 # Offline progress
 signal replay_started(total_ticks: int)
@@ -165,6 +167,9 @@ Save schema:
       {"id": "herbivore_wave", "ticks_remaining": 45, "payload": {"spawn_count": 3}}
     ],
     "event_first_fires_seen": [],
+    "goal_id": "",
+    "goal_progress": {},
+    "goal_met": false,
     "statistics": {
       "total_biomass_earned": 1247.5,
       "tiles_colonized": 18,
@@ -288,6 +293,32 @@ class_name DiscoveryEntry extends Resource
 @export var trigger_id: StringName
 ```
 
+### `AbilityData` (Phase 11+)
+```gdscript
+class_name AbilityData extends Resource
+@export var id: StringName
+@export var display_name: String
+@export var description: String
+@export var cost: Dictionary
+@export var unlock_node_id: StringName
+@export var requires_event_active: StringName
+@export var target_mode: StringName
+@export var radius: int
+@export var magnitude: float
+@export var extra_payload: Dictionary
+```
+
+### `PerRunGoalData` (Phase 11+)
+```gdscript
+class_name PerRunGoalData extends Resource
+@export var id: StringName
+@export var display_text: String
+@export var tracker: StringName
+@export var target: float
+@export var niches: Array[StringName]
+@export var kingdoms: Array[StringName]
+```
+
 ### `NicheData` (Phase 8+)
 ```gdscript
 class_name NicheData extends Resource
@@ -325,6 +356,7 @@ Each gameplay system is a single `.gd` script attached to a node under `world.ts
 | `EvolutionSystem` | `scripts/systems/evolution_system.gd` | input | `trait_unlocked`, `evolution_node_unlocked` |
 | `PrestigeSystem` | `scripts/systems/prestige_system.gd` | UI button signals | `prestige_triggered`, `run_started`, `evolution_node_unlocked` |
 | `DiscoveryLog` | `scripts/autoloads/discovery_log.gd` | `evolution_node_unlocked`, `niche_changed`, `event_resolved`, `prestige_triggered` | `discovery_unlocked` |
+| `RunGoalSystem` | `scripts/autoloads/run_goal_system.gd` | `run_started`, `tile_colonized`, `event_resolved`, `organism_died`, `evolution_node_unlocked`, `tick` | `goal_progress_changed`, `goal_met` |
 | `RunStatsTracker` | `scripts/systems/run_stats_tracker.gd` | `resource_changed`, `tile_colonized`, `event_resolved` | — (writes only to `GameState.run_save.statistics`) |
 | `OfflineProgress` | `scripts/systems/offline_progress.gd` | `run_loaded` | `replay_started`, `replay_finished`; drives `force_tick(n)` on TickClock |
 
@@ -399,7 +431,9 @@ Increment `SAVE_VERSION` and add a `migrate()` case any time the JSON schema cha
 | v4 | tiles split into `surface_owner` / `subsurface_owner` |
 | v5 | `run.niche_id` added (defaults: plantae→`photosynthesizer`, fungi→`decomposer`, others→`""`); tile `data.parasite_decay_ticks` may be present; tile `data.surface_variant` / `data.subsurface_variant` may be present |
 | v6 | `meta.discovery_log`, `meta.kingdoms_played`, `meta.niches_played`, `run.event_first_fires_seen` added |
+| v7 | niche id rename `parasite_plantae` → `parasitic_plantae` |
+| v9 | `run.goal_id`, `run.goal_progress`, `run.goal_met` added |
 
 ---
 
-**Last updated**: Phase 8 niche system. Update this doc whenever a contract changes; do not update it speculatively.
+**Last updated**: Phase 11 goals + abilities scaffolding. Update this doc whenever a contract changes; do not update it speculatively.

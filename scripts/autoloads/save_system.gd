@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 7
+const SAVE_VERSION: int = 9
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -180,6 +180,19 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 				if String(played[i]) == "parasite_plantae":
 					played[i] = "parasitic_plantae"
 			meta["niches_played"] = played
+	if from_version < 8:
+		# v7 -> v8: reserved for Phase 10.
+		pass
+	if from_version < 9:
+		# v8 -> v9: add per-run goal fields (tile_history deferred).
+		if old.has("run") and old["run"] is Dictionary:
+			var run: Dictionary = old["run"]
+			if not run.has("goal_id"):
+				run["goal_id"] = ""
+			if not run.has("goal_progress"):
+				run["goal_progress"] = {}
+			if not run.has("goal_met"):
+				run["goal_met"] = false
 	return old
 
 
@@ -210,6 +223,9 @@ func _build_default_save() -> Dictionary:
 			"organisms": [],
 			"active_events": [],
 			"event_first_fires_seen": [],
+			"goal_id": "",
+			"goal_progress": {},
+			"goal_met": false,
 			"statistics": {
 				"total_biomass_earned": 0.0,
 				"tiles_colonized": 0,

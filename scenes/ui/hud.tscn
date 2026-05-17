@@ -1,12 +1,43 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/goal_banner.gd" id="2"]
 
 [node name="HUD" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1")
 mouse_filter = 2
+
+[node name="GoalBanner" type="PanelContainer" parent="."]
+anchor_right = 1.0
+custom_minimum_size = Vector2(0, 36)
+offset_left = 8.0
+offset_top = 44.0
+offset_right = -8.0
+offset_bottom = 80.0
+script = ExtResource("2")
+
+[node name="HBox" type="HBoxContainer" parent="GoalBanner"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="GoalText" type="Label" parent="GoalBanner/HBox"]
+text = "Reach 30 tiles colonized"
+
+[node name="Spacer" type="Control" parent="GoalBanner/HBox"]
+size_flags_horizontal = 3
+
+[node name="ProgressLabel" type="Label" parent="GoalBanner/HBox"]
+text = "0 / 30"
+
+[node name="ProgressBar" type="ProgressBar" parent="GoalBanner"]
+anchor_left = 0.0
+anchor_right = 1.0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -4.0
+offset_bottom = 0.0
 
 [node name="Bar" type="PanelContainer" parent="."]
 anchor_right = 1.0
@@ -69,16 +100,16 @@ offset_right = 70.0
 offset_bottom = 20.0
 text = "Photosynthesizer"
 
-[node name="ToxinBloomButton" type="Button" parent="."]
+[node name="AbilitiesBar" type="HBoxContainer" parent="."]
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -120.0
+offset_left = -220.0
 offset_top = -56.0
 offset_right = -16.0
 offset_bottom = -16.0
-text = "Toxin Bloom"
+alignment = 2
 
 [node name="LayerToggle" type="Button" parent="."]
 visible = false

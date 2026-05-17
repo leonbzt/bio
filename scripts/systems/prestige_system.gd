@@ -228,6 +228,9 @@ func _reset_run_state() -> void:
 		"active_events": [],
 		"event_first_fires_seen": [],
 		"spore_distribution_charges": 0,
+		"goal_id": "",
+		"goal_progress": {},
+		"goal_met": false,
 		"statistics": {
 			"total_biomass_earned": 0.0,
 			"tiles_colonized": 0,

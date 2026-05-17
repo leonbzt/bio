@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ability_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"bundle"
+display_name = "Bundle"
+description = "Cluster mycelium around a hyphal node. Warmed tiles ignore cool spell yield reduction for 10 seconds."
+cost = {
+"decay": 20.0
+}
+unlock_node_id = &"cold_tolerance"
+requires_event_active = &"cool_spell"
+target_mode = &"target_tile"
+radius = 1
+magnitude = 10.0
+extra_payload = {
+"effect": "warm"
+}

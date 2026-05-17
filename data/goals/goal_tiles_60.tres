@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="PerRunGoalData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/per_run_goal_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"tiles_60"
+display_text = "Reach 60 tiles colonized"
+tracker = &"tiles_colonized"
+target = 60.0
+niches = []
+kingdoms = []

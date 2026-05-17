@@ -10,12 +10,14 @@ var _spread_counter: int = 0
 var _spread_every: int = 5
 var _is_active: bool = false
 var _is_replaying: bool = false
+var _culled_set: Dictionary[Vector2i, bool] = {}
 
 
 func _ready() -> void:
 	EventBus.event_started.connect(_on_event_started)
 	EventBus.event_resolved.connect(_on_event_resolved)
 	EventBus.tick.connect(_on_tick)
+	EventBus.ability_used.connect(_on_ability_used)
 	EventBus.replay_started.connect(func(_n): _is_replaying = true)
 	EventBus.replay_finished.connect(func(): _is_replaying = false)
 
@@ -26,12 +28,24 @@ func _on_event_started(event_id: StringName, payload: Dictionary) -> void:
 	_is_active = true
 	_spread_counter = 0
 	_spread_every = int(payload.get("spread_every_ticks", 5))
+	_culled_set.clear()
 
 
 func _on_event_resolved(event_id: StringName, _outcome: StringName) -> void:
 	if event_id != EVENT_ID:
 		return
 	_is_active = false
+	_culled_set.clear()
+
+
+func _on_ability_used(id: StringName, payload: Dictionary) -> void:
+	if id != &"cull":
+		return
+	var coord: Vector2i = payload.get("coord", Vector2i.ZERO)
+	var radius: int = int(payload.get("radius_tiles", 0))
+	for dx in range(-radius, radius + 1):
+		for dy in range(-radius, radius + 1):
+			_culled_set[Vector2i(coord.x + dx, coord.y + dy)] = true
 
 
 func _on_tick(_delta: float) -> void:
@@ -61,6 +75,8 @@ func _try_spread_one() -> void:
 			if neighbor.x >= int(_tile_grid.GRID_WIDTH) or neighbor.y >= int(_tile_grid.GRID_HEIGHT):
 				continue
 			if seen.has(neighbor):
+				continue
+			if _culled_set.has(neighbor):
 				continue
 			if _territory.get_subsurface_owner(neighbor) != &"":
 				continue

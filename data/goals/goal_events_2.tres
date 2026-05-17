@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="PerRunGoalData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/per_run_goal_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"events_2"
+display_text = "Survive 2 ecological events"
+tracker = &"events_survived"
+target = 2.0
+niches = []
+kingdoms = []

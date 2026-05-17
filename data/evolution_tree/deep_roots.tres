@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EvolutionNodeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/evolution_node_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"deep_roots"
+display_name = "Deep Roots"
+description = "Plant roots reach water reservoirs the surface forgets. Unlocks Irrigate during droughts."
+prerequisites = [&"pioneer_resilience"]
+meta_cost = {
+"evolution_points": 8
+}
+grants_traits = []
+grants_kingdoms = []
+wing = &"plantae"
+tier = 2

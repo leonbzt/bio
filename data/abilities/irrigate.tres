@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ability_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"irrigate"
+display_name = "Irrigate"
+description = "Channel reserves into the soil during drought. +5 nutrients per owned tile in radius."
+cost = {
+"biomass": 30.0
+}
+unlock_node_id = &"deep_roots"
+requires_event_active = &"drought"
+target_mode = &"target_tile"
+radius = 3
+magnitude = 5.0
+extra_payload = {}

@@ -16,6 +16,7 @@ var _all_species: Dictionary[StringName, SpeciesData] = {}
 func _ready() -> void:
 	_load_species_index()
 	EventBus.tick.connect(_on_tick)
+	EventBus.ability_used.connect(_on_ability_used)
 
 
 func _load_species_index() -> void:
@@ -104,7 +105,12 @@ func _apply_yields(
 				var biome: BiomeData = _nutrients.get_biome_at(coord)
 				if biome == null:
 					continue
-				per_tile *= biome.sunlight_per_tick * sun_mult
+				var local_sun_mult := sun_mult
+				if _is_tile_warmed(coord) and _ambient.has_method("get_event_multiplier"):
+					var cool_mult: float = float(_ambient.get_event_multiplier(&"cool_spell", &"sunlight_multiplier"))
+					if cool_mult > 0.0:
+						local_sun_mult = sun_mult / cool_mult
+				per_tile *= biome.sunlight_per_tick * local_sun_mult
 				per_tile *= _get_niche_yield_multiplier()
 				per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
 				per_tile *= meta_mult
@@ -129,6 +135,18 @@ func _apply_yields(
 			ResourceLedger.add(resource_key, total)
 	if extra_biomass > 0.0:
 		ResourceLedger.add(ResourceLedger.BIOMASS, extra_biomass)
+
+
+func _on_ability_used(id: StringName, payload: Dictionary) -> void:
+	if id != &"bundle":
+		return
+	var coord: Vector2i = payload.get("coord", Vector2i.ZERO)
+	var duration: float = float(payload.get("magnitude", 0.0))
+	if duration <= 0.0:
+		return
+	var until: int = int(Time.get_unix_time_from_system() + duration)
+	for offset in [Vector2i.ZERO, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		_territory.set_tile_data(coord + offset, "warmed_until_unix", until)
 
 
 func _is_tile_symbiotic(coord: Vector2i) -> bool:
@@ -162,6 +180,11 @@ func _is_adjacent_to_plantae(coord: Vector2i) -> bool:
 		if _territory.get_surface_owner(coord + offset) == &"plantae":
 			return true
 	return false
+
+
+func _is_tile_warmed(coord: Vector2i) -> bool:
+	var until: int = int(_territory.get_tile_data(coord, "warmed_until_unix", 0))
+	return until > int(Time.get_unix_time_from_system())
 
 
 func _compute_trait_modifiers(species: SpeciesData) -> Dictionary:

@@ -16,6 +16,7 @@ const MENU_SCENE: String = "res://scenes/main/main_menu.tscn"
 const PRESTIGE_SCENE: String = "res://scenes/ui/prestige_screen.tscn"
 
 @onready var _title: Label = $CenterContainer/VBoxContainer/Title
+@onready var _generations_label: Label = $CenterContainer/VBoxContainer/GenerationsLabel
 @onready var _play_button: Button = $CenterContainer/VBoxContainer/PlayButton
 @onready var _continue_button: Button = $CenterContainer/VBoxContainer/ContinueButton
 @onready var _reset_button: Button = $CenterContainer/VBoxContainer/ResetButton
@@ -28,6 +29,7 @@ func _ready() -> void:
 	_play_button.text = _s("play")
 	_continue_button.text = _s("continue")
 	_reset_button.text = _s("reset")
+	_refresh_generations_label()
 
 	_reset_dialog.title = _s("reset_title")
 	_reset_dialog.dialog_text = _s("reset_body")
@@ -93,3 +95,54 @@ func _open_kingdom_select() -> void:
 	if screen.has_method("set"):
 		screen.set("skip_to_kingdom_select", true)
 	add_child(screen)
+
+
+const _DESCRIPTOR_THRESHOLDS: Array = [
+	[101, "The Anthropocene Watches"],
+	[21, "Networked Life"],
+	[6, "Settled Colonies"],
+	[1, "Pioneers"]
+]
+
+
+func _refresh_generations_label() -> void:
+	var generations: int = _read_prestige_count()
+	if generations <= 0:
+		_generations_label.visible = false
+		return
+	_generations_label.visible = true
+	var descriptor: String = _get_descriptor(generations)
+	_generations_label.text = "%s · %d generations" % [descriptor, generations]
+
+
+func _read_prestige_count() -> int:
+	if GameState.meta_save is Dictionary and not (GameState.meta_save as Dictionary).is_empty():
+		var stats: Dictionary = (GameState.meta_save as Dictionary).get("statistics", {})
+		return int(stats.get("prestige_count", 0))
+	if not FileAccess.file_exists(SaveSystem.SAVE_PATH):
+		return 0
+	var file := FileAccess.open(SaveSystem.SAVE_PATH, FileAccess.READ)
+	if file == null:
+		return 0
+	var text := file.get_as_text()
+	file.close()
+	var parser := JSON.new()
+	if parser.parse(text) != OK:
+		return 0
+	var data: Variant = parser.data
+	if not (data is Dictionary):
+		return 0
+	var meta: Variant = (data as Dictionary).get("meta", {})
+	if not (meta is Dictionary):
+		return 0
+	var stats: Variant = (meta as Dictionary).get("statistics", {})
+	if not (stats is Dictionary):
+		return 0
+	return int((stats as Dictionary).get("prestige_count", 0))
+
+
+func _get_descriptor(count: int) -> String:
+	for entry in _DESCRIPTOR_THRESHOLDS:
+		if count >= int(entry[0]):
+			return String(entry[1])
+	return "Pioneers"

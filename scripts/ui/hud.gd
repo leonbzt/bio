@@ -48,7 +48,7 @@ const NICHE_INDEX_PATH: String = "res://data/niches/_index.tres"
 
 @onready var _labels_container: HBoxContainer = $Bar/Margin/ResourcesRow/Resources
 @onready var _tick_indicator: ColorRect = $TickIndicator
-@onready var _toxin_button: Button = $ToxinBloomButton
+@onready var _abilities_bar: HBoxContainer = $AbilitiesBar
 @onready var _pause_button: Button = $PauseButton
 @onready var _layer_toggle: Button = $LayerToggle
 @onready var _niche_badge: Label = $NicheBadge
@@ -69,7 +69,7 @@ var _events_by_id: Dictionary[StringName, EventData] = {}
 var _niches_by_id: Dictionary[StringName, NicheData] = {}
 var _toast_event_id: StringName = StringName()
 var _toast_tween: Tween = null
-var _toxin_cost: float = 50.0
+var _buttons_by_id: Dictionary[StringName, Button] = {}
 
 
 func _ready() -> void:
@@ -77,7 +77,6 @@ func _ready() -> void:
 	_sync_labels()
 	_build_event_index()
 	_build_niche_index()
-	_setup_toxin_button()
 	_pause_button.pressed.connect(_on_pause_pressed)
 	_layer_toggle.pressed.connect(_on_layer_toggle_pressed)
 	EventBus.resource_changed.connect(_on_resource_changed)
@@ -91,10 +90,12 @@ func _ready() -> void:
 	EventBus.run_started.connect(_on_run_started)
 	EventBus.run_loaded.connect(_on_run_loaded_for_layer)
 	EventBus.niche_changed.connect(_on_niche_changed)
+	EventBus.evolution_node_unlocked.connect(func(_id): _refresh_abilities())
 	_refresh_layer_toggle_visibility()
 	_refresh_layer_toggle_label()
 	_refresh_resource_visibility()
 	_refresh_niche_badge()
+	_refresh_abilities()
 
 
 func _bind_labels() -> void:
@@ -118,8 +119,7 @@ func _sync_labels() -> void:
 func _on_resource_changed(resource_id: StringName, new_amount: float) -> void:
 	if _labels.has(resource_id):
 		_labels[resource_id].text = _format_resource(resource_id, new_amount)
-	if resource_id == ResourceLedger.BIOMASS:
-		_update_toxin_button(new_amount)
+	_refresh_abilities()
 
 
 func _on_tick(_delta_seconds: float) -> void:
@@ -129,6 +129,7 @@ func _on_tick(_delta_seconds: float) -> void:
 	_tick_indicator.modulate.a = 1.0
 	tween.tween_property(_tick_indicator, "modulate:a", 0.3, 0.1)
 	tween.tween_property(_tick_indicator, "modulate:a", 1.0, 0.1)
+	_refresh_abilities()
 
 
 func _on_replay_started(_ticks: int) -> void:
@@ -144,6 +145,7 @@ func _on_run_started(_kingdom_id: StringName) -> void:
 	_refresh_layer_toggle_label()
 	_refresh_resource_visibility()
 	_refresh_niche_badge()
+	_refresh_abilities()
 
 
 func _on_run_loaded_for_layer(_save_version: int) -> void:
@@ -151,10 +153,12 @@ func _on_run_loaded_for_layer(_save_version: int) -> void:
 	_refresh_layer_toggle_label()
 	_refresh_resource_visibility()
 	_refresh_niche_badge()
+	_refresh_abilities()
 
 
 func _on_niche_changed(_niche_id: StringName) -> void:
 	_refresh_niche_badge()
+	_refresh_abilities()
 
 
 func _refresh_layer_toggle_visibility() -> void:
@@ -197,32 +201,15 @@ func _format_resource(resource_id: StringName, amount: float) -> String:
 	return "%s: %s" % [name, FormatUtils.abbreviate(amount)]
 
 
-func _setup_toxin_button() -> void:
-	if _ability_system != null and _ability_system.has_method("get_toxin_bloom_cost"):
-		var cost: Dictionary = _ability_system.get_toxin_bloom_cost()
-		_toxin_cost = float(cost.get(ResourceLedger.BIOMASS, _toxin_cost))
-	_toxin_button.text = "Toxin Bloom (%d Biomass)" % int(_toxin_cost)
-	_toxin_button.pressed.connect(_on_toxin_button_pressed)
-	_update_toxin_button(ResourceLedger.get_amount(ResourceLedger.BIOMASS))
-	_on_input_mode_changed(GameState.input_mode)
-
-
-func _on_toxin_button_pressed() -> void:
-	if _ability_system == null:
-		return
-	if _ability_system.has_method("request_toxin_bloom"):
-		_ability_system.request_toxin_bloom()
-
-
-func _update_toxin_button(biomass_amount: float) -> void:
-	_toxin_button.disabled = biomass_amount < _toxin_cost
-
-
 func _on_input_mode_changed(mode: StringName) -> void:
-	if mode == &"target_toxin_bloom":
-		_toxin_button.modulate = Color(1.5, 1.0, 1.0)
-	else:
-		_toxin_button.modulate = Color(1.0, 1.0, 1.0)
+	for id in _buttons_by_id.keys():
+		var button: Button = _buttons_by_id[id]
+		if button == null:
+			continue
+		if mode == GameState.INPUT_MODE_TARGET and GameState.input_mode == mode:
+			button.modulate = Color(1.0, 1.0, 1.0)
+		else:
+			button.modulate = Color(1.0, 1.0, 1.0)
 
 
 func _on_pause_pressed() -> void:
@@ -304,3 +291,37 @@ func _refresh_niche_badge() -> void:
 		return
 	_niche_badge.text = _niches_by_id[niche_id].display_name
 	_niche_badge.visible = true
+
+
+func _refresh_abilities() -> void:
+	if _ability_system == null or not _ability_system.has_method("get_all_abilities"):
+		return
+	var usable: Array = _ability_system.get_all_abilities()
+	var seen: Dictionary = {}
+	for ability in usable:
+		if ability == null:
+			continue
+		if _ability_system.has_method("is_ability_available"):
+			if not _ability_system.is_ability_available(ability.id):
+				continue
+		seen[ability.id] = true
+		if not _buttons_by_id.has(ability.id):
+			var button := Button.new()
+			button.text = String(ability.display_name)
+			button.pressed.connect(func() -> void:
+				if _ability_system.has_method("request_ability"):
+					_ability_system.request_ability(ability.id)
+			)
+			_abilities_bar.add_child(button)
+			_buttons_by_id[ability.id] = button
+		if _ability_system.has_method("can_afford_ability"):
+			_buttons_by_id[ability.id].disabled = not _ability_system.can_afford_ability(ability.id)
+		else:
+			_buttons_by_id[ability.id].disabled = false
+	for id in _buttons_by_id.keys():
+		if seen.has(id):
+			continue
+		var button: Button = _buttons_by_id[id]
+		if button != null:
+			button.queue_free()
+		_buttons_by_id.erase(id)

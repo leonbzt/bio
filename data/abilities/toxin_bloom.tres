@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ability_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"toxin_bloom"
+display_name = "Toxin Bloom"
+description = "Release defensive toxins in a 3-tile radius. Damages herbivores caught inside."
+cost = {
+"biomass": 50.0
+}
+unlock_node_id = &""
+requires_event_active = &""
+target_mode = &"target_tile"
+radius = 3
+magnitude = 3.0
+extra_payload = {}

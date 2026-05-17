@@ -140,6 +140,12 @@ func _rule_animal_anchor(coord: Vector2i, kingdom_id: StringName, species: Speci
 	if territory.get_surface_owner(coord) != &"":
 		return {"valid": false, "cost": {}, "data": {}}
 
+	# Animals are mobile-anchored — first animal places free anywhere.
+	# Subsequent animals must be adjacent to an owned tile (forms a herd/range).
+	var owned: Array[Vector2i] = territory.get_surface_owned_coords(kingdom_id)
+	if owned.is_empty():
+		return {"valid": true, "cost": {}, "data": {}}
+
 	var has_neighbor: bool = false
 	for n in neighbors(coord):
 		if territory.get_surface_owner(n) != &"" or territory.get_subsurface_owner(n) != &"":

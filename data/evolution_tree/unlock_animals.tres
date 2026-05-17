@@ -12,7 +12,7 @@ meta_cost = {
 "evolution_points": 20
 }
 grants_traits = []
-grants_kingdoms = []
+grants_kingdoms = [&"animals"]
 wing = &"animals"
 tier = 1
 requires_kingdom_played = [&"plantae", &"fungi"]

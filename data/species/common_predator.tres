@@ -4,14 +4,17 @@
 
 [resource]
 script = ExtResource("1")
-id = &"lichen_common"
-display_name = "Common Lichen"
-kingdom_id = &"fungi"
+id = &"common_predator"
+display_name = "Common Predator"
+kingdom_id = &"animals"
 sprite = null
 base_traits = Array[Resource]([])
 colonize_cost = {
-"biomass": 6.0
+"protein": 10.0
 }
-tick_yield = {}
-layer_count = 2
-layer_species = [&"pioneer_grass", &"mycelium_thread"]
+tick_yield = {
+"protein": 0.6,
+"lifeforce": 0.05
+}
+layer_count = 1
+layer_species = []

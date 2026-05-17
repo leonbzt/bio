@@ -81,8 +81,8 @@ active_kingdoms = [&"animals"]
 [node name="LifeforceLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
 script = ExtResource("4")
 resource_id = &"lifeforce"
-tooltip_when_inactive = "Unlock Lichen Heritage to stabilize lifeforce."
-active_niches = [&"lichen"]
+tooltip_when_inactive = "Predators draw lifeforce from prey. Unlock the animal kingdom."
+active_niches = [&"lichen", &"predator"]
 
 [node name="BloodCohesionLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
 script = ExtResource("4")

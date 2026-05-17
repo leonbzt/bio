@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="NicheData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/niche_data.gd" id="1"]
+[ext_resource type="Resource" path="res://data/species/common_grazer.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"herbivore"
+display_name = "Herbivore"
+description = "You move. You eat what grows. The line between food and you is short."
+kingdom_id = &"animals"
+species_options = Array[Resource]([ExtResource("2")])
+colonization_rule = &"animal_anchor"
+cost_override = {}
+unlock_node_id = &""
+tile_variant = &"animals_herbivore"
+expects_layered = false
+parasitic_targets = []
+conditional_start_bonus = {}
+conditional_start_bonus_requires = &""

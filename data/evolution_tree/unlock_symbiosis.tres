@@ -5,13 +5,13 @@
 [resource]
 script = ExtResource("1")
 id = &"unlock_symbiosis"
-display_name = "Symbiotic Awakening"
-description = "Plant and fungal kingdoms can grow as one."
+display_name = "Lichen Heritage"
+description = "Two bodies learn to be one. The Lichen niche unlocks under Fungi — place both fungal and plant layers in the same run."
 prerequisites = [&"unlock_fungi"]
 meta_cost = {
 "evolution_points": 15
 }
 grants_traits = []
-grants_kingdoms = [&"symbiosis"]
+grants_kingdoms = []
 wing = &"hybrid"
 tier = 2

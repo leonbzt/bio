@@ -28,7 +28,7 @@ Self-contained, paste-into-an-agent task instructions for the project.
 
 ### Tier 2 — World feedback + eras
 - `phase_11/` — **World feedback layer**. **10 briefs written 2026-05-17.** Active-event interventions (Irrigate/Bundle/Cull), tile history persistence + faint pre-existing tint, soil_memory tile-local refactor, soft prestige goal + banner, generations counter on title screen.
-- `phase_12/` — Era system + ecosystem selector (was Phase 11).
+- `phase_12/` — Era system + ecosystem selector. **11 briefs written 2026-05-18.** Save v10→v11 (era + ecosystem state), EraData + EcosystemData schemas, 2 eras (Cryogenian fungi-only, Devonian all-kingdoms) × 3 ecosystems each with per-ecosystem authored completion criteria, EraSystem autoload + completion tracking, world map UI replacing "begin run as..." flow, era transition narrative passages, era-locked kingdom availability, mass extinction event (narrative only — gameplay teeth in Phase 13), 10 new discovery entries (total 38).
 - `phase_13/` — Ecosystem-specific biomes + events + graphics (was Phase 12). Includes axis-scoped events (`EventData.scope`).
 - `phase_14/` — Predator + Scavenger niches; Cordyceps; Coral (first 3-layer pack) (was Phase 13).
 - `phase_15/` — More layered species packs (Termite Mound, Mycorrhizal Forest) (was Phase 14).

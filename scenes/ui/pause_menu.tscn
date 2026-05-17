@@ -2,11 +2,13 @@
 
 [ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/prestige_screen.tscn" id="2"]
+[ext_resource type="Theme" path="res://assets/ui/theme.tres" id="3"]
 
 [node name="PauseMenu" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 visible = false
+theme = ExtResource("3")
 mouse_filter = 2
 script = ExtResource("1")
 prestige_scene = ExtResource("2")

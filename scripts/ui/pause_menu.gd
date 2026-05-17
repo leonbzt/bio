@@ -61,11 +61,12 @@ func _start_prestige_glow() -> void:
 
 
 func _reset_prestige_glow() -> void:
-	var existing: Variant = _prestige_button.get_meta("_glow_tween", null)
-	if existing is Tween:
-		(existing as Tween).kill()
+	if _prestige_button.has_meta("_glow_tween"):
+		var existing: Variant = _prestige_button.get_meta("_glow_tween")
+		if existing is Tween:
+			(existing as Tween).kill()
+		_prestige_button.remove_meta("_glow_tween")
 	_prestige_button.modulate = Color(1.0, 1.0, 1.0, 1.0)
-	_prestige_button.remove_meta("_glow_tween")
 
 
 func _on_prestige_pressed() -> void:

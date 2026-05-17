@@ -1,9 +1,9 @@
-# Brief 07 — Soft-goal banner UI + prestige-button highlight
+# Brief 05 — Soft-goal banner UI + prestige-button highlight
 
 **Suggested agent**: ChatGPT 5.2 via Copilot. Route diff to Claude — mobile layout.
 
 Read first:
-1. `docs/briefs/phase_11/06_per_run_goal_system.md` (must land first).
+1. `docs/briefs/phase_11/04_per_run_goal_system.md` (must land first).
 2. `scenes/world/hud.tscn` — where the banner attaches.
 3. `scripts/ui/hud.gd` — existing HUD logic.
 4. Wherever the prestige-screen entry button lives (HUD has a "Prestige" button somewhere; verify in scene).
@@ -13,7 +13,7 @@ Two pieces:
 1. **Goal banner** at the top of the HUD showing "<display_text>: N / target" with a progress bar.
 2. **Prestige-button highlight**: when `goal_met` fires, the prestige entry button gets a pulsing tint to congratulate the player and suggest prestige is now meaningful.
 
-Banner is non-modal, always-visible during an active run. Empty if `get_active_goal()` is null (e.g., legacy run from before brief 06 shipped).
+Banner is non-modal, always-visible during an active run. Empty if `get_active_goal()` is null (e.g., legacy run from before brief 04 shipped).
 
 ## Scene changes
 
@@ -139,7 +139,7 @@ func _reset_prestige_glow() -> void:
     _prestige_button.remove_meta("_glow_tween")
 ```
 
-(Adapt to the actual HUD structure — the prestige entry might be elsewhere; brief 06 doesn't change the prestige flow itself.)
+(Adapt to the actual HUD structure — the prestige entry might be elsewhere; brief 04 doesn't change the prestige flow itself.)
 
 ## Mobile considerations
 

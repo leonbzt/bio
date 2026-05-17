@@ -104,6 +104,12 @@ Within each era, **multiple ecosystems** to complete (shallow sea, exposed rock,
 
 This gives the run loop a **route layer** above the run itself: not just "play another run" but "I need to clear the Devonian's tidal-pool ecosystem; let me try it as parasitic fungi this time."
 
+## Emergent structures (parked design)
+
+Tiles can combine into larger multi-cell **structures** when the player places specific patterns. A 2×2 fungi cluster with a plantae center becomes a Mycorrhizal Hub. Three plantae tiles in a vertical line become an Old-Growth Tree. Animal tiles in the right shape become a Termite Mound. The structure replaces the underlying tiles visually and acts as a single entity for yield, status, and events. This makes the tilemap *visibly transform* as gameplay progresses rather than staying a flat owner-grid.
+
+See `docs/STRUCTURES.md` for the full design sketch. Not phased yet; revisit alongside layered-lifeform packs and the ecosystem system.
+
 ## Deferred / aspirational
 
 The following ideas are flagged as worth pursuing IF the game proves itself, but are not on the near-term roadmap:

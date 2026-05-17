@@ -1,4 +1,4 @@
-# Brief 08 — Generations counter on title screen
+# Brief 06 — Generations counter on title screen
 
 **Suggested agent**: ChatGPT 5.2 via Copilot. Route diff to Claude — small UI add.
 

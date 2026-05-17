@@ -1,4 +1,4 @@
-# Brief 04 — AbilityData resource + AbilitySystem generalization
+# Brief 02 — AbilityData resource + AbilitySystem generalization
 
 **Suggested agent**: ChatGPT 5.2 via Copilot. Route diff to Claude — refactors a contract.
 
@@ -87,7 +87,7 @@ magnitude = 3.0
 extra_payload = {}
 ```
 
-(Magnitude 3.0 matches `TOXIN_BLOOM_DAMAGE` in the old code; `toxin_potency` bumps it via the same lookup pattern brief 05 establishes.)
+(Magnitude 3.0 matches `TOXIN_BLOOM_DAMAGE` in the old code; `toxin_potency` bumps it via the same lookup pattern brief 03 establishes.)
 
 ### Create `data/abilities/_index.tres`
 
@@ -257,7 +257,7 @@ func _is_coord_in_bounds(coord: Vector2i) -> bool:
 
 
 # Special-case for the existing toxin_potency upgrade.
-# Brief 05 may add a general "ability_potency_overrides" mechanism; until
+# A future polish brief may add a general "ability_potency_overrides" mechanism; until
 # then, this stays a localized special-case to keep the refactor scope tight.
 func _get_toxin_damage(ability: AbilityData) -> float:
     if MetaModifiers.is_unlocked(&"toxin_potency"):
@@ -294,7 +294,7 @@ Already listens for `ability_id == &"toxin_bloom"` and reads `payload.damage`. T
 - [ ] Pressing Toxin Bloom button twice cancels target mode (existing UX behavior).
 
 ## Out of scope
-- The 3 new event-tied abilities (brief 05).
-- HUD ability bar that lists multiple abilities (brief 05 wires it).
+- The 3 new event-tied abilities (brief 03).
+- HUD ability bar that lists multiple abilities (brief 03 wires it).
 - Generalizing `toxin_potency` into a per-ability potency dict (defer to a polish pass; the special-case in `_get_toxin_damage` is acceptable for now).
 - Cooldown system for abilities (not in scope; cost gate is enough).

@@ -1,9 +1,9 @@
-# Brief 05 — Event-tied abilities + evolution nodes + HUD ability bar
+# Brief 03 — Event-tied abilities + evolution nodes + HUD ability bar
 
 **Suggested agent**: Kilo for the `.tres` data (mechanical), ChatGPT 5.2 for the HUD + system hooks. Route diff to Claude.
 
 Read first:
-1. `docs/briefs/phase_11/04_ability_data_generalization.md` (must land first).
+1. `docs/briefs/phase_11/02_ability_data_generalization.md` (must land first).
 2. `scripts/systems/ambient_modifier_system.gd` — drought/cool_spell handler.
 3. `scripts/systems/spore_infection_handler.gd` — spore_infection handler.
 4. `scenes/ui/hud.tscn` (or wherever the Toxin Bloom button currently lives).

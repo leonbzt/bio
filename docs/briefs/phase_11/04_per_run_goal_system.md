@@ -1,4 +1,4 @@
-# Brief 06 — PerRunGoalData + RunGoalSystem + goal pool
+# Brief 04 — PerRunGoalData + RunGoalSystem + goal pool
 
 **Suggested agent**: Kilo for the data, ChatGPT 5.2 for the system + tracking logic. Route diff to Claude.
 
@@ -9,7 +9,7 @@ Read first:
 4. `scripts/autoloads/event_bus.gd`.
 
 ## Goal
-Author 12 soft prestige goals + the `RunGoalSystem` autoload that picks one at run start, tracks progress, and emits when met. No UI in this brief — banner is brief 07.
+Author 12 soft prestige goals + the `RunGoalSystem` autoload that picks one at run start, tracks progress, and emits when met. No UI in this brief — banner is brief 05.
 
 ## Outputs
 
@@ -281,8 +281,8 @@ func _on_run_started(kingdom_id: StringName) -> void:
 - [ ] `save.json` after running: `run.goal_id` populated, `run.goal_progress.value` reflects ticker, `run.goal_met` flips when target hit.
 
 ## Out of scope
-- Banner UI (brief 07).
-- Goal-met → prestige button lights up (brief 07).
+- Banner UI (brief 05).
+- Goal-met → prestige button lights up (brief 05).
 - Per-tile goals (e.g., "place a tile adjacent to X") — schema doesn't support locality yet.
 - Goal rewards beyond the goal-met emit (no extra EP, no extra discovery entry — that's a polish add).
 - `corpses_decomposed` tracker (would need a new CorpseSystem signal; defer to Phase 12 if `decomposer_corpses` proxy is too loose).

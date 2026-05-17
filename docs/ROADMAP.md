@@ -87,20 +87,26 @@ See `PROGRESSION_WEB.md` and `STORY_AND_TONE.md`.
 **Exit**: a fungi run is mechanically rewarding for a plantae-focused player and vice versa. Discovery log has ≥ 25 entries.
 
 ### Phase 10 — Symbiosis reframe + Animal foundation + niche signatures *(planned)*
-See `GAME_VISION.md` and `KINGDOMS.md`. Reshaped 2026-05-16 based on Phase 9 mechanics-vs-vision review.
+See `GAME_VISION.md` and `KINGDOMS.md`. Reshaped 2026-05-16, refined 2026-05-17 (Lichen → Fungi, hybrid niche+species model).
 
 **Deliverables**:
-- **Layered-lifeform foundation**: `SpeciesData` gains `layer_count` + `layer_species`. The first 2-layer species (**Lichen**, plantae × fungi) ships as the canonical example. `unlock_symbiosis` evolution node renamed/redirected to `unlock_lichen` (grants species pack, not a kingdom).
-- **Retire symbiosis kingdom**: `&"symbiosis"` kingdom_id removed from UI and game state. Save migration v7 → v8 strips it from `unlocked_kingdoms`, converts any `current_kingdom_id == &"symbiosis"` to the active layer's primary kingdom, etc.
+- **Layered-lifeform foundation (hybrid niche+species model)**:
+  - `NicheData` gains `expects_layered: bool` — flags niches that drive multi-layer placement.
+  - `SpeciesData` gains `layer_count: int` and `layer_species: Array[SpeciesData]` — the layer count + per-layer roster.
+  - The first 2-layer playable is **Lichen**, implemented as a niche under **Fungi** (biologically the fungus dominates structurally). Cascade at run start: Fungi → Lichen niche → Common Lichen species. The species carries `layer_count = 2`, `layer_species = [mycelium_thread, pioneer_grass]`.
+  - `unlock_symbiosis` evolution node redirected to `unlock_lichen` (grants the Lichen niche, not a kingdom).
+- **Retire symbiosis kingdom**: `&"symbiosis"` kingdom_id removed from UI and game state. Save migration v7 → v8 strips it from `unlocked_kingdoms`; any in-flight `current_kingdom_id == &"symbiosis"` migrates to `&"fungi"` with `current_niche_id = &"lichen"`.
 - **Per-niche signature mechanics** for the two non-default niches (lifts the gap-1 finding from Phase 9 review):
   - **Parasite plantae**: gains a *biomass-steal* tick effect — adjacent non-parasite tiles lose a small biomass amount per tick that the parasite cluster gains. Replaces the flat 2× yield multiplier.
   - **Mycorrhizal fungi**: gains a *substrate-claim* placement mode — tap an existing plantae tile to bond with it, mutually boosting yield, instead of behaving almost identically to decomposer.
-- **Animal kingdom foundation**: kingdom registration, one species (generic herbivore), one niche (Herbivore). Animals are mobile range-tile occupants — reuse existing herbivore mover logic where possible.
+- **Animal kingdom foundation**: kingdom registration, one species (generic herbivore), one niche (Herbivore), one niche (Predator — per locked open question, ships in Phase 10 not 14). Herbivore animal is a **separate stat-block from the herbivore-wave agents**, not a reuse. Predator's prey selection deferred to Phase 14 polish.
 - **Insect agents** as the first cross-kingdom autonomous agent (passive boosts to pollinator-host plant tiles; no playable pollinator niche yet).
-- **Stub resources introduced** (no gameplay impact yet, just `ResourceLedger` IDs + display): **Protein**, **Cellulose**, **Chitin**, **Phosphate**, **Lifeforce**, **Pollination**. Each is biologically grounded — see `GAME_VISION.md` resource section.
+- **Stub resources introduced** (no gameplay impact yet, just `ResourceLedger` IDs + **visible-but-greyed HUD display**): **Protein**, **Cellulose**, **Chitin**, **Phosphate**, **Lifeforce**, **Pollination**. Each is biologically grounded — see `GAME_VISION.md` resource section.
 - Light graphics pass: niche icons, animal sprites at placeholder quality.
 
-**Exit**: player can play a **Lichen** run (no kingdom called "symbiosis" in UI), and an **Animal Herbivore** run. Parasite plantae *feels* parasitic (steals from neighbors). Mycorrhizal fungi *feels* mutualistic (must bond with plants). Insects appear in some plant runs based on niche.
+**3+ layer model deferred**: the layered-lifeform architecture supports any `layer_count`, but the *design decision* of whether 3+ layer packs are picked at run start (locked-yesterday "pre-authored packs" model) or dynamically assembled (pack + intra-run layer unlocks) is deferred to Phase 14 when Coral actually needs the answer. Lichen ships as 2-layer-only.
+
+**Exit**: player can play a **Lichen** run as a Fungi niche (no kingdom called "symbiosis" in UI), and an **Animal Herbivore** and **Animal Predator** run. Parasite plantae *feels* parasitic (steals from neighbors). Mycorrhizal fungi *feels* mutualistic (must bond with plants). Insects appear in some plant runs based on niche. Stub resources visible in HUD.
 
 ---
 
@@ -108,21 +114,22 @@ See `GAME_VISION.md` and `KINGDOMS.md`. Reshaped 2026-05-16 based on Phase 9 mec
 
 **Target**: 3–4 months. Adds the world-feedback layer first (the lightest cohesive phase), then the time/world meta axis. See `ERAS_AND_ECOSYSTEMS.md`.
 
-### Phase 11 — World feedback layer *(new, inserted 2026-05-16)*
+### Phase 11 — World feedback layer *(briefs written 2026-05-16, scope refined 2026-05-17)*
 
-The smallest cohesive phase in Tier 2. Three mutually reinforcing pieces that lift Pillar 5 (mobile tempo + active gameplay) and the "world remembers" promise.
+The smallest cohesive phase in Tier 2. Three mutually reinforcing pieces that lift Pillar 5 (mobile tempo + active gameplay) and the "long arc" identity.
 
 **Deliverables**:
 - **Active-event interventions** — each ambient event (`drought`, `cool_spell`, `spore_infection`) defaults to passive impact (current behavior). Evolution-tree nodes unlock *active counter-play actions* keyed to events. Examples:
   - `deep_roots` (plantae) unlocks "Irrigate" tap-action during Drought.
-  - `cold_tolerance` (fungi) unlocks "Bundle" tap-action during Cool Spell (joins two adjacent tiles for shared warmth).
+  - `cold_tolerance` (fungi) unlocks "Bundle" tap-action during Cool Spell (joins five adjacent tiles for shared warmth).
   - `quarantine` (fungi) unlocks "Cull" tap-action during Spore Infection.
   Generalizes the existing `AbilitySystem` pattern (Toxin Bloom is the prototype).
-- **Tile history** — `TerritorySystem` persists per-tile metadata across prestige: `tile.history: Array[StringName]` lists every kingdom/niche that has ever owned the tile. Rendered as a faint pre-existing tint (color = blend of historical kingdoms). The `soil_memory` evolution node's bonus becomes tile-local (15% on tiles with `fungi` in history) instead of global — fixes Phase 9's balance leak.
 - **Soft prestige goal** — per-run goal banner ("Reach 30 tiles" / "Earn 500 biomass" / "Survive 2 events"). Banner highlights when met; doesn't *force* prestige but congratulates and lights up the prestige button. Goals drawn from a small per-niche pool (tied to niche signatures — parasite plantae's goal might be "Steal 200 biomass from neighbors").
 - **Generations counter** on title screen with evolving descriptor ("Pioneers" → "Settled Colonies" → "Networked Life" → "The Anthropocene Watches"). Cheap; sells the long arc.
 
-**Exit**: a 10-minute session contains at least one active-intervention moment beyond herbivore wave; the player can visually see which tiles they grew on a previous run; prestige feels like *closing a chapter*, not "I guess I should restart now."
+**Dropped from Phase 11 (2026-05-17)**: **tile history**. Per-tile colored tints would be visually noisy on the 32×48 portrait grid, and without a long-press tooltip (deferred) players wouldn't understand the difference. `soil_memory` stays as the Phase 9 global 15% bonus (an acceptable balance leak in the interim). A different "world remembers" mechanic will revisit in Phase 12 alongside the ecosystem/era system — likely at **ecosystem-level granularity** rather than per-tile (subtler, less visual noise, more meaningful when ecosystems require specific kingdom combinations to complete).
+
+**Exit**: a 10-minute session contains at least one active-intervention moment beyond herbivore wave; soft-goal banner gives runs shape; prestige feels like *closing a chapter*, not "I guess I should restart now."
 
 ### Phase 12 — Era system + ecosystem selector *(was Phase 11)*
 - `EraData` and `EcosystemData` resources.
@@ -155,6 +162,31 @@ The smallest cohesive phase in Tier 2. Three mutually reinforcing pieces that li
 
 ---
 
+## Parked design ideas 🅿
+
+Ideas the user wants captured but hasn't committed to a phase. Move to a tier/phase when scope and motivation align.
+
+### Tile history / "world remembers" (parked 2026-05-17)
+
+Originally a Phase 11 deliverable; dropped because per-tile colored tints would be visually noisy on a 32×48 portrait grid and the supporting tooltip wasn't in scope. Concept worth keeping:
+
+- `meta.tile_history: Dictionary` — per-tile (or per-region) record of every kingdom/niche that has owned a cell across runs.
+- Render as subtle visual feedback (faint tint, or per-region background shade — both lighter than per-tile colored tints).
+- Powers tile-local versions of `soil_memory`-style bonuses, breaking the Phase 9 global-multiplier balance leak.
+- Powers "ruin" semantics when structures (see below) are destroyed.
+
+Most likely revisit: **Phase 12** (alongside the era/ecosystem system) at **ecosystem-level granularity** rather than per-tile — fewer entities, easier to render meaningfully ("this ecosystem has seen 3 generations of plant runs"), more naturally tied to ecosystem-completion gating.
+
+### Emergent multi-tile structures (parked 2026-05-17)
+
+When the player places certain combinations of tiles + layers, the engine **promotes** those cells into a single multi-cell structure (Mycorrhizal Hub, Old-Growth Tree, Fairy Ring, Coral Reef, Termite Mound). The tilemap visibly transforms; structures have their own visual, yield, status, events. Substantiates "the tilemap feels alive and changing."
+
+See `docs/STRUCTURES.md` for the full design sketch — schema, examples, system interactions, open questions.
+
+Most likely revisit: **Phase 13–14** alongside layered-lifeform packs (Coral and Termite Mound are natural structure candidates), per-ecosystem completion gating (some ecosystems require a specific structure), and per-axis events (events can target structures as a unit).
+
+---
+
 ## TIER 3 — Aspirational 💭
 
 Commit to these only after Tier 2 ships and the audience justifies the work.
@@ -180,6 +212,7 @@ These are documented in `GAME_VISION.md` under "Deferred / aspirational" and ref
 ## Open questions for the user before Phase 10 starts
 
 1. **Animal Herbivore reuse**: do you want Herbivore animals to *be* the existing herbivore-wave agents (so the wave is now a hostile playable kingdom on the other side), or a separate stat-block? Reusing them is cleaner; separating is more flexible.
-2. **Lichen as a species pack vs. a "kingdom-shaped" mode**: when Lichen is the active species, does the player still pick a niche, or is the pack itself the niche-equivalent? Locked answer per `KINGDOMS.md` is: the pack *is* the niche-equivalent at v1 — no separate niche selector for layered species. Confirm before Phase 10 starts.
-3. **Animal niche set for Phase 10**: Herbivore is locked. Should Phase 10 also ship Predator, or save it for Phase 14 with Cordyceps? Reach vs. depth in the same window.
-4. **Stub resource visibility**: the 6 new resources land as `ResourceLedger` ids in Phase 10 with no gameplay impact. Should the HUD also display them (greyed-out, "Coming in Phase X") or stay hidden until wired? Visible-but-greyed teases content; hidden stays clean.
+separate
+2. **Lichen as a species pack vs. a "kingdom-shaped" mode**: when Lichen is the active species, does the player still pick a niche, or is the pack itself the niche-equivalent? Locked answer per `KINGDOMS.md` is: the pack *is* the niche-equivalent at v1 — no separate niche selector for layered species. Confirm before Phase 10 starts. A: a lichen is already the symbiosis between algae and fungi, it could be a niche
+3. **Animal niche set for Phase 10**: Herbivore is locked. Should Phase 10 also ship Predator, or save it for Phase 14 with Cordyceps? Reach vs. depth in the same window. Phase 10
+4. **Stub resource visibility**: the 6 new resources land as `ResourceLedger` ids in Phase 10 with no gameplay impact. Should the HUD also display them (greyed-out, "Coming in Phase X") or stay hidden until wired? Visible-but-greyed teases content; hidden stays clean.display already

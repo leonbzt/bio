@@ -9,11 +9,12 @@ Read first:
 4. `docs/briefs/phase_11/00_phase_11_entry.md` for the rationale of each new field.
 
 ## Goal
-Add three Phase 11 fields:
-- `meta.tile_history: Dictionary` — keyed by `"x,y"` string; value is `Array[String]` of kingdom ids that have ever occupied either layer at this coord. Append-only, deduplicated.
+Add three soft-goal fields to the run block:
 - `run.goal_id: String` — id of the soft prestige goal active for the current run. Empty string = no goal (legacy or pre-goal run).
 - `run.goal_progress: Dictionary` — free-form per-goal-type progress. Each goal type defines its own key set.
 - `run.goal_met: bool` — whether the active goal has been satisfied at any point this run.
+
+(Tile history was dropped from Phase 11 — see brief 00. No `meta.tile_history` field is added.)
 
 ## Changes
 
@@ -26,11 +27,7 @@ const SAVE_VERSION: int = 9
 
 ```gdscript
 if from_version < 9:
-    # v8 -> v9: tile history (meta), goal state (run).
-    if old.has("meta") and old["meta"] is Dictionary:
-        var meta: Dictionary = old["meta"]
-        if not meta.has("tile_history"):
-            meta["tile_history"] = {}
+    # v8 -> v9: soft prestige goal state.
     if old.has("run") and old["run"] is Dictionary:
         var run: Dictionary = old["run"]
         if not run.has("goal_id"):
@@ -42,10 +39,6 @@ if from_version < 9:
 ```
 
 ### `_build_default_save()`
-Under `meta`:
-```gdscript
-"tile_history": {},
-```
 Under `run`:
 ```gdscript
 "goal_id": "",
@@ -61,14 +54,12 @@ Add to the fresh_run dict (alphabetical with existing keys):
 "goal_met": false,
 ```
 
-**Do not reset `meta.tile_history` on prestige** — that's the whole point. It survives.
-
 ## Tests
 
 Append to `tests/test_save_system.gd`:
 
 ```gdscript
-func test_migrate_v8_adds_phase_11_fields() -> void:
+func test_migrate_v8_adds_goal_fields() -> void:
     var v8 := {
         "save_version": 8,
         "meta": {"unlocked_kingdoms": ["plantae"], "evolution_tree": {}, "statistics": {}, "discovery_log": {}, "kingdoms_played": [], "niches_played": []},
@@ -80,8 +71,6 @@ func test_migrate_v8_adds_phase_11_fields() -> void:
         }
     }
     var migrated := SaveSystem.migrate(v8, 8)
-    assert_true(migrated["meta"].has("tile_history"))
-    assert_eq(migrated["meta"]["tile_history"], {})
     assert_true(migrated["run"].has("goal_id"))
     assert_eq(migrated["run"]["goal_id"], "")
     assert_true(migrated["run"].has("goal_progress"))
@@ -93,7 +82,6 @@ func test_migrate_v8_adds_phase_11_fields() -> void:
 func test_migrate_v0_cascades_to_v9() -> void:
     var v0 := {"save_version": 0, "meta": {}, "run": {"kingdom": "plantae"}}
     var migrated := SaveSystem.migrate(v0, 0)
-    assert_true(migrated["meta"].has("tile_history"))
     assert_true(migrated["run"].has("goal_id"))
     # Sanity: earlier-version fields still populated.
     assert_eq(migrated["run"]["niche_id"], "photosynthesizer")
@@ -102,14 +90,14 @@ func test_migrate_v0_cascades_to_v9() -> void:
 
 ## Acceptance criteria
 - [ ] `SAVE_VERSION == 9`.
-- [ ] Existing v8 saves migrate cleanly: `tile_history == {}`, `goal_id == ""`, `goal_progress == {}`, `goal_met == false`.
+- [ ] Existing v8 saves migrate cleanly: `goal_id == ""`, `goal_progress == {}`, `goal_met == false`.
 - [ ] Cascade test (v0 → v9) passes — all intervening fields populated.
-- [ ] First launch on a clean device writes a v9 save with the four new fields present.
-- [ ] `_reset_run_state` clears `goal_id`/`goal_progress`/`goal_met` but **does not touch `meta.tile_history`**.
+- [ ] First launch on a clean device writes a v9 save with the three new fields present.
+- [ ] `_reset_run_state` clears `goal_id`/`goal_progress`/`goal_met`.
 
 ## Out of scope
-- Writing to `meta.tile_history` (brief 02 does that via TerritorySystem).
-- Authoring goal data (brief 06).
-- Goal-tracking logic (brief 06).
-- Banner UI (brief 07).
-- Title-screen counter (brief 08).
+- Authoring goal data (brief 04).
+- Goal-tracking logic (brief 04).
+- Banner UI (brief 05).
+- Title-screen counter (brief 06).
+- Tile history (dropped from Phase 11 entirely).

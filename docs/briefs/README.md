@@ -27,7 +27,7 @@ Self-contained, paste-into-an-agent task instructions for the project.
 - `phase_10/` — Symbiosis reframe + Animal foundation + niche signatures + stub resources. *Reshaped 2026-05-16 after Phase 9 mechanics-vs-vision review. Not yet written.* Locked: layered-lifeform foundation (Lichen as first 2-layer pack), pre-authored species packs (no free combination), per-niche signature mechanics for parasite plantae + mycorrhizal fungi, 6 stub resources introduced.
 
 ### Tier 2 — World feedback + eras
-- `phase_11/` — **World feedback layer** *(new, inserted 2026-05-16)*. Active-event interventions, tile history, soft prestige goal, generations counter. *Brief next per planning.*
+- `phase_11/` — **World feedback layer**. **10 briefs written 2026-05-17.** Active-event interventions (Irrigate/Bundle/Cull), tile history persistence + faint pre-existing tint, soil_memory tile-local refactor, soft prestige goal + banner, generations counter on title screen.
 - `phase_12/` — Era system + ecosystem selector (was Phase 11).
 - `phase_13/` — Ecosystem-specific biomes + events + graphics (was Phase 12). Includes axis-scoped events (`EventData.scope`).
 - `phase_14/` — Predator + Scavenger niches; Cordyceps; Coral (first 3-layer pack) (was Phase 13).

@@ -10,6 +10,12 @@ const LAYER_BASE: int = 0
 
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 
+# Symbiosis tile color (Locked palette 2026-05-18) — plantae+fungi co-occupied
+# tiles get a warm-gold fill so symbiosis reads instantly. Per-species hint
+# is preserved at 30% via lerp.
+const SYMBIOSIS_GOLD: Color = Color(0.85, 0.72, 0.28, 1.0)
+const FILL_INSET: float = 1.0   # leaves a 1px grid line on each side
+
 @export var tile_texture: Texture2D = preload("res://assets/art/tiles/placeholder_tile.png")
 
 var _tile_occupants: Dictionary[Vector2i, Dictionary] = {}
@@ -107,7 +113,10 @@ func _paint_fill(coord: Vector2i, occ: Dictionary) -> void:
 		return
 	var fill_color: Color
 	if plant_id != &"" and fungi_id != &"":
-		fill_color = _species_color(plant_id).lerp(_species_color(fungi_id), 0.5).lightened(0.05)
+		# Symbiosis blend: 70% symbiosis-gold + 30% per-species mix.
+		# Reads as symbiosis at a glance; species identity hinted at 30%.
+		var species_mix: Color = _species_color(plant_id).lerp(_species_color(fungi_id), 0.5)
+		fill_color = SYMBIOSIS_GOLD.lerp(species_mix, 0.30)
 	elif plant_id != &"":
 		fill_color = _species_color(plant_id)
 	else:
@@ -115,10 +124,10 @@ func _paint_fill(coord: Vector2i, occ: Dictionary) -> void:
 	var fill: ColorRect = _fill_nodes.get(coord, null)
 	if fill == null:
 		fill = ColorRect.new()
-		fill.size = Vector2(TILE_SIZE, TILE_SIZE)
+		fill.size = Vector2(TILE_SIZE - FILL_INSET * 2.0, TILE_SIZE - FILL_INSET * 2.0)
 		fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		fill.z_index = 1
-		fill.position = map_to_local(coord) - Vector2(TILE_SIZE * 0.5, TILE_SIZE * 0.5)
+		fill.position = map_to_local(coord) - Vector2(TILE_SIZE * 0.5 - FILL_INSET, TILE_SIZE * 0.5 - FILL_INSET)
 		_overlay_layer.add_child(fill)
 		_fill_nodes[coord] = fill
 	fill.color = fill_color
@@ -137,10 +146,12 @@ func _paint_border(coord: Vector2i, occ: Dictionary) -> void:
 		border.width = 2.0
 		border.closed = true
 		border.default_color = Color.WHITE
-		border.add_point(Vector2(0, 0))
-		border.add_point(Vector2(TILE_SIZE, 0))
-		border.add_point(Vector2(TILE_SIZE, TILE_SIZE))
-		border.add_point(Vector2(0, TILE_SIZE))
+		var inset: float = FILL_INSET
+		var inner: float = TILE_SIZE - inset
+		border.add_point(Vector2(inset, inset))
+		border.add_point(Vector2(inner, inset))
+		border.add_point(Vector2(inner, inner))
+		border.add_point(Vector2(inset, inner))
 		border.position = map_to_local(coord) - Vector2(TILE_SIZE * 0.5, TILE_SIZE * 0.5)
 		border.z_index = 2
 		_overlay_layer.add_child(border)

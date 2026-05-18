@@ -159,7 +159,7 @@ Architectural reshape. **No new player-visible content.** Collapses kingdom/nich
 
 **Originally-scoped Phase 13 content briefs** (biomes, mass extinction teeth, era nodes, per-era visuals) — paused, archived at `docs/briefs/phase_13_paused/`, revive as Phase 14.
 
-### Phase 14a — Species roster foundation + biome affinity *(briefs written 2026-05-18, see `docs/SPECIES_ROSTER.md`)*
+### Phase 14a — Species roster foundation + biome affinity ✅ *(completed 2026-05-18, see `docs/SPECIES_ROSTER.md`)*
 
 Layered tier rollout, Tier 1 starter (~15 species). Hybrid era gating (most carry over, some signature era-locked). Soft biome preference via per-species multipliers. Hybrid naming (poetic display + Latin tooltip).
 

@@ -5,6 +5,7 @@ extends Node
 ##
 
 const DISCOVERY_INDEX_PATH: String = "res://data/discovery/_index.tres"
+const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 
 const _MILESTONES: Dictionary[StringName, int] = {
 	&"prestige_5": 5,
@@ -120,13 +121,63 @@ func _on_species_introduced(species_id: StringName) -> void:
 	var entry := find_entry_for_trigger(&"species", species_id)
 	if entry != &"":
 		unlock(entry)
+
+	var dirty: bool = false
 	var starter: StringName = StringName(GameState.run_save.get("starting_species_id", ""))
 	if species_id == starter:
 		var played: Array = GameState.meta_save.get("species_played", []) as Array
 		if not played.has(String(species_id)):
 			played.append(String(species_id))
 			GameState.meta_save["species_played"] = played
+			dirty = true
+
+	# Phase 14a: lineage tracking + cross-era milestone unlocks.
+	var species: SpeciesData = _lookup_species(species_id)
+	if species == null:
+		if dirty:
 			SaveSystem.save_now()
+		return
+	var lineage: StringName = species.lineage_id
+	if lineage == &"":
+		if dirty:
+			SaveSystem.save_now()
+		return
+
+	var lineages_played: Array = GameState.meta_save.get("lineages_played", []) as Array
+	if not lineages_played.has(String(lineage)):
+		lineages_played.append(String(lineage))
+		GameState.meta_save["lineages_played"] = lineages_played
+		dirty = true
+
+	var ecosystem_id: StringName = StringName(GameState.meta_save.get("current_ecosystem_id", ""))
+	if ecosystem_id == &"":
+		if dirty:
+			SaveSystem.save_now()
+		return
+	var lineage_key: String = "%s@%s" % [String(lineage), String(ecosystem_id)]
+	var seen: Array = GameState.meta_save.get("lineage_ecosystems_seen", []) as Array
+	if not seen.has(lineage_key):
+		seen.append(lineage_key)
+		GameState.meta_save["lineage_ecosystems_seen"] = seen
+		dirty = true
+
+	var eras_for_lineage: Dictionary = {}
+	var era_system := _get_era_system()
+	if era_system != null:
+		for key in seen:
+			var parts: PackedStringArray = String(key).split("@")
+			if parts.size() != 2 or parts[0] != String(lineage):
+				continue
+			var eco_id: StringName = StringName(parts[1])
+			var eco = era_system.get_ecosystem(eco_id)
+			if eco != null:
+				eras_for_lineage[String(eco.era_id)] = true
+	if eras_for_lineage.size() >= 2:
+		var milestone := find_entry_for_trigger(&"milestone", StringName("lineage_" + String(lineage)))
+		if milestone != &"":
+			unlock(milestone)
+	if dirty:
+		SaveSystem.save_now()
 
 
 func _on_event_resolved(event_id: StringName, _outcome: StringName) -> void:
@@ -195,4 +246,24 @@ func _lookup_node(node_id: StringName) -> EvolutionNodeData:
 	for node in ps.get_all_nodes():
 		if node.id == node_id:
 			return node
+	return null
+
+
+func _lookup_species(species_id: StringName) -> SpeciesData:
+	return _load_species_for_lookup(species_id)
+
+
+func _load_species_for_lookup(species_id: StringName) -> SpeciesData:
+	var index: SpeciesIndex = load(SPECIES_INDEX_PATH) as SpeciesIndex
+	if index == null:
+		return null
+	for sp in index.species:
+		if sp.id == species_id:
+			return sp
+	return null
+
+
+func _get_era_system() -> Node:
+	if has_node("/root/EraSystem"):
+		return get_node("/root/EraSystem")
 	return null

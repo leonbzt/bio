@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_species_wood_rot_bracket"
+title = "The First Decomposer of Wood"
+body = "Lignin is a molecule the world had not known what to do with. For sixty million years, dead trees did not decay - they accumulated, fell over, and became coal.
+Then a fungus learned the trick. The carbon began to move again. Without this, nothing recycles."
+category = &"species"
+trigger_id = &"wood_rot_bracket"

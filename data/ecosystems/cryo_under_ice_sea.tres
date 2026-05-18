@@ -17,6 +17,6 @@ completion_criterion = &"events_survived"
 completion_target = 3.0
 completion_required_species = &""
 completion_required_biome = &""
-starting_species_filter = [&"mycelium_thread"]
+starting_species_filter = [&"mycelium_thread", &"cyanobacterial_mat"]
 unlock_text = "Below the ice, the sea remembers being warm. It will be warm again."
 complete_text = "What you grew here will rise when the ice does. The spores already know the way."

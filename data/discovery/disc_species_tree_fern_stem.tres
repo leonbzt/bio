@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_species_tree_fern_stem"
+title = "Standing Up"
+body = "Conducting tissue. Lignin. Height. The first thing on land that grew above the height of a thumb and stayed.
+You raise your leaves into a sky that has never had anything in it but cloud and weather. From now on, there are also you."
+category = &"species"
+trigger_id = &"tree_fern_stem"

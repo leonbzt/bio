@@ -1,6 +1,7 @@
 extends Node
 
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
+const DEBUG_BIOME_AFFINITY: bool = false
 const _TICK_EFFECT_HANDLERS: Dictionary = {
 	&"parasite_steal": "_effect_parasite_steal",
 	&"corpse_decay": "_effect_corpse_decay",
@@ -74,11 +75,18 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 			sun_mult = float(_ambient.get_multiplier(&"sunlight_multiplier"))
 		for coord in coords:
 			var per_tile: float = base_yield * base_mult
+			var affinity_mult: float = 1.0
+			var affinity_biome_id: StringName = &""
 			if resource_key == &"biomass":
 				if kingdom_id == &"fungi":
 					per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
 					if _is_tile_mycorrhizal_bonded(coord):
 						per_tile *= 1.20
+					var biome_for_affinity: BiomeData = _nutrients.get_biome_at(coord)
+					if biome_for_affinity != null:
+						affinity_mult = float(species.biome_affinity.get(biome_for_affinity.id, 1.0))
+						affinity_biome_id = biome_for_affinity.id
+						per_tile *= affinity_mult
 				else:
 					var biome: BiomeData = _nutrients.get_biome_at(coord)
 					if biome == null:
@@ -95,6 +103,9 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 						per_tile *= 1.15
 					if _is_tile_mycorrhizal_bonded(coord):
 						per_tile *= 1.20
+					affinity_mult = float(species.biome_affinity.get(biome.id, 1.0))
+					affinity_biome_id = biome.id
+					per_tile *= affinity_mult
 			elif resource_key == &"decay":
 				per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
 				if _is_tile_mycorrhizal_bonded(coord):
@@ -105,6 +116,8 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 				per_tile *= (1.0 + _get_symbiosis_bonus())
 			elif MetaModifiers.is_unlocked(&"wood_wide_web") and _is_adjacent_to_symbiotic(coord):
 				per_tile *= 1.15
+			if DEBUG_BIOME_AFFINITY and resource_key == &"biomass" and affinity_biome_id != &"" and affinity_mult != 1.0:
+				print("[GrowthSystem] %s on %s: affinity=%.2f per_tile=%.3f" % [species.id, affinity_biome_id, affinity_mult, per_tile])
 			total += per_tile
 		if total > 0.0:
 			ResourceLedger.add(resource_key, total)

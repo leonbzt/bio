@@ -1,0 +1,767 @@
+diff --git a/data/discovery/_index.tres b/data/discovery/_index.tres
+index 30ee497..e4a970b 100644
+--- a/data/discovery/_index.tres
++++ b/data/discovery/_index.tres
+@@ -1,4 +1,4 @@
+-[gd_resource type="Resource" script_class="DiscoveryIndex" load_steps=40 format=3]
++[gd_resource type="Resource" script_class="DiscoveryIndex" load_steps=48 format=3]
+ 
+ [ext_resource type="Script" path="res://scripts/data/discovery_index.gd" id="1"]
+ [ext_resource type="Resource" path="res://data/discovery/disc_kingdom_plantae.tres" id="2"]
+@@ -39,7 +39,15 @@
+ [ext_resource type="Resource" path="res://data/discovery/disc_ecosystem_dev_inland_swamp.tres" id="37"]
+ [ext_resource type="Resource" path="res://data/discovery/disc_event_mass_extinction.tres" id="38"]
+ [ext_resource type="Resource" path="res://data/discovery/disc_milestone_first_era_transition.tres" id="39"]
++[ext_resource type="Resource" path="res://data/discovery/disc_species_cyanobacterial_mat.tres" id="40"]
++[ext_resource type="Resource" path="res://data/discovery/disc_species_vent_archaeon.tres" id="41"]
++[ext_resource type="Resource" path="res://data/discovery/disc_species_cryo_lichen.tres" id="42"]
++[ext_resource type="Resource" path="res://data/discovery/disc_species_tree_fern_stem.tres" id="43"]
++[ext_resource type="Resource" path="res://data/discovery/disc_species_wood_rot_bracket.tres" id="44"]
++[ext_resource type="Resource" path="res://data/discovery/disc_lineage_pioneer_stem.tres" id="45"]
++[ext_resource type="Resource" path="res://data/discovery/disc_lineage_mycorrhizal.tres" id="46"]
++[ext_resource type="Resource" path="res://data/discovery/disc_lineage_lichen.tres" id="47"]
+ 
+ [resource]
+ script = ExtResource("1")
+-entries = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36"), ExtResource("37"), ExtResource("38"), ExtResource("39")])
++entries = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36"), ExtResource("37"), ExtResource("38"), ExtResource("39"), ExtResource("40"), ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47")])
+diff --git a/data/ecosystems/cryo_polar_ice.tres b/data/ecosystems/cryo_polar_ice.tres
+index 53fc8c3..2de9661 100644
+--- a/data/ecosystems/cryo_polar_ice.tres
++++ b/data/ecosystems/cryo_polar_ice.tres
+@@ -18,6 +18,6 @@ completion_criterion = &"tiles_colonized"
+ completion_target = 30.0
+ completion_required_species = &""
+ completion_required_biome = &""
+-starting_species_filter = [&"mycelium_thread"]
++starting_species_filter = [&"mycelium_thread", &"cyanobacterial_mat", &"cryo_lichen"]
+ unlock_text = "The first cold. Few species can begin here."
+ complete_text = "A presence holds in the cold. Patience proved enough."
+diff --git a/data/ecosystems/cryo_under_ice_sea.tres b/data/ecosystems/cryo_under_ice_sea.tres
+index 70d55f1..a36d77a 100644
+--- a/data/ecosystems/cryo_under_ice_sea.tres
++++ b/data/ecosystems/cryo_under_ice_sea.tres
+@@ -17,6 +17,6 @@ completion_criterion = &"events_survived"
+ completion_target = 3.0
+ completion_required_species = &""
+ completion_required_biome = &""
+-starting_species_filter = [&"mycelium_thread"]
++starting_species_filter = [&"mycelium_thread", &"cyanobacterial_mat"]
+ unlock_text = "Below the ice, the sea remembers being warm. It will be warm again."
+ complete_text = "What you grew here will rise when the ice does. The spores already know the way."
+diff --git a/data/ecosystems/cryo_volcanic_vent.tres b/data/ecosystems/cryo_volcanic_vent.tres
+index 1d5695c..444048c 100644
+--- a/data/ecosystems/cryo_volcanic_vent.tres
++++ b/data/ecosystems/cryo_volcanic_vent.tres
+@@ -18,6 +18,6 @@ completion_criterion = &"biomass_earned"
+ completion_target = 400.0
+ completion_required_species = &""
+ completion_required_biome = &""
+-starting_species_filter = [&"mycelium_thread"]
++starting_species_filter = [&"mycelium_thread", &"vent_archaeon"]
+ unlock_text = "The world is not all cold. Find the warmth and grow into it."
+ complete_text = "Twenty bodies arranged around a single seam of heat. A small civilization, made of patience."
+diff --git a/data/ecosystems/dev_inland_swamp.tres b/data/ecosystems/dev_inland_swamp.tres
+index d15c7e6..a3a1eb2 100644
+--- a/data/ecosystems/dev_inland_swamp.tres
++++ b/data/ecosystems/dev_inland_swamp.tres
+@@ -18,6 +18,6 @@ completion_criterion = &"events_survived"
+ completion_target = 4.0
+ completion_required_species = &""
+ completion_required_biome = &""
+-starting_species_filter = [&"pioneer_grass", &"mycelium_thread", &"bramble"]
++starting_species_filter = [&"pioneer_grass", &"mycelium_thread", &"bramble", &"tree_fern_stem", &"wood_rot_bracket"]
+ unlock_text = "Where the water sits, the fungi find the plants. The bargain follows."
+ complete_text = "Five hundred units of compounded partnership. The swamp itself is your monument."
+diff --git a/data/species/_index.tres b/data/species/_index.tres
+index a20666e..82c0a92 100644
+--- a/data/species/_index.tres
++++ b/data/species/_index.tres
+@@ -1,4 +1,4 @@
+-[gd_resource type="Resource" script_class="SpeciesIndex" load_steps=9 format=3]
++[gd_resource type="Resource" script_class="SpeciesIndex" load_steps=14 format=3]
+ 
+ [ext_resource type="Script" path="res://scripts/data/species_index.gd" id="1"]
+ [ext_resource type="Resource" path="res://data/species/pioneer_grass.tres" id="2"]
+@@ -8,7 +8,12 @@
+ [ext_resource type="Resource" path="res://data/species/common_grazer.tres" id="6"]
+ [ext_resource type="Resource" path="res://data/species/common_predator.tres" id="7"]
+ [ext_resource type="Resource" path="res://data/species/mycelium_thread_mycorrhizal.tres" id="8"]
++[ext_resource type="Resource" path="res://data/species/cyanobacterial_mat.tres" id="9"]
++[ext_resource type="Resource" path="res://data/species/vent_archaeon.tres" id="10"]
++[ext_resource type="Resource" path="res://data/species/cryo_lichen.tres" id="11"]
++[ext_resource type="Resource" path="res://data/species/tree_fern_stem.tres" id="12"]
++[ext_resource type="Resource" path="res://data/species/wood_rot_bracket.tres" id="13"]
+ 
+ [resource]
+ script = ExtResource("1")
+-species = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])
++species = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13")])
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index bbceaa2..a7575da 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -215,6 +215,8 @@ class_name SpeciesData extends Resource
+ @export var id: StringName
+ @export var display_name: String
+ @export var description: String
++@export var latin_name: String
++@export var lineage_id: StringName
+ @export var kingdom_id: StringName            # tag, not run-state (see SPECIES_MODEL.md)
+ @export var sprite: Texture2D
+ @export var base_traits: Array[TraitData]
+@@ -231,6 +233,7 @@ class_name SpeciesData extends Resource
+ @export var recipe_components: Array[StringName]  # non-empty + placement_rule==&"recipe" → atomic multi-component placement
+ @export var tile_marker_color: Color
+ @export var tile_marker_shape: StringName     # square|circle|cross|leaf|spore|root|border
++@export var biome_affinity: Dictionary        # {biome_id: multiplier}; consumed by GrowthSystem biomass yields
+ ```
+ 
+ Removed fields: `layer_count`, `layer_species` (replaced by `recipe_components` per Locked Decision 12).
+@@ -448,6 +451,10 @@ Increment `SAVE_VERSION` and add a `migrate()` case any time the JSON schema cha
+ | v6 | `meta.discovery_log`, `meta.kingdoms_played`, `meta.niches_played`, `run.event_first_fires_seen` added |
+ | v7 | niche id rename `parasite_plantae` → `parasitic_plantae` |
+ | v9 | `run.goal_id`, `run.goal_progress`, `run.goal_met` added |
++| v10 | symbiosis retired from active kingdom state; legacy run/resources compatibility backfills |
++| v11 | era/ecosystem state added (`current_era_id`, `current_ecosystem_id`, `ecosystem_completions`, `eras_unlocked`) |
++| v12 | species-first migration (`species_unlocked`, `species_played`, `starting_species_id`, per-tile `occupants`) |
++| v13 | `meta.lineages_played` added; backfilled from `meta.species_played` |
+ 
+ ---
+ 
+diff --git a/docs/ROADMAP.md b/docs/ROADMAP.md
+index 4734ece..1e1291e 100644
+--- a/docs/ROADMAP.md
++++ b/docs/ROADMAP.md
+@@ -159,7 +159,7 @@ Architectural reshape. **No new player-visible content.** Collapses kingdom/nich
+ 
+ **Originally-scoped Phase 13 content briefs** (biomes, mass extinction teeth, era nodes, per-era visuals) — paused, archived at `docs/briefs/phase_13_paused/`, revive as Phase 14.
+ 
+-### Phase 14a — Species roster foundation + biome affinity *(briefs written 2026-05-18, see `docs/SPECIES_ROSTER.md`)*
++### Phase 14a — Species roster foundation + biome affinity ✅ *(completed 2026-05-18, see `docs/SPECIES_ROSTER.md`)*
+ 
+ Layered tier rollout, Tier 1 starter (~15 species). Hybrid era gating (most carry over, some signature era-locked). Soft biome preference via per-species multipliers. Hybrid naming (poetic display + Latin tooltip).
+ 
+diff --git a/scripts/autoloads/discovery_log.gd b/scripts/autoloads/discovery_log.gd
+index eca9a30..bf8c584 100644
+--- a/scripts/autoloads/discovery_log.gd
++++ b/scripts/autoloads/discovery_log.gd
+@@ -5,6 +5,7 @@ extends Node
+ ##
+ 
+ const DISCOVERY_INDEX_PATH: String = "res://data/discovery/_index.tres"
++const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
+ 
+ const _MILESTONES: Dictionary[StringName, int] = {
+ 	&"prestige_5": 5,
+@@ -120,13 +121,63 @@ func _on_species_introduced(species_id: StringName) -> void:
+ 	var entry := find_entry_for_trigger(&"species", species_id)
+ 	if entry != &"":
+ 		unlock(entry)
++
++	var dirty: bool = false
+ 	var starter: StringName = StringName(GameState.run_save.get("starting_species_id", ""))
+ 	if species_id == starter:
+ 		var played: Array = GameState.meta_save.get("species_played", []) as Array
+ 		if not played.has(String(species_id)):
+ 			played.append(String(species_id))
+ 			GameState.meta_save["species_played"] = played
++			dirty = true
++
++	# Phase 14a: lineage tracking + cross-era milestone unlocks.
++	var species: SpeciesData = _lookup_species(species_id)
++	if species == null:
++		if dirty:
++			SaveSystem.save_now()
++		return
++	var lineage: StringName = species.lineage_id
++	if lineage == &"":
++		if dirty:
+ 			SaveSystem.save_now()
++		return
++
++	var lineages_played: Array = GameState.meta_save.get("lineages_played", []) as Array
++	if not lineages_played.has(String(lineage)):
++		lineages_played.append(String(lineage))
++		GameState.meta_save["lineages_played"] = lineages_played
++		dirty = true
++
++	var ecosystem_id: StringName = StringName(GameState.meta_save.get("current_ecosystem_id", ""))
++	if ecosystem_id == &"":
++		if dirty:
++			SaveSystem.save_now()
++		return
++	var lineage_key: String = "%s@%s" % [String(lineage), String(ecosystem_id)]
++	var seen: Array = GameState.meta_save.get("lineage_ecosystems_seen", []) as Array
++	if not seen.has(lineage_key):
++		seen.append(lineage_key)
++		GameState.meta_save["lineage_ecosystems_seen"] = seen
++		dirty = true
++
++	var eras_for_lineage: Dictionary = {}
++	var era_system := _get_era_system()
++	if era_system != null:
++		for key in seen:
++			var parts: PackedStringArray = String(key).split("@")
++			if parts.size() != 2 or parts[0] != String(lineage):
++				continue
++			var eco_id: StringName = StringName(parts[1])
++			var eco = era_system.get_ecosystem(eco_id)
++			if eco != null:
++				eras_for_lineage[String(eco.era_id)] = true
++	if eras_for_lineage.size() >= 2:
++		var milestone := find_entry_for_trigger(&"milestone", StringName("lineage_" + String(lineage)))
++		if milestone != &"":
++			unlock(milestone)
++	if dirty:
++		SaveSystem.save_now()
+ 
+ 
+ func _on_event_resolved(event_id: StringName, _outcome: StringName) -> void:
+@@ -196,3 +247,23 @@ func _lookup_node(node_id: StringName) -> EvolutionNodeData:
+ 		if node.id == node_id:
+ 			return node
+ 	return null
++
++
++func _lookup_species(species_id: StringName) -> SpeciesData:
++	return _load_species_for_lookup(species_id)
++
++
++func _load_species_for_lookup(species_id: StringName) -> SpeciesData:
++	var index: SpeciesIndex = load(SPECIES_INDEX_PATH) as SpeciesIndex
++	if index == null:
++		return null
++	for sp in index.species:
++		if sp.id == species_id:
++			return sp
++	return null
++
++
++func _get_era_system() -> Node:
++	if has_node("/root/EraSystem"):
++		return get_node("/root/EraSystem")
++	return null
+diff --git a/scripts/systems/colonization_rules_registry.gd b/scripts/systems/colonization_rules_registry.gd
+index a6804e6..455dad0 100644
+--- a/scripts/systems/colonization_rules_registry.gd
++++ b/scripts/systems/colonization_rules_registry.gd
+@@ -37,6 +37,28 @@ func _rule_adjacent_empty(coord: Vector2i, species: SpeciesData) -> Dictionary:
+ 		return _invalid()
+ 
+ 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
++	# Phase 14a: pioneer-tagged species can start and spread without adjacency.
++	if species.tags.has(&"pioneer"):
++		var pioneer_cost: Dictionary = species.colonize_cost.duplicate()
++		if MetaModifiers.is_unlocked(&"thrifty_growth"):
++			for k in pioneer_cost.keys():
++				pioneer_cost[k] = maxf(0.0, float(pioneer_cost[k]) - 1.0)
++		if owned.is_empty():
++			pioneer_cost = {}
++		return {
++			"valid": true,
++			"cost": pioneer_cost,
++			"data": {},
++			"placements": [{
++				"coord": coord,
++				"kingdom_id": kingdom_id,
++				"species_id": species.id,
++				"data": {}
++			}]
++		}
++
++	# Note: `successor` is intentionally a no-op in Phase 14a; it follows the
++	# standard adjacent-empty flow until tile-history predicates land.
+ 	if owned.size() > 0:
+ 		var owned_set: Dictionary = {}
+ 		for c in owned:
+@@ -76,6 +98,14 @@ func _rule_fungi_substrate(coord: Vector2i, species: SpeciesData) -> Dictionary:
+ 	if territory.get_occupant(coord, kingdom_id) != &"":
+ 		return _invalid()
+ 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
++
++	# Phase 14a: pioneer-tagged fungi can colonize bare tiles without substrate.
++	if species.tags.has(&"pioneer"):
++		var pioneer_cost: Dictionary = _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species)
++		if owned.is_empty():
++			pioneer_cost = {}
++		return _single(coord, species, pioneer_cost, {})
++
+ 	if owned.is_empty():
+ 		return _single(coord, species, {}, {})
+ 
+diff --git a/scripts/systems/growth_system.gd b/scripts/systems/growth_system.gd
+index b263c0b..60e7260 100644
+--- a/scripts/systems/growth_system.gd
++++ b/scripts/systems/growth_system.gd
+@@ -1,6 +1,7 @@
+ extends Node
+ 
+ const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
++const DEBUG_BIOME_AFFINITY: bool = false
+ const _TICK_EFFECT_HANDLERS: Dictionary = {
+ 	&"parasite_steal": "_effect_parasite_steal",
+ 	&"corpse_decay": "_effect_corpse_decay",
+@@ -74,11 +75,18 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
+ 			sun_mult = float(_ambient.get_multiplier(&"sunlight_multiplier"))
+ 		for coord in coords:
+ 			var per_tile: float = base_yield * base_mult
++			var affinity_mult: float = 1.0
++			var affinity_biome_id: StringName = &""
+ 			if resource_key == &"biomass":
+ 				if kingdom_id == &"fungi":
+ 					per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
+ 					if _is_tile_mycorrhizal_bonded(coord):
+ 						per_tile *= 1.20
++					var biome_for_affinity: BiomeData = _nutrients.get_biome_at(coord)
++					if biome_for_affinity != null:
++						affinity_mult = float(species.biome_affinity.get(biome_for_affinity.id, 1.0))
++						affinity_biome_id = biome_for_affinity.id
++						per_tile *= affinity_mult
+ 				else:
+ 					var biome: BiomeData = _nutrients.get_biome_at(coord)
+ 					if biome == null:
+@@ -95,6 +103,9 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
+ 						per_tile *= 1.15
+ 					if _is_tile_mycorrhizal_bonded(coord):
+ 						per_tile *= 1.20
++					affinity_mult = float(species.biome_affinity.get(biome.id, 1.0))
++					affinity_biome_id = biome.id
++					per_tile *= affinity_mult
+ 			elif resource_key == &"decay":
+ 				per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
+ 				if _is_tile_mycorrhizal_bonded(coord):
+@@ -105,6 +116,8 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
+ 				per_tile *= (1.0 + _get_symbiosis_bonus())
+ 			elif MetaModifiers.is_unlocked(&"wood_wide_web") and _is_adjacent_to_symbiotic(coord):
+ 				per_tile *= 1.15
++			if DEBUG_BIOME_AFFINITY and resource_key == &"biomass" and affinity_biome_id != &"" and affinity_mult != 1.0:
++				print("[GrowthSystem] %s on %s: affinity=%.2f per_tile=%.3f" % [species.id, affinity_biome_id, affinity_mult, per_tile])
+ 			total += per_tile
+ 		if total > 0.0:
+ 			ResourceLedger.add(resource_key, total)
+diff --git a/scripts/ui/species_panel.gd b/scripts/ui/species_panel.gd
+index 65abc2c..c588c88 100644
+--- a/scripts/ui/species_panel.gd
++++ b/scripts/ui/species_panel.gd
+@@ -51,6 +51,7 @@ func _refresh() -> void:
+ 
+ func _build_introduced_row(species: SpeciesData) -> Control:
+ 	var row := HBoxContainer.new()
++	var info := VBoxContainer.new()
+ 	var btn := Button.new()
+ 	btn.text = species.display_name
+ 	btn.modulate = species.tile_marker_color
+@@ -60,15 +61,30 @@ func _build_introduced_row(species: SpeciesData) -> Control:
+ 		EventBus.placement_target_changed.emit(String(species.id))
+ 		_refresh()
+ 	)
+-	row.add_child(btn)
++	info.add_child(btn)
++	if species.latin_name != "":
++		var lat := Label.new()
++		lat.text = species.latin_name
++		lat.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
++		lat.add_theme_font_size_override("font_size", 10)
++		info.add_child(lat)
++	row.add_child(info)
+ 	return row
+ 
+ 
+ func _build_available_row(species: SpeciesData) -> Control:
+ 	var row := HBoxContainer.new()
++	var info := VBoxContainer.new()
+ 	var label := Label.new()
+ 	label.text = species.display_name
+-	row.add_child(label)
++	info.add_child(label)
++	if species.latin_name != "":
++		var lat := Label.new()
++		lat.text = species.latin_name
++		lat.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
++		lat.add_theme_font_size_override("font_size", 10)
++		info.add_child(lat)
++	row.add_child(info)
+ 	var button := Button.new()
+ 	button.text = "Introduce"
+ 	button.disabled = not ResourceLedger.can_afford(species.introduce_cost)
+diff --git a/scripts/ui/starting_species_picker.gd b/scripts/ui/starting_species_picker.gd
+index 99092d8..c6c6222 100644
+--- a/scripts/ui/starting_species_picker.gd
++++ b/scripts/ui/starting_species_picker.gd
+@@ -88,6 +88,12 @@ func _build_card(species: SpeciesData) -> PanelContainer:
+ 	var name := Label.new()
+ 	name.text = species.display_name
+ 	vbox.add_child(name)
++	if species.latin_name != "":
++		var lat := Label.new()
++		lat.text = species.latin_name
++		lat.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
++		lat.add_theme_font_size_override("font_size", 10)
++		vbox.add_child(lat)
+ 	var kingdom := Label.new()
+ 	kingdom.text = String(species.kingdom_id).capitalize()
+ 	vbox.add_child(kingdom)
+diff --git a/data/discovery/disc_lineage_lichen.tres b/data/discovery/disc_lineage_lichen.tres
+new file mode 100644
+index 0000000..5d747fa
+--- /dev/null
++++ b/data/discovery/disc_lineage_lichen.tres
+@@ -0,0 +1,12 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_lineage_lichen"
++title = "The Partnership That Outlasts"
++body = "Two organisms agreeing to be one organism. Cyanobacteria with fungus. Algae with fungus. The contract is always different and always works.
++You have made this partnership in more than one age. The form survives the era that named it."
++category = &"milestone"
++trigger_id = &"lineage_lichen"
+diff --git a/data/discovery/disc_lineage_mycorrhizal.tres b/data/discovery/disc_lineage_mycorrhizal.tres
+new file mode 100644
+index 0000000..bc69384
+--- /dev/null
++++ b/data/discovery/disc_lineage_mycorrhizal.tres
+@@ -0,0 +1,12 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_lineage_mycorrhizal"
++title = "The Network Beneath"
++body = "Threads in the soil have looked the same for half a billion years. They reach what roots cannot reach, and what they reach, the roots receive.
++You have grown them under two different worlds. The pattern remembers itself."
++category = &"milestone"
++trigger_id = &"lineage_mycorrhizal"
+diff --git a/data/discovery/disc_lineage_pioneer_stem.tres b/data/discovery/disc_lineage_pioneer_stem.tres
+new file mode 100644
+index 0000000..1c85208
+--- /dev/null
++++ b/data/discovery/disc_lineage_pioneer_stem.tres
+@@ -0,0 +1,12 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_lineage_pioneer_stem"
++title = "The Lineage of Beginnings"
++body = "From bacterial mat to vascular stem, the same impulse: be first, hold light, ask nothing of the soil that the soil cannot give.
++You have carried this lineage forward across more than one age. The same project, two implementations."
++category = &"milestone"
++trigger_id = &"lineage_pioneer_stem"
+diff --git a/data/discovery/disc_species_cryo_lichen.tres b/data/discovery/disc_species_cryo_lichen.tres
+new file mode 100644
+index 0000000..ba9371d
+--- /dev/null
++++ b/data/discovery/disc_species_cryo_lichen.tres
+@@ -0,0 +1,12 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_species_cryo_lichen"
++title = "Two Cold Bodies, One Survival"
++body = "Cyanobacteria woven into fungal thread. The bacteria photograph the light; the fungus holds them above the ice.
++Together they survive what neither could alone. The blueprint is older than most of what calls itself alive."
++category = &"species"
++trigger_id = &"cryo_lichen"
+diff --git a/data/discovery/disc_species_cyanobacterial_mat.tres b/data/discovery/disc_species_cyanobacterial_mat.tres
+new file mode 100644
+index 0000000..2be0bdc
+--- /dev/null
++++ b/data/discovery/disc_species_cyanobacterial_mat.tres
+@@ -0,0 +1,12 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_species_cyanobacterial_mat"
++title = "The First Skin"
++body = "A green film across the ice. It learns to breathe with a sun that barely reaches.
++Every breath you take, every plant you walk past, every cell you are made of - they all came from this. Don't be fooled by how thin it looks."
++category = &"species"
++trigger_id = &"cyanobacterial_mat"
+diff --git a/data/discovery/disc_species_tree_fern_stem.tres b/data/discovery/disc_species_tree_fern_stem.tres
+new file mode 100644
+index 0000000..9a90a34
+--- /dev/null
++++ b/data/discovery/disc_species_tree_fern_stem.tres
+@@ -0,0 +1,12 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_species_tree_fern_stem"
++title = "Standing Up"
++body = "Conducting tissue. Lignin. Height. The first thing on land that grew above the height of a thumb and stayed.
++You raise your leaves into a sky that has never had anything in it but cloud and weather. From now on, there are also you."
++category = &"species"
++trigger_id = &"tree_fern_stem"
+diff --git a/data/discovery/disc_species_vent_archaeon.tres b/data/discovery/disc_species_vent_archaeon.tres
+new file mode 100644
+index 0000000..96e8e47
+--- /dev/null
++++ b/data/discovery/disc_species_vent_archaeon.tres
+@@ -0,0 +1,12 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_species_vent_archaeon"
++title = "The Wait at the Crack"
++body = "Single cells the size of nothing, gathered where the deep world breathes heat into the cold.
++They don't know they are first. They aren't first. They are simply still there, and that is the same thing."
++category = &"species"
++trigger_id = &"vent_archaeon"
+diff --git a/data/discovery/disc_species_wood_rot_bracket.tres b/data/discovery/disc_species_wood_rot_bracket.tres
+new file mode 100644
+index 0000000..0cae818
+--- /dev/null
++++ b/data/discovery/disc_species_wood_rot_bracket.tres
+@@ -0,0 +1,12 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_species_wood_rot_bracket"
++title = "The First Decomposer of Wood"
++body = "Lignin is a molecule the world had not known what to do with. For sixty million years, dead trees did not decay - they accumulated, fell over, and became coal.
++Then a fungus learned the trick. The carbon began to move again. Without this, nothing recycles."
++category = &"species"
++trigger_id = &"wood_rot_bracket"
+diff --git a/data/species/cryo_lichen.tres b/data/species/cryo_lichen.tres
+new file mode 100644
+index 0000000..ecdfba9
+--- /dev/null
++++ b/data/species/cryo_lichen.tres
+@@ -0,0 +1,34 @@
++[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"cryo_lichen"
++display_name = "Cryo-Lichen"
++description = "Cyanobacteria woven into mycelium. The two of them survive what neither could alone."
++kingdom_id = &"fungi"
++sprite = null
++base_traits = Array[Resource]([])
++colonize_cost = {}
++tick_yield = {}
++introduce_cost = {
++"biomass": 100.0,
++"spores": 40.0
++}
++placement_rule = &"recipe"
++placement_targets = Array[StringName]([])
++tags = Array[StringName]([])
++tick_effects = Array[StringName]([])
++unlock_ep_cost = 5
++unlock_prerequisites = Array[StringName]([&"cyanobacterial_mat", &"mycelium_thread"])
++era_requires = &"cryogenian"
++recipe_components = Array[StringName]([&"cyanobacterial_mat", &"mycelium_thread"])
++tile_marker_color = Color(0.6, 0.7, 0.55, 1.0)
++tile_marker_shape = &"square"
++latin_name = "Lecidea atrobrunnea (Proterozoic-now)"
++lineage_id = &"lichen"
++biome_affinity = {
++&"rich_soil": 1.2,
++&"forest_edge": 1.0
++}
+diff --git a/data/species/cyanobacterial_mat.tres b/data/species/cyanobacterial_mat.tres
+new file mode 100644
+index 0000000..72327fa
+--- /dev/null
++++ b/data/species/cyanobacterial_mat.tres
+@@ -0,0 +1,37 @@
++[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"cyanobacterial_mat"
++display_name = "Cyanobacterial Mat"
++description = "A thin green skin across the ice and rock. The first to make oxygen worth breathing."
++kingdom_id = &"plantae"
++sprite = null
++base_traits = Array[Resource]([])
++colonize_cost = {
++"biomass": 2.0
++}
++tick_yield = {
++"biomass": 0.2,
++"nutrients": 0.1
++}
++introduce_cost = {}
++placement_rule = &"adjacent_empty"
++placement_targets = Array[StringName]([])
++tags = Array[StringName]([&"plantae", &"pioneer", &"nitrogen_fixer"])
++tick_effects = Array[StringName]([])
++unlock_ep_cost = 0
++unlock_prerequisites = Array[StringName]([])
++era_requires = &"cryogenian"
++recipe_components = Array[StringName]([])
++tile_marker_color = Color(0.35, 0.65, 0.50, 1.0)
++tile_marker_shape = &"square"
++latin_name = "Oscillatoria princeps (Proterozoic-Cambrian)"
++lineage_id = &"pioneer_stem"
++biome_affinity = {
++&"rich_soil": 1.1,
++&"forest_edge": 0.9,
++&"grassland": 1.0
++}
+diff --git a/data/species/tree_fern_stem.tres b/data/species/tree_fern_stem.tres
+new file mode 100644
+index 0000000..029c9ba
+--- /dev/null
++++ b/data/species/tree_fern_stem.tres
+@@ -0,0 +1,39 @@
++[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"tree_fern_stem"
++display_name = "Tree-Fern Stem"
++description = "Vascular tissue at last. The first tall thing in a world that had been low."
++kingdom_id = &"plantae"
++sprite = null
++base_traits = Array[Resource]([])
++colonize_cost = {
++"biomass": 5.0
++}
++tick_yield = {
++"biomass": 0.5,
++"nutrients": 0.2
++}
++introduce_cost = {
++"biomass": 80.0
++}
++placement_rule = &"adjacent_empty"
++placement_targets = Array[StringName]([])
++tags = Array[StringName]([&"plantae", &"successor", &"arborescent"])
++tick_effects = Array[StringName]([])
++unlock_ep_cost = 6
++unlock_prerequisites = Array[StringName]([&"pioneer_grass"])
++era_requires = &"devonian"
++recipe_components = Array[StringName]([])
++tile_marker_color = Color(0.30, 0.55, 0.25, 1.0)
++tile_marker_shape = &"leaf"
++latin_name = "Wattieza muschelae (Middle Devonian)"
++lineage_id = &"arborescent"
++biome_affinity = {
++&"forest_edge": 1.3,
++&"rich_soil": 1.2,
++&"grassland": 0.9
++}
+diff --git a/data/species/vent_archaeon.tres b/data/species/vent_archaeon.tres
+new file mode 100644
+index 0000000..7f11b2f
+--- /dev/null
++++ b/data/species/vent_archaeon.tres
+@@ -0,0 +1,39 @@
++[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"vent_archaeon"
++display_name = "Vent Archaeon"
++description = "Heat-eaters. They wait at the cracks where the deep world breathes."
++kingdom_id = &"fungi"
++sprite = null
++base_traits = Array[Resource]([])
++colonize_cost = {
++"spores": 3.0
++}
++tick_yield = {
++"biomass": 0.25,
++"decay": 0.15
++}
++introduce_cost = {
++"biomass": 60.0
++}
++placement_rule = &"fungi_substrate"
++placement_targets = Array[StringName]([])
++tags = Array[StringName]([&"fungi", &"pioneer", &"extremophile"])
++tick_effects = Array[StringName]([])
++unlock_ep_cost = 4
++unlock_prerequisites = Array[StringName]([&"mycelium_thread"])
++era_requires = &"cryogenian"
++recipe_components = Array[StringName]([])
++tile_marker_color = Color(0.30, 0.25, 0.40, 1.0)
++tile_marker_shape = &"spore"
++latin_name = "Pyrolobus fumarii (extremophile, all eras)"
++lineage_id = &"extremophile"
++biome_affinity = {
++&"rich_soil": 0.5,
++&"forest_edge": 0.4,
++&"grassland": 0.3
++}
+diff --git a/data/species/wood_rot_bracket.tres b/data/species/wood_rot_bracket.tres
+new file mode 100644
+index 0000000..f598cf1
+--- /dev/null
++++ b/data/species/wood_rot_bracket.tres
+@@ -0,0 +1,40 @@
++[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"wood_rot_bracket"
++display_name = "Wood-Rot Bracket"
++description = "A fungus that learned to eat wood. The first organism in 400 million years that did. Everything else burned. This one rotted."
++kingdom_id = &"fungi"
++sprite = null
++base_traits = Array[Resource]([])
++colonize_cost = {
++"spores": 3.0
++}
++tick_yield = {
++"biomass": 0.3,
++"decay": 0.6,
++"spores": 0.1
++}
++introduce_cost = {
++"spores": 60.0,
++"biomass": 30.0
++}
++placement_rule = &"fungi_substrate"
++placement_targets = Array[StringName]([])
++tags = Array[StringName]([&"fungi", &"saprotroph"])
++tick_effects = Array[StringName]([&"corpse_decay"])
++unlock_ep_cost = 5
++unlock_prerequisites = Array[StringName]([&"mycelium_thread"])
++era_requires = &"devonian"
++recipe_components = Array[StringName]([])
++tile_marker_color = Color(0.55, 0.35, 0.20, 1.0)
++tile_marker_shape = &"root"
++latin_name = "Prototaxites loganii (Silurian-Devonian, gigantic)"
++lineage_id = &"saprotroph"
++biome_affinity = {
++&"forest_edge": 1.2,
++&"rich_soil": 1.1
++}

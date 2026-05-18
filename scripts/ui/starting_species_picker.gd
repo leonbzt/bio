@@ -88,6 +88,12 @@ func _build_card(species: SpeciesData) -> PanelContainer:
 	var name := Label.new()
 	name.text = species.display_name
 	vbox.add_child(name)
+	if species.latin_name != "":
+		var lat := Label.new()
+		lat.text = species.latin_name
+		lat.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+		lat.add_theme_font_size_override("font_size", 10)
+		vbox.add_child(lat)
 	var kingdom := Label.new()
 	kingdom.text = String(species.kingdom_id).capitalize()
 	vbox.add_child(kingdom)

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_species_vent_archaeon"
+title = "The Wait at the Crack"
+body = "Single cells the size of nothing, gathered where the deep world breathes heat into the cold.
+They don't know they are first. They aren't first. They are simply still there, and that is the same thing."
+category = &"species"
+trigger_id = &"vent_archaeon"

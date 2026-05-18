@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_lineage_lichen"
+title = "The Partnership That Outlasts"
+body = "Two organisms agreeing to be one organism. Cyanobacteria with fungus. Algae with fungus. The contract is always different and always works.
+You have made this partnership in more than one age. The form survives the era that named it."
+category = &"milestone"
+trigger_id = &"lineage_lichen"

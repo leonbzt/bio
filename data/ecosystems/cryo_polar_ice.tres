@@ -18,6 +18,6 @@ completion_criterion = &"tiles_colonized"
 completion_target = 30.0
 completion_required_species = &""
 completion_required_biome = &""
-starting_species_filter = [&"mycelium_thread"]
+starting_species_filter = [&"mycelium_thread", &"cyanobacterial_mat", &"cryo_lichen"]
 unlock_text = "The first cold. Few species can begin here."
 complete_text = "A presence holds in the cold. Patience proved enough."

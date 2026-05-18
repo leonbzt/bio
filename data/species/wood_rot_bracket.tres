@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"wood_rot_bracket"
+display_name = "Wood-Rot Bracket"
+description = "A fungus that learned to eat wood. The first organism in 400 million years that did. Everything else burned. This one rotted."
+kingdom_id = &"fungi"
+sprite = null
+base_traits = Array[Resource]([])
+colonize_cost = {
+"spores": 3.0
+}
+tick_yield = {
+"biomass": 0.3,
+"decay": 0.6,
+"spores": 0.1
+}
+introduce_cost = {
+"spores": 60.0,
+"biomass": 30.0
+}
+placement_rule = &"fungi_substrate"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"fungi", &"saprotroph"])
+tick_effects = Array[StringName]([&"corpse_decay"])
+unlock_ep_cost = 5
+unlock_prerequisites = Array[StringName]([&"mycelium_thread"])
+era_requires = &"devonian"
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.55, 0.3, 0.45, 1.0)
+tile_marker_shape = &"root"
+latin_name = "Prototaxites loganii (Silurian-Devonian, gigantic)"
+lineage_id = &"saprotroph"
+biome_affinity = {
+&"forest_edge": 1.2,
+&"rich_soil": 1.1
+}

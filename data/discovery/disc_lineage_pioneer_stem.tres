@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_lineage_pioneer_stem"
+title = "The Lineage of Beginnings"
+body = "From bacterial mat to vascular stem, the same impulse: be first, hold light, ask nothing of the soil that the soil cannot give.
+You have carried this lineage forward across more than one age. The same project, two implementations."
+category = &"milestone"
+trigger_id = &"lineage_pioneer_stem"

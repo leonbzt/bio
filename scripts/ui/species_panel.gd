@@ -51,6 +51,7 @@ func _refresh() -> void:
 
 func _build_introduced_row(species: SpeciesData) -> Control:
 	var row := HBoxContainer.new()
+	var info := VBoxContainer.new()
 	var btn := Button.new()
 	btn.text = species.display_name
 	btn.modulate = species.tile_marker_color
@@ -60,15 +61,30 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 		EventBus.placement_target_changed.emit(String(species.id))
 		_refresh()
 	)
-	row.add_child(btn)
+	info.add_child(btn)
+	if species.latin_name != "":
+		var lat := Label.new()
+		lat.text = species.latin_name
+		lat.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+		lat.add_theme_font_size_override("font_size", 10)
+		info.add_child(lat)
+	row.add_child(info)
 	return row
 
 
 func _build_available_row(species: SpeciesData) -> Control:
 	var row := HBoxContainer.new()
+	var info := VBoxContainer.new()
 	var label := Label.new()
 	label.text = species.display_name
-	row.add_child(label)
+	info.add_child(label)
+	if species.latin_name != "":
+		var lat := Label.new()
+		lat.text = species.latin_name
+		lat.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+		lat.add_theme_font_size_override("font_size", 10)
+		info.add_child(lat)
+	row.add_child(info)
 	var button := Button.new()
 	button.text = "Introduce"
 	button.disabled = not ResourceLedger.can_afford(species.introduce_cost)

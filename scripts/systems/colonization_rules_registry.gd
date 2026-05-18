@@ -37,6 +37,28 @@ func _rule_adjacent_empty(coord: Vector2i, species: SpeciesData) -> Dictionary:
 		return _invalid()
 
 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
+	# Phase 14a: pioneer-tagged species can start and spread without adjacency.
+	if species.tags.has(&"pioneer"):
+		var pioneer_cost: Dictionary = species.colonize_cost.duplicate()
+		if MetaModifiers.is_unlocked(&"thrifty_growth"):
+			for k in pioneer_cost.keys():
+				pioneer_cost[k] = maxf(0.0, float(pioneer_cost[k]) - 1.0)
+		if owned.is_empty():
+			pioneer_cost = {}
+		return {
+			"valid": true,
+			"cost": pioneer_cost,
+			"data": {},
+			"placements": [{
+				"coord": coord,
+				"kingdom_id": kingdom_id,
+				"species_id": species.id,
+				"data": {}
+			}]
+		}
+
+	# Note: `successor` is intentionally a no-op in Phase 14a; it follows the
+	# standard adjacent-empty flow until tile-history predicates land.
 	if owned.size() > 0:
 		var owned_set: Dictionary = {}
 		for c in owned:
@@ -76,6 +98,14 @@ func _rule_fungi_substrate(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	if territory.get_occupant(coord, kingdom_id) != &"":
 		return _invalid()
 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
+
+	# Phase 14a: pioneer-tagged fungi can colonize bare tiles without substrate.
+	if species.tags.has(&"pioneer"):
+		var pioneer_cost: Dictionary = _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species)
+		if owned.is_empty():
+			pioneer_cost = {}
+		return _single(coord, species, pioneer_cost, {})
+
 	if owned.is_empty():
 		return _single(coord, species, {}, {})
 

@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"vent_archaeon"
+display_name = "Vent Archaeon"
+description = "Heat-eaters. They wait at the cracks where the deep world breathes."
+kingdom_id = &"fungi"
+sprite = null
+base_traits = Array[Resource]([])
+colonize_cost = {
+"spores": 3.0
+}
+tick_yield = {
+"biomass": 0.25,
+"decay": 0.15
+}
+introduce_cost = {
+"biomass": 60.0
+}
+placement_rule = &"fungi_substrate"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"fungi", &"pioneer", &"extremophile"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 4
+unlock_prerequisites = Array[StringName]([&"mycelium_thread"])
+era_requires = &"cryogenian"
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.3, 0.2, 0.55, 1.0)
+tile_marker_shape = &"spore"
+latin_name = "Pyrolobus fumarii (extremophile, all eras)"
+lineage_id = &"extremophile"
+biome_affinity = {
+&"rich_soil": 0.5,
+&"forest_edge": 0.4,
+&"grassland": 0.3
+}

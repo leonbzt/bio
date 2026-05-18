@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_species_cryo_lichen"
+title = "Two Cold Bodies, One Survival"
+body = "Cyanobacteria woven into fungal thread. The bacteria photograph the light; the fungus holds them above the ice.
+Together they survive what neither could alone. The blueprint is older than most of what calls itself alive."
+category = &"species"
+trigger_id = &"cryo_lichen"

@@ -215,6 +215,8 @@ class_name SpeciesData extends Resource
 @export var id: StringName
 @export var display_name: String
 @export var description: String
+@export var latin_name: String
+@export var lineage_id: StringName
 @export var kingdom_id: StringName            # tag, not run-state (see SPECIES_MODEL.md)
 @export var sprite: Texture2D
 @export var base_traits: Array[TraitData]
@@ -231,6 +233,7 @@ class_name SpeciesData extends Resource
 @export var recipe_components: Array[StringName]  # non-empty + placement_rule==&"recipe" → atomic multi-component placement
 @export var tile_marker_color: Color
 @export var tile_marker_shape: StringName     # square|circle|cross|leaf|spore|root|border
+@export var biome_affinity: Dictionary        # {biome_id: multiplier}; consumed by GrowthSystem biomass yields
 ```
 
 Removed fields: `layer_count`, `layer_species` (replaced by `recipe_components` per Locked Decision 12).
@@ -448,6 +451,10 @@ Increment `SAVE_VERSION` and add a `migrate()` case any time the JSON schema cha
 | v6 | `meta.discovery_log`, `meta.kingdoms_played`, `meta.niches_played`, `run.event_first_fires_seen` added |
 | v7 | niche id rename `parasite_plantae` → `parasitic_plantae` |
 | v9 | `run.goal_id`, `run.goal_progress`, `run.goal_met` added |
+| v10 | symbiosis retired from active kingdom state; legacy run/resources compatibility backfills |
+| v11 | era/ecosystem state added (`current_era_id`, `current_ecosystem_id`, `ecosystem_completions`, `eras_unlocked`) |
+| v12 | species-first migration (`species_unlocked`, `species_played`, `starting_species_id`, per-tile `occupants`) |
+| v13 | `meta.lineages_played` added; backfilled from `meta.species_played` |
 
 ---
 

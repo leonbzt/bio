@@ -18,6 +18,6 @@ completion_criterion = &"events_survived"
 completion_target = 4.0
 completion_required_species = &""
 completion_required_biome = &""
-starting_species_filter = [&"pioneer_grass", &"mycelium_thread", &"bramble"]
+starting_species_filter = [&"pioneer_grass", &"mycelium_thread", &"bramble", &"tree_fern_stem", &"wood_rot_bracket"]
 unlock_text = "Where the water sits, the fungi find the plants. The bargain follows."
 complete_text = "Five hundred units of compounded partnership. The swamp itself is your monument."

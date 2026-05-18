@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_species_cyanobacterial_mat"
+title = "The First Skin"
+body = "A green film across the ice. It learns to breathe with a sun that barely reaches.
+Every breath you take, every plant you walk past, every cell you are made of - they all came from this. Don't be fooled by how thin it looks."
+category = &"species"
+trigger_id = &"cyanobacterial_mat"

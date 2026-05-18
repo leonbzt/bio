@@ -8,10 +8,16 @@ id = &"cryo_volcanic_vent"
 display_name = "Volcanic Vent"
 description = "Heat from below. The world's pulse, somewhere down there. Fungi crowd where the warmth seeps up."
 era_id = &"cryogenian"
-completion_criterion = &"tiles_colonized"
-completion_target = 20.0
-completion_required_niche = &""
-completion_required_kingdom = &"fungi"
+biome_recipe = {
+&"forest_edge": 0.4,
+&"grassland": 0.2,
+&"rich_soil": 0.4
+}
+biome_cluster_size = 3.0
+completion_criterion = &"biomass_earned"
+completion_target = 400.0
+completion_required_species = &""
+completion_required_biome = &""
+starting_species_filter = [&"mycelium_thread"]
 unlock_text = "The world is not all cold. Find the warmth and grow into it."
 complete_text = "Twenty bodies arranged around a single seam of heat. A small civilization, made of patience."
-biome_preference = &"forest_edge"

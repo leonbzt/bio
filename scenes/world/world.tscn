@@ -14,14 +14,9 @@
 [ext_resource type="Script" path="res://scripts/systems/ability_system.gd" id="12"]
 [ext_resource type="Script" path="res://scripts/systems/run_stats_tracker.gd" id="13"]
 [ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="15"]
-[ext_resource type="Script" path="res://scripts/systems/plant_colonization.gd" id="16"]
 [ext_resource type="Script" path="res://scripts/systems/corpse_system.gd" id="17"]
-[ext_resource type="Script" path="res://scripts/systems/fungi_colonization.gd" id="18"]
 [ext_resource type="Script" path="res://scripts/systems/spore_infection_handler.gd" id="19"]
 [ext_resource type="Script" path="res://scripts/systems/ambient_modifier_system.gd" id="20"]
-[ext_resource type="Script" path="res://scripts/systems/parasite_decay_system.gd" id="21"]
-[ext_resource type="Script" path="res://scripts/systems/animal_colonization.gd" id="22"]
-[ext_resource type="Script" path="res://scripts/systems/parasite_steal_system.gd" id="23"]
 
 [node name="World" type="Node2D"]
 
@@ -38,15 +33,6 @@ world_max = Vector2(512, 768)
 
 [node name="TileInputRouter" type="Node" parent="Systems"]
 script = ExtResource("4")
-
-[node name="PlantColonization" type="Node" parent="Systems"]
-script = ExtResource("16")
-
-[node name="FungiColonization" type="Node" parent="Systems"]
-script = ExtResource("18")
-
-[node name="AnimalColonization" type="Node" parent="Systems"]
-script = ExtResource("22")
 
 [node name="TerritorySystem" type="Node" parent="Systems"]
 script = ExtResource("5")
@@ -72,12 +58,6 @@ script = ExtResource("19")
 
 [node name="AmbientModifierSystem" type="Node" parent="Systems"]
 script = ExtResource("20")
-
-[node name="ParasiteDecaySystem" type="Node" parent="Systems"]
-script = ExtResource("21")
-
-[node name="ParasiteStealSystem" type="Node" parent="Systems"]
-script = ExtResource("23")
 
 [node name="AbilitySystem" type="Node" parent="Systems"]
 script = ExtResource("12")

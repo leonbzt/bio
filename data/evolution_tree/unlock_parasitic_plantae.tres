@@ -13,5 +13,6 @@ meta_cost = {
 }
 grants_traits = []
 grants_kingdoms = []
+grants_species = [&"bramble"]
 wing = &"plantae"
 tier = 2

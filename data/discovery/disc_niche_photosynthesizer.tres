@@ -8,5 +8,5 @@ id = &"disc_niche_photosynthesizer"
 title = "Photons and Patience"
 body = "The sun arrives at every leaf for free. The work is in being there to catch it.
 You learn that growth is mostly about holding still in the right place."
-category = &"niche"
-trigger_id = &"photosynthesizer"
+category = &"species"
+trigger_id = &"pioneer_grass"

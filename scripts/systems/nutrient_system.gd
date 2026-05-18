@@ -93,12 +93,56 @@ func _generate_biome_map() -> Dictionary:
 
 	var width: int = int(_tile_grid.GRID_WIDTH)
 	var height: int = int(_tile_grid.GRID_HEIGHT)
+	var era_system := _get_era_system()
+	var eco: EcosystemData = null
+	if era_system != null:
+		eco = era_system.get_current_ecosystem()
+
 	var map: Dictionary = {}
+	if eco == null or eco.biome_recipe.is_empty():
+		for y in range(height):
+			for x in range(width):
+				var biome: BiomeData = _biomes[rng.randi_range(0, _biomes.size() - 1)]
+				map["%d,%d" % [x, y]] = String(biome.id)
+		return map
+
+	var cluster_threshold: float = 1.0 - (1.0 / maxf(eco.biome_cluster_size, 1.0))
 	for y in range(height):
 		for x in range(width):
-			var biome: BiomeData = _biomes[rng.randi_range(0, _biomes.size() - 1)]
-			map["%d,%d" % [x, y]] = String(biome.id)
+			var biome_id: StringName = &""
+			if rng.randf() < cluster_threshold and (x > 0 or y > 0):
+				var src_key: String = ""
+				if x > 0 and rng.randf() < 0.5:
+					src_key = "%d,%d" % [x - 1, y]
+				elif y > 0:
+					src_key = "%d,%d" % [x, y - 1]
+				if src_key in map:
+					biome_id = StringName(map[src_key])
+			if biome_id == &"":
+				biome_id = _weighted_pick(eco.biome_recipe, rng)
+			map["%d,%d" % [x, y]] = String(biome_id)
 	return map
+
+
+func _weighted_pick(recipe: Dictionary, rng: RandomNumberGenerator) -> StringName:
+	var total: float = 0.0
+	for weight in recipe.values():
+		total += float(weight)
+	if total <= 0.0:
+		return _biomes[0].id if not _biomes.is_empty() else &""
+	var roll: float = rng.randf_range(0.0, total)
+	for biome_id in recipe.keys():
+		roll -= float(recipe[biome_id])
+		if roll <= 0.0:
+			return StringName(biome_id)
+	return _biomes[0].id if not _biomes.is_empty() else &""
+
+
+func _get_era_system() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("EraSystem")
 
 
 func _parse_coord_key(key: String) -> Variant:

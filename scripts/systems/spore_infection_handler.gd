@@ -2,6 +2,7 @@ extends Node
 
 const EVENT_ID: StringName = &"spore_infection"
 const KINGDOM_ID: StringName = &"fungi"
+const DEFAULT_FUNGI_SPECIES: StringName = &"mycelium_thread"
 
 @onready var _territory: Node = get_node("../TerritorySystem")
 @onready var _tile_grid: Node = get_node("../../TileGrid")
@@ -61,9 +62,14 @@ func _on_tick(_delta: float) -> void:
 
 
 func _try_spread_one() -> void:
-	var owned: Array[Vector2i] = _territory.get_subsurface_owned_coords(KINGDOM_ID)
+	var owned: Array[Vector2i] = _territory.get_kingdom_occupied_coords(KINGDOM_ID)
 	if owned.is_empty():
 		return
+	# Use whichever fungi species currently occupies the fungi slot on the
+	# first owned tile — keeps spread visually consistent with the player's run.
+	var spreading_species: StringName = _territory.get_occupant(owned[0], KINGDOM_ID)
+	if spreading_species == &"":
+		spreading_species = DEFAULT_FUNGI_SPECIES
 	var seen: Dictionary = {}
 	for c in owned:
 		seen[c] = true
@@ -78,7 +84,7 @@ func _try_spread_one() -> void:
 				continue
 			if _culled_set.has(neighbor):
 				continue
-			if _territory.get_subsurface_owner(neighbor) != &"":
+			if _territory.get_occupant(neighbor, KINGDOM_ID) != &"":
 				continue
-			_territory.add_subsurface(neighbor, KINGDOM_ID)
+			_territory.add_occupant(neighbor, KINGDOM_ID, spreading_species)
 			return

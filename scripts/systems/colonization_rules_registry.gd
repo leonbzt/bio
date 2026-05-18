@@ -1,31 +1,42 @@
 extends Node
 
-# Returns {"valid": bool, "cost": Dictionary, "data": Dictionary}.
-func evaluate(rule: StringName, coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
-	match rule:
+const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
+
+
+func evaluate(coord: Vector2i, species: SpeciesData) -> Dictionary:
+	if species == null:
+		return _invalid()
+	match species.placement_rule:
 		&"adjacent_empty":
-			return _rule_adjacent_empty(coord, kingdom_id, species, niche)
+			return _rule_adjacent_empty(coord, species)
 		&"fungi_substrate":
-			return _rule_fungi_substrate(coord, kingdom_id, species, niche)
+			return _rule_fungi_substrate(coord, species)
 		&"parasitic_plantae":
-			return _rule_parasitic_plantae(coord, kingdom_id, species, niche)
+			return _rule_parasitic_plantae(coord, species)
 		&"mycorrhizal_fungi":
-			return _rule_mycorrhizal_fungi(coord, kingdom_id, species, niche)
+			return _rule_mycorrhizal_fungi(coord, species)
 		&"animal_anchor":
-			return _rule_animal_anchor(coord, kingdom_id, species, niche)
+			return _rule_animal_anchor(coord, species)
+		&"recipe":
+			return _rule_recipe(coord, species)
 		_:
-			push_warning("ColonizationRulesRegistry: unknown rule %s" % String(rule))
-			return {"valid": false, "cost": {}, "data": {}}
+			push_warning("ColonizationRulesRegistry: unknown rule %s" % String(species.placement_rule))
+			return _invalid()
 
 
-func _rule_adjacent_empty(coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
+func _invalid() -> Dictionary:
+	return {"valid": false, "cost": {}, "data": {}, "placements": []}
+
+
+func _rule_adjacent_empty(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	var territory: Node = _get_territory()
 	if territory == null:
-		return {"valid": false, "cost": {}, "data": {}}
-	if territory.get_surface_owner(coord) != &"":
-		return {"valid": false, "cost": {}, "data": {}}
+		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
+	if territory.get_occupant(coord, kingdom_id) != &"":
+		return _invalid()
 
-	var owned: Array[Vector2i] = territory.get_surface_owned_coords(kingdom_id)
+	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
 	if owned.size() > 0:
 		var owned_set: Dictionary = {}
 		for c in owned:
@@ -36,126 +47,172 @@ func _rule_adjacent_empty(coord: Vector2i, kingdom_id: StringName, species: Spec
 				has_neighbor = true
 				break
 		if not has_neighbor:
-			return {"valid": false, "cost": {}, "data": {}}
+			return _invalid()
 
-	var cost: Dictionary
-	if not niche.cost_override.is_empty():
-		cost = niche.cost_override.duplicate()
-	else:
-		cost = species.colonize_cost.duplicate()
+	var cost: Dictionary = species.colonize_cost.duplicate()
 	if MetaModifiers.is_unlocked(&"thrifty_growth"):
 		for k in cost.keys():
 			cost[k] = maxf(0.0, float(cost[k]) - 1.0)
 	if owned.is_empty():
 		cost = {}
+	return {
+		"valid": true,
+		"cost": cost,
+		"data": {},
+		"placements": [{
+			"coord": coord,
+			"kingdom_id": kingdom_id,
+			"species_id": species.id,
+			"data": {}
+		}]
+	}
 
-	return {"valid": true, "cost": cost, "data": {}}
 
-
-func _rule_fungi_substrate(coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
+func _rule_fungi_substrate(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	var territory: Node = _get_territory()
 	if territory == null:
-		return {"valid": false, "cost": {}, "data": {}}
-	if territory.get_subsurface_owner(coord) != &"":
-		return {"valid": false, "cost": {}, "data": {}}
-
-	var owned: Array[Vector2i] = territory.get_subsurface_owned_coords(kingdom_id)
+		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
+	if territory.get_occupant(coord, kingdom_id) != &"":
+		return _invalid()
+	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
 	if owned.is_empty():
-		return {"valid": true, "cost": {}, "data": {}}
-	if territory.get_surface_owner(coord) == &"plantae":
-		return {"valid": true, "cost": _apply_trait_cost_modifiers(_resolve_cost(species, niche), species), "data": {}}
+		return _single(coord, species, {}, {})
+
+	if territory.get_occupant(coord, &"plantae") != &"":
+		return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), {})
 	if _is_corpse_at(coord):
-		return {"valid": true, "cost": _apply_trait_cost_modifiers(_resolve_cost(species, niche), species), "data": {}}
+		return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), {})
 
 	var owned_set: Dictionary = {}
 	for c in owned:
 		owned_set[c] = true
 	for offset in neighbors(coord):
 		if owned_set.has(offset):
-			return {"valid": true, "cost": _apply_trait_cost_modifiers(_resolve_cost(species, niche), species), "data": {}}
+			return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), {})
 
 	if MetaModifiers.is_unlocked(&"spore_distribution"):
 		var charges: int = _get_spore_distribution_charges()
 		if charges > 0 and _has_line_of_sight(coord, owned):
 			_set_spore_distribution_charges(charges - 1)
-			return {"valid": true, "cost": _apply_trait_cost_modifiers(_resolve_cost(species, niche), species), "data": {}}
+			return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), {})
 
-	return {"valid": false, "cost": {}, "data": {}}
+	return _invalid()
 
 
-func _rule_parasitic_plantae(coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
+func _rule_parasitic_plantae(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	var territory: Node = _get_territory()
 	if territory == null:
-		return {"valid": false, "cost": {}, "data": {}}
-	if territory.get_surface_owner(coord) != &"":
-		return {"valid": false, "cost": {}, "data": {}}
-
-	var owned: Array[Vector2i] = territory.get_surface_owned_coords(kingdom_id)
+		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
+	if territory.get_occupant(coord, kingdom_id) != &"":
+		return _invalid()
+	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
 	if owned.is_empty():
-		return {"valid": true, "cost": {}, "data": {"parasite_decay_ticks": 30}}
+		return _single(coord, species, {}, {"parasite_decay_ticks": 30})
 
 	var has_neighbor: bool = false
 	for n in neighbors(coord):
-		if territory.get_surface_owner(n) != &"" or territory.get_subsurface_owner(n) != &"":
+		var occ: Dictionary = territory.get_occupants(n)
+		if not occ.is_empty():
 			has_neighbor = true
 			break
 	if not has_neighbor:
-		return {"valid": false, "cost": {}, "data": {}}
-
-	var cost: Dictionary = _resolve_cost(species, niche)
+		return _invalid()
+	var cost: Dictionary = species.colonize_cost.duplicate()
 	if MetaModifiers.is_unlocked(&"thrifty_growth"):
 		for k in cost.keys():
 			cost[k] = maxf(0.0, float(cost[k]) - 1.0)
+	return _single(coord, species, cost, {"parasite_decay_ticks": 30})
 
-	return {"valid": true, "cost": cost, "data": {"parasite_decay_ticks": 30}}
 
-
-func _rule_mycorrhizal_fungi(coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
+func _rule_mycorrhizal_fungi(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	var territory: Node = _get_territory()
 	if territory == null:
-		return {"valid": false, "cost": {}, "data": {}}
-	if territory.get_subsurface_owner(coord) != &"":
-		return {"valid": false, "cost": {}, "data": {}}
-
-	var plant_at_or_adjacent: bool = territory.get_surface_owner(coord) == &"plantae"
+		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
+	if territory.get_occupant(coord, kingdom_id) != &"":
+		return _invalid()
+	var plant_at_or_adjacent: bool = territory.get_occupant(coord, &"plantae") != &""
 	if not plant_at_or_adjacent:
 		for n in neighbors(coord):
-			if territory.get_surface_owner(n) == &"plantae":
+			if territory.get_occupant(n, &"plantae") != &"":
 				plant_at_or_adjacent = true
 				break
 	if not plant_at_or_adjacent:
-		return {"valid": false, "cost": {}, "data": {}}
-
-	var cost: Dictionary = _apply_trait_cost_modifiers(_resolve_cost(species, niche), species)
+		return _invalid()
 	var data := {}
-	if territory.get_surface_owner(coord) == &"plantae":
+	if territory.get_occupant(coord, &"plantae") != &"":
 		data["mycorrhizal_bond"] = true
-	return {"valid": true, "cost": cost, "data": data}
+	return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), data)
 
 
-func _rule_animal_anchor(coord: Vector2i, kingdom_id: StringName, species: SpeciesData, niche: NicheData) -> Dictionary:
+func _rule_animal_anchor(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	var territory: Node = _get_territory()
 	if territory == null:
-		return {"valid": false, "cost": {}, "data": {}}
-	if territory.get_surface_owner(coord) != &"":
-		return {"valid": false, "cost": {}, "data": {}}
-
-	# Animals are mobile-anchored — first animal places free anywhere.
-	# Subsequent animals must be adjacent to an owned tile (forms a herd/range).
-	var owned: Array[Vector2i] = territory.get_surface_owned_coords(kingdom_id)
+		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
+	if territory.get_occupant(coord, kingdom_id) != &"":
+		return _invalid()
+	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
 	if owned.is_empty():
-		return {"valid": true, "cost": {}, "data": {}}
-
+		return _single(coord, species, {}, {})
 	var has_neighbor: bool = false
 	for n in neighbors(coord):
-		if territory.get_surface_owner(n) != &"" or territory.get_subsurface_owner(n) != &"":
+		var occ: Dictionary = territory.get_occupants(n)
+		if not occ.is_empty():
 			has_neighbor = true
 			break
 	if not has_neighbor:
-		return {"valid": false, "cost": {}, "data": {}}
+		return _invalid()
+	return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), {})
 
-	var cost: Dictionary = _apply_trait_cost_modifiers(_resolve_cost(species, niche), species)
-	return {"valid": true, "cost": cost, "data": {}}
+
+func _rule_recipe(coord: Vector2i, species: SpeciesData) -> Dictionary:
+	if species.recipe_components.is_empty():
+		push_warning("Recipe species %s has no components" % String(species.id))
+		return _invalid()
+	var territory: Node = _get_territory()
+	if territory == null:
+		return _invalid()
+	var combined_placements: Array = []
+	var combined_cost: Dictionary = species.colonize_cost.duplicate()
+	var data_carry: Dictionary = {}
+	for component_id in species.recipe_components:
+		var component: SpeciesData = _species_lookup(component_id)
+		if component == null:
+			return _invalid()
+		var sub: Dictionary = evaluate(coord, component)
+		if not bool(sub.get("valid", false)):
+			return _invalid()
+		if territory.get_occupant(coord, component.kingdom_id) != &"":
+			return _invalid()
+		for key in (sub.get("cost", {}) as Dictionary).keys():
+			combined_cost[key] = float(combined_cost.get(key, 0.0)) + float(sub["cost"][key])
+		for key in (sub.get("data", {}) as Dictionary).keys():
+			data_carry[key] = sub["data"][key]
+		for placement in sub.get("placements", []):
+			combined_placements.append(placement)
+	return {
+		"valid": true,
+		"cost": combined_cost,
+		"data": data_carry,
+		"placements": combined_placements
+	}
+
+
+func _single(coord: Vector2i, species: SpeciesData, cost: Dictionary, data: Dictionary) -> Dictionary:
+	return {
+		"valid": true,
+		"cost": cost,
+		"data": data,
+		"placements": [{
+			"coord": coord,
+			"kingdom_id": species.kingdom_id,
+			"species_id": species.id,
+			"data": data
+		}]
+	}
 
 
 func neighbors(coord: Vector2i) -> Array[Vector2i]:
@@ -182,12 +239,6 @@ func _is_corpse_at(coord: Vector2i) -> bool:
 	if corpses.has_method("is_corpse_at"):
 		return corpses.is_corpse_at(coord)
 	return false
-
-
-func _resolve_cost(species: SpeciesData, niche: NicheData) -> Dictionary:
-	if not niche.cost_override.is_empty():
-		return niche.cost_override.duplicate()
-	return species.colonize_cost.duplicate()
 
 
 func _apply_trait_cost_modifiers(cost: Dictionary, species: SpeciesData) -> Dictionary:
@@ -219,3 +270,13 @@ func _has_line_of_sight(coord: Vector2i, owned: Array[Vector2i]) -> bool:
 		if c.x == coord.x or c.y == coord.y:
 			return true
 	return false
+
+
+func _species_lookup(species_id: StringName) -> SpeciesData:
+	var index: SpeciesIndex = load(SPECIES_INDEX_PATH) as SpeciesIndex
+	if index == null:
+		return null
+	for sp in index.species:
+		if sp.id == species_id:
+			return sp
+	return null

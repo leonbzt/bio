@@ -34,11 +34,11 @@ signal event_resolved(event_id: StringName, outcome: StringName)
 # Input mode and abilities
 signal input_mode_changed(mode: StringName)
 signal ability_used(ability_id: StringName, payload: Dictionary)
-signal placement_target_changed(target: StringName)
+signal placement_target_changed(target_species_id: StringName)
 
 # Run lifecycle
 signal run_started(kingdom_id: StringName)
-signal niche_changed(niche_id: StringName)
+signal species_introduced(species_id: StringName)
 signal prestige_triggered(summary: Dictionary)
 signal run_loaded(save_version: int)
 signal goal_progress_changed(progress: Dictionary)

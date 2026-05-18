@@ -18,25 +18,36 @@ func _ready() -> void:
 		_nodes_by_id[node.id] = node
 
 
-static func calculate_prestige_reward(total_biomass_earned: float) -> int:
-	return int(sqrt(maxf(0.0, total_biomass_earned) / 10.0))
+static func calculate_prestige_reward(total_biomass_earned: float, species_diversity: int = 1) -> int:
+	var base: int = int(sqrt(maxf(0.0, total_biomass_earned) / 10.0))
+	var diversity_mult: float = 1.0
+	if species_diversity >= 3:
+		diversity_mult = 1.2
+	elif species_diversity == 2:
+		diversity_mult = 1.1
+	return int(round(base * diversity_mult))
 
 
 func get_pending_reward() -> int:
 	var earned: float = float(GameState.run_save.get("statistics", {}).get("total_biomass_earned", 0.0))
-	return calculate_prestige_reward(earned)
+	var diversity: int = (GameState.run_save.get("unlocked_species_in_run", []) as Array).size()
+	return calculate_prestige_reward(earned, diversity)
 
 
 func trigger_prestige() -> void:
-	var reward: int = get_pending_reward()
 	var earned: float = float(GameState.run_save.get("statistics", {}).get("total_biomass_earned", 0.0))
+	var diversity: int = (GameState.run_save.get("unlocked_species_in_run", []) as Array).size()
+	var reward: int = calculate_prestige_reward(earned, diversity)
 	_record_kingdom_played()
+	_record_species_played()
 	_update_meta_stats(reward, earned)
-	_reset_run_state()
 	var summary := {
 		"evolution_points_earned": reward,
-		"total_biomass_earned": earned
+		"total_biomass_earned": earned,
+		"species_cultivated": diversity,
+		"starting_species_id": GameState.run_save.get("starting_species_id", "")
 	}
+	_reset_run_state()
 	EventBus.prestige_triggered.emit(summary)
 	SaveSystem.save_now()
 
@@ -59,37 +70,36 @@ func purchase_node(node_id: StringName) -> bool:
 	_set_node_unlocked(node_id, true)
 	for kingdom_id in node.grants_kingdoms:
 		_unlock_kingdom(kingdom_id)
+	for species_id in node.grants_species:
+		_unlock_species(species_id)
 	EventBus.evolution_node_unlocked.emit(node_id)
 	SaveSystem.save_now()
 	return true
 
 
-func start_run(kingdom_id: StringName, niche_id: StringName = &"") -> void:
-	if not is_kingdom_unlocked(kingdom_id):
+func start_run(species: SpeciesData) -> void:
+	if species == null:
 		return
-	if not _is_kingdom_available_in_current_era(kingdom_id):
-		push_warning("PrestigeSystem: kingdom %s is not available in the current era" % String(kingdom_id))
+	if not _is_kingdom_available_in_current_era(species.kingdom_id):
+		push_warning("PrestigeSystem: kingdom %s is not available in the current era" % String(species.kingdom_id))
 		return
-	var resolved_niche: StringName = _resolve_niche(kingdom_id, niche_id)
-	if resolved_niche == &"":
-		push_error("PrestigeSystem: no valid niche for kingdom %s" % String(kingdom_id))
-		return
-	GameState.current_kingdom_id = kingdom_id
-	GameState.current_niche_id = resolved_niche
-	if GameState.run_save is Dictionary:
-		GameState.run_save["kingdom_id"] = String(kingdom_id)
-		GameState.run_save["niche_id"] = String(resolved_niche)
-		if MetaModifiers.is_unlocked(&"spore_distribution"):
-			GameState.run_save["spore_distribution_charges"] = 3
-		else:
-			GameState.run_save["spore_distribution_charges"] = 0
+	GameState.current_kingdom_id = species.kingdom_id
+	_reset_run_state()
+	var run: Dictionary = GameState.run_save
+	run["kingdom_id"] = String(species.kingdom_id)
+	run["starting_species_id"] = String(species.id)
+	run["unlocked_species_in_run"] = [String(species.id)]
+	run["starting_species_kingdom_id"] = String(species.kingdom_id)
+	run["spore_distribution_charges"] = 3 if MetaModifiers.is_unlocked(&"spore_distribution") else 0
+	GameState.run_save = run
 	GameState.run_seed = randi()
 	GameState.is_run_active = true
-	GameState.placement_target = kingdom_id
-	EventBus.placement_target_changed.emit(GameState.placement_target)
-	EventBus.niche_changed.emit(resolved_niche)
-	EventBus.run_started.emit(kingdom_id)
-	_apply_conditional_start_bonus(resolved_niche)
+	GameState.placement_target_species_id = species.id
+	EventBus.placement_target_changed.emit(String(species.id))
+	EventBus.run_started.emit(species.kingdom_id)
+	EventBus.species_introduced.emit(species.id)
+	for key in species.tick_yield.keys():
+		ResourceLedger.add(StringName(key), float(species.tick_yield[key]) * 10.0)
 	SaveSystem.save_now()
 
 
@@ -105,59 +115,6 @@ func _is_kingdom_available_in_current_era(kingdom_id: StringName) -> bool:
 	if era.available_kingdoms.is_empty():
 		return true
 	return era.available_kingdoms.has(kingdom_id)
-
-
-func _resolve_niche(kingdom_id: StringName, requested: StringName) -> StringName:
-	var niches: Array[NicheData] = get_niches_for_kingdom(kingdom_id, true)
-	if niches.is_empty():
-		return &""
-	if requested != &"":
-		for niche in niches:
-			if niche.id == requested:
-				return requested
-	return niches[0].id
-
-
-func get_niches_for_kingdom(kingdom_id: StringName, only_unlocked: bool = true) -> Array[NicheData]:
-	var index := load("res://data/niches/_index.tres")
-	if index == null or not (index is NicheIndex):
-		return []
-	var result: Array[NicheData] = []
-	for niche in (index as NicheIndex).niches:
-		if niche == null:
-			continue
-		if niche.kingdom_id != kingdom_id:
-			continue
-		if only_unlocked and niche.unlock_node_id != &"":
-			if not MetaModifiers.is_unlocked(niche.unlock_node_id):
-				continue
-		result.append(niche)
-	return result
-
-
-func _get_niche_by_id(niche_id: StringName) -> NicheData:
-	var index := load("res://data/niches/_index.tres")
-	if index == null or not (index is NicheIndex):
-		return null
-	for niche in (index as NicheIndex).niches:
-		if niche != null and niche.id == niche_id:
-			return niche
-	return null
-
-
-func _apply_conditional_start_bonus(niche_id: StringName) -> void:
-	var niche := _get_niche_by_id(niche_id)
-	if niche == null:
-		return
-	if niche.conditional_start_bonus.is_empty():
-		return
-	if niche.conditional_start_bonus_requires != &"" and not MetaModifiers.is_unlocked(niche.conditional_start_bonus_requires):
-		return
-	for key in niche.conditional_start_bonus.keys():
-		var amount: float = float(niche.conditional_start_bonus[key])
-		if amount == 0.0:
-			continue
-		ResourceLedger.add(StringName(key), amount)
 
 
 func is_node_unlocked(node_id: StringName) -> bool:
@@ -231,6 +188,14 @@ func _unlock_kingdom(kingdom_id: StringName) -> void:
 	GameState.meta_save["unlocked_kingdoms"] = kingdoms
 
 
+func _unlock_species(species_id: StringName) -> void:
+	var unlocked: Array = GameState.meta_save.get("species_unlocked", []) as Array
+	var species_id_str: String = String(species_id)
+	if not unlocked.has(species_id_str):
+		unlocked.append(species_id_str)
+	GameState.meta_save["species_unlocked"] = unlocked
+
+
 func _update_meta_stats(reward: int, earned_this_run: float) -> void:
 	var stats: Dictionary = GameState.meta_save.get("statistics", {}) as Dictionary
 	stats["prestige_count"] = int(stats.get("prestige_count", 0)) + 1
@@ -240,7 +205,7 @@ func _update_meta_stats(reward: int, earned_this_run: float) -> void:
 
 
 func _record_kingdom_played() -> void:
-	var kid: String = String(GameState.run_save.get("kingdom_id", ""))
+	var kid: String = String(GameState.run_save.get("starting_species_kingdom_id", ""))
 	if kid == "":
 		return
 	var played: Array = GameState.meta_save.get("kingdoms_played", []) as Array
@@ -249,10 +214,22 @@ func _record_kingdom_played() -> void:
 	GameState.meta_save["kingdoms_played"] = played
 
 
+func _record_species_played() -> void:
+	var starter: String = String(GameState.run_save.get("starting_species_id", ""))
+	if starter == "":
+		return
+	var played: Array = GameState.meta_save.get("species_played", []) as Array
+	if not played.has(starter):
+		played.append(starter)
+		GameState.meta_save["species_played"] = played
+
+
 func _reset_run_state() -> void:
 	var fresh_run := {
 		"kingdom_id": "",
-		"niche_id": "",
+		"starting_species_id": "",
+		"starting_species_kingdom_id": "",
+		"unlocked_species_in_run": [],
 		"run_seed": 0,
 		"tick_count": 0,
 		"resources": {
@@ -286,8 +263,6 @@ func _reset_run_state() -> void:
 	GameState.run_save = fresh_run
 	GameState.is_run_active = false
 	GameState.current_kingdom_id = &""
-	GameState.current_niche_id = &""
-	GameState.placement_target = &""
+	GameState.placement_target_species_id = &""
 	ResourceLedger.reset_run()
-	EventBus.niche_changed.emit(&"")
 	EventBus.run_loaded.emit(SaveSystem.SAVE_VERSION)

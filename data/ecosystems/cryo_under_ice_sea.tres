@@ -8,10 +8,15 @@ id = &"cryo_under_ice_sea"
 display_name = "Under-ice Sea"
 description = "Liquid water under a frozen lid. Spores drift in currents the surface will never know."
 era_id = &"cryogenian"
-completion_criterion = &"biomass_earned"
-completion_target = 300.0
-completion_required_niche = &""
-completion_required_kingdom = &"fungi"
+biome_recipe = {
+&"grassland": 0.4,
+&"rich_soil": 0.6
+}
+biome_cluster_size = 4.0
+completion_criterion = &"events_survived"
+completion_target = 3.0
+completion_required_species = &""
+completion_required_biome = &""
+starting_species_filter = [&"mycelium_thread"]
 unlock_text = "Below the ice, the sea remembers being warm. It will be warm again."
 complete_text = "What you grew here will rise when the ice does. The spores already know the way."
-biome_preference = &"grassland"

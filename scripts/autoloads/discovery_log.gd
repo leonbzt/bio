@@ -1,12 +1,11 @@
 extends Node
 ##
 ## DiscoveryLog — owns the index of authored entries, tracks which are unlocked,
-## and exposes unlock/query API. Trigger wiring lives here (Phase 9 brief 06).
+## and exposes unlock/query API. Trigger wiring lives here.
 ##
 
 const DISCOVERY_INDEX_PATH: String = "res://data/discovery/_index.tres"
 
-# milestone trigger_id -> prestige_count threshold
 const _MILESTONES: Dictionary[StringName, int] = {
 	&"prestige_5": 5,
 	&"prestige_25": 25,
@@ -15,17 +14,15 @@ const _MILESTONES: Dictionary[StringName, int] = {
 
 var _all_entries: Array[DiscoveryEntry] = []
 var _entries_by_id: Dictionary[StringName, DiscoveryEntry] = {}
-# Key: "<category>:<trigger_id>" (e.g. "node:wood_wide_web") -> entry_id
 var _trigger_index: Dictionary[String, StringName] = {}
 
 
 func _enter_tree() -> void:
 	EventBus.evolution_node_unlocked.connect(_on_evolution_node_unlocked)
-	EventBus.niche_changed.connect(_on_niche_changed)
+	EventBus.species_introduced.connect(_on_species_introduced)
 	EventBus.event_resolved.connect(_on_event_resolved)
 	EventBus.prestige_triggered.connect(_on_prestige_triggered)
 	EventBus.run_started.connect(_on_run_started)
-	# Phase 12 wiring: era + ecosystem + first-era-transition milestone.
 	EventBus.era_changed.connect(_on_era_changed)
 	EventBus.ecosystem_completed.connect(_on_ecosystem_completed)
 	EventBus.era_transition_started.connect(_on_era_transition_started)
@@ -48,8 +45,6 @@ func _ready() -> void:
 			var key := "%s:%s" % [String(entry.category), String(entry.trigger_id)]
 			_trigger_index[key] = entry.id
 
-
-# Public API ---------------------------------------------------------------
 
 func get_all_entries() -> Array[DiscoveryEntry]:
 	return _all_entries
@@ -84,7 +79,6 @@ func is_unlocked(entry_id: StringName) -> bool:
 	return bool(log.get(String(entry_id), false))
 
 
-# Idempotent unlock. Returns true if this call newly unlocked the entry.
 func unlock(entry_id: StringName) -> bool:
 	if not _entries_by_id.has(entry_id):
 		push_warning("DiscoveryLog: unknown entry id %s" % String(entry_id))
@@ -99,45 +93,40 @@ func unlock(entry_id: StringName) -> bool:
 	return true
 
 
-# Trigger lookup used by wiring.
 func find_entry_for_trigger(category: StringName, trigger_id: StringName) -> StringName:
 	var key := "%s:%s" % [String(category), String(trigger_id)]
 	return _trigger_index.get(key, &"")
 
 
-# Trigger wiring -----------------------------------------------------------
-
 func _on_evolution_node_unlocked(node_id: StringName) -> void:
 	var node_entry := find_entry_for_trigger(&"node", node_id)
 	if node_entry != &"":
 		unlock(node_entry)
-
 	var node: EvolutionNodeData = _lookup_node(node_id)
 	if node != null:
 		for kingdom_id in node.grants_kingdoms:
 			var kingdom_entry := find_entry_for_trigger(&"kingdom", kingdom_id)
 			if kingdom_entry != &"":
 				unlock(kingdom_entry)
-
 	if node != null and not node.requires_kingdom_played.is_empty():
 		var milestone_entry := find_entry_for_trigger(&"milestone", &"first_cross_kingdom_node")
 		if milestone_entry != &"":
 			unlock(milestone_entry)
 
 
-func _on_niche_changed(niche_id: StringName) -> void:
-	if niche_id == &"":
+func _on_species_introduced(species_id: StringName) -> void:
+	if species_id == &"":
 		return
-	var played: Array = GameState.meta_save.get("niches_played", []) as Array
-	if played.has(String(niche_id)):
-		return
-	played.append(String(niche_id))
-	GameState.meta_save["niches_played"] = played
-	var entry := find_entry_for_trigger(&"niche", niche_id)
+	var entry := find_entry_for_trigger(&"species", species_id)
 	if entry != &"":
 		unlock(entry)
-	else:
-		SaveSystem.save_now()
+	var starter: StringName = StringName(GameState.run_save.get("starting_species_id", ""))
+	if species_id == starter:
+		var played: Array = GameState.meta_save.get("species_played", []) as Array
+		if not played.has(String(species_id)):
+			played.append(String(species_id))
+			GameState.meta_save["species_played"] = played
+			SaveSystem.save_now()
 
 
 func _on_event_resolved(event_id: StringName, _outcome: StringName) -> void:
@@ -154,15 +143,13 @@ func _on_event_resolved(event_id: StringName, _outcome: StringName) -> void:
 
 
 func _on_run_started(kingdom_id: StringName) -> void:
-	# Kingdom entries fire on first play of each kingdom. This is the only path
-	# for default-unlocked kingdoms (plantae) that are never granted by a node;
-	# for node-granted kingdoms (fungi, symbiosis) the entry already fired on
-	# node purchase and this is a no-op via unlock()'s idempotency.
-	if kingdom_id == &"":
-		return
-	var entry := find_entry_for_trigger(&"kingdom", kingdom_id)
-	if entry != &"":
-		unlock(entry)
+	if kingdom_id != &"":
+		var entry := find_entry_for_trigger(&"kingdom", kingdom_id)
+		if entry != &"":
+			unlock(entry)
+	var starter: StringName = String(GameState.run_save.get("starting_species_id", ""))
+	if starter != "":
+		_on_species_introduced(StringName(starter))
 
 
 func _on_prestige_triggered(_summary: Dictionary) -> void:
@@ -175,8 +162,6 @@ func _on_prestige_triggered(_summary: Dictionary) -> void:
 			if entry != &"":
 				unlock(entry)
 
-
-# Phase 12 wiring -----------------------------------------------------------
 
 func _on_era_changed(era_id: StringName) -> void:
 	if era_id == &"":
@@ -198,9 +183,6 @@ func _on_era_transition_started(_from: StringName, _to: StringName) -> void:
 	var milestone := find_entry_for_trigger(&"milestone", &"first_era_transition")
 	if milestone != &"":
 		unlock(milestone)
-	# Also fire the destination era's entry now (the era_changed signal also
-	# does this when set_current_ecosystem switches eras, but a fresh-load
-	# cold-start might miss it).
 	var era_entry := find_entry_for_trigger(&"era", _to)
 	if era_entry != &"":
 		unlock(era_entry)

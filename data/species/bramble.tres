@@ -7,11 +7,26 @@
 script = ExtResource("1")
 id = &"bramble"
 display_name = "Bramble"
+description = "A parasitic plant that thrives beside other life."
 kingdom_id = &"plantae"
+sprite = null
 base_traits = Array[Resource]([ExtResource("2")])
+introduce_cost = {
+"biomass": 80.0
+}
 colonize_cost = {
-"biomass": 8.0
+"biomass": 3.0
 }
 tick_yield = {
 "biomass": 0.3
 }
+placement_rule = &"parasitic_plantae"
+placement_targets = Array[StringName]([&"plantae", &"fungi"])
+tags = Array[StringName]([&"parasite", &"plantae"])
+tick_effects = Array[StringName]([&"parasite_steal"])
+unlock_ep_cost = 3
+unlock_prerequisites = Array[StringName]([&"pioneer_grass"])
+era_requires = &""
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.4, 0.35, 0.2, 1)
+tile_marker_shape = &"cross"

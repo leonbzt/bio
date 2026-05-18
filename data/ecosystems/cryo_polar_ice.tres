@@ -5,13 +5,19 @@
 [resource]
 script = ExtResource("1")
 id = &"cryo_polar_ice"
-display_name = "Polar Ice Cap"
-description = "Thin sun. Thick ice. The fungi here live in the gaps between freezings."
+display_name = "Polar Ice"
+description = "Frozen flats. What grows here, grows slowly."
 era_id = &"cryogenian"
-completion_criterion = &"events_survived"
-completion_target = 3.0
-completion_required_niche = &""
-completion_required_kingdom = &"fungi"
-unlock_text = "The cold is older than thought. What survives it survives by waiting."
-complete_text = "Three winters held. The ice did not name you, but you remained."
-biome_preference = &"rich_soil"
+biome_recipe = {
+&"forest_edge": 0.5,
+&"grassland": 0.2,
+&"rich_soil": 0.3
+}
+biome_cluster_size = 2.0
+completion_criterion = &"tiles_colonized"
+completion_target = 30.0
+completion_required_species = &""
+completion_required_biome = &""
+starting_species_filter = [&"mycelium_thread"]
+unlock_text = "The first cold. Few species can begin here."
+complete_text = "A presence holds in the cold. Patience proved enough."

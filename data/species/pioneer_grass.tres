@@ -7,11 +7,24 @@
 script = ExtResource("1")
 id = &"pioneer_grass"
 display_name = "Pioneer Grass"
+description = "A hardy photosynthesizer that anchors early land growth."
 kingdom_id = &"plantae"
+sprite = null
 base_traits = Array[Resource]([ExtResource("2")])
+introduce_cost = {}
 colonize_cost = {
 "biomass": 5.0
 }
 tick_yield = {
 "biomass": 0.5
 }
+placement_rule = &"adjacent_empty"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"plantae"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 0
+unlock_prerequisites = Array[StringName]([])
+era_requires = &""
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.45, 0.75, 0.35, 1)
+tile_marker_shape = &"leaf"

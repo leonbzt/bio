@@ -8,5 +8,5 @@ id = &"disc_niche_decomposer"
 title = "The Slow Return"
 body = "Nothing is wasted, only delayed. The body that fell is the soil that will rise.
 You are the verb between those two nouns."
-category = &"niche"
-trigger_id = &"decomposer"
+category = &"species"
+trigger_id = &"mycelium_thread"

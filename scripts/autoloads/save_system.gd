@@ -5,10 +5,26 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 11
+const SAVE_VERSION: int = 12
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
+
+const _KINGDOM_DEFAULT_STARTERS: Dictionary[StringName, StringName] = {
+	&"plantae": &"pioneer_grass",
+	&"fungi": &"mycelium_thread",
+	&"animals": &"common_grazer"
+}
+
+const _NICHE_TO_STARTER_SPECIES: Dictionary[StringName, StringName] = {
+	&"photosynthesizer": &"pioneer_grass",
+	&"parasitic_plantae": &"bramble",
+	&"decomposer": &"mycelium_thread",
+	&"mycorrhizal_fungi": &"mycelium_thread_mycorrhizal",
+	&"lichen": &"lichen_common",
+	&"herbivore": &"common_grazer",
+	&"predator": &"common_predator"
+}
 
 
 func _ready() -> void:
@@ -236,6 +252,8 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 			if not bool(tree.get("unlock_fungi", false)):
 				tree["unlock_fungi"] = true
 				meta["evolution_tree"] = tree
+	if from_version < 12:
+		_migrate_v11_to_v12(old)
 	return old
 
 
@@ -248,7 +266,8 @@ func _build_default_save() -> Dictionary:
 			"evolution_tree": {"unlock_fungi": true},
 			"discovery_log": {},
 			"kingdoms_played": [],
-			"niches_played": [],
+			"species_unlocked": ["pioneer_grass", "mycelium_thread"],
+			"species_played": [],
 			"current_era_id": "cryogenian",
 			"current_ecosystem_id": "cryo_polar_ice",
 			"ecosystem_completions": {},
@@ -261,7 +280,9 @@ func _build_default_save() -> Dictionary:
 		},
 		"run": {
 			"kingdom_id": "",
-			"niche_id": "",
+			"starting_species_id": "",
+			"starting_species_kingdom_id": "",
+			"unlocked_species_in_run": [],
 			"run_seed": 0,
 			"tick_count": 0,
 			"resources": {
@@ -340,8 +361,142 @@ func _try_load(path: String) -> Dictionary:
 func _apply_loaded(data: Dictionary) -> void:
 	GameState.meta_save = data.get("meta", {})
 	GameState.run_save = data.get("run", {})
+	_repair_species_unlocked(GameState.meta_save)
 	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
-	GameState.current_kingdom_id = StringName(run.get("kingdom_id", ""))
-	GameState.current_niche_id = StringName(run.get("niche_id", ""))
+	GameState.current_kingdom_id = StringName(
+		run.get("starting_species_kingdom_id", run.get("kingdom_id", ""))
+	)
 	GameState.last_save_unix = int(data.get("saved_at_unix", 0))
 	EventBus.run_loaded.emit(int(data.get("save_version", SAVE_VERSION)))
+
+
+# Defensive backfill on every load — handles v12 saves created before the
+# migration was patched to seed from unlocked_kingdoms (commit c4ee431+).
+# Without this, players who tested early get stuck with species_unlocked=["pioneer_grass"]
+# and can't enter Cryogenian (filter requires mycelium_thread).
+func _repair_species_unlocked(meta: Dictionary) -> void:
+	if not (meta is Dictionary):
+		return
+	var species_unlocked: Array = meta.get("species_unlocked", []) as Array
+	var unlocked_kingdoms: Array = meta.get("unlocked_kingdoms", []) as Array
+	var kingdoms_played: Array = meta.get("kingdoms_played", []) as Array
+	var dirty: bool = false
+	for kingdom in unlocked_kingdoms:
+		var starter: StringName = _KINGDOM_DEFAULT_STARTERS.get(StringName(kingdom), &"")
+		if starter != &"" and not species_unlocked.has(String(starter)):
+			species_unlocked.append(String(starter))
+			dirty = true
+	for kingdom in kingdoms_played:
+		var starter: StringName = _KINGDOM_DEFAULT_STARTERS.get(StringName(kingdom), &"")
+		if starter != &"" and not species_unlocked.has(String(starter)):
+			species_unlocked.append(String(starter))
+			dirty = true
+	if not species_unlocked.has("pioneer_grass"):
+		species_unlocked.append("pioneer_grass")
+		dirty = true
+	if dirty:
+		meta["species_unlocked"] = species_unlocked
+
+
+func _migrate_v11_to_v12(save: Dictionary) -> void:
+	var meta: Dictionary = save.get("meta", {}) as Dictionary
+	var kingdoms_played: Array = meta.get("kingdoms_played", []) as Array
+	var unlocked_kingdoms: Array = meta.get("unlocked_kingdoms", []) as Array
+	var species_unlocked: Array = meta.get("species_unlocked", []) as Array
+	# Seed default starters from any kingdom the player has unlocked OR played.
+	# Without this, a v11 save with fungi unlocked but never-played leaves
+	# Cryogenian ecosystems (filter=[mycelium_thread]) un-enterable in v12.
+	for kingdom in unlocked_kingdoms:
+		var starter: StringName = _KINGDOM_DEFAULT_STARTERS.get(StringName(kingdom), &"")
+		if starter != &"" and not species_unlocked.has(String(starter)):
+			species_unlocked.append(String(starter))
+	for kingdom in kingdoms_played:
+		var starter: StringName = _KINGDOM_DEFAULT_STARTERS.get(StringName(kingdom), &"")
+		if starter != &"" and not species_unlocked.has(String(starter)):
+			species_unlocked.append(String(starter))
+	if not species_unlocked.has("pioneer_grass"):
+		species_unlocked.append("pioneer_grass")
+	meta["species_unlocked"] = species_unlocked
+	if not meta.has("species_played"):
+		meta["species_played"] = []
+	meta.erase("niches_played")
+	save["meta"] = meta
+
+	var run: Dictionary = save.get("run", {}) as Dictionary
+	var kingdom_id: String = String(run.get("kingdom_id", ""))
+	var niche_id: String = String(run.get("niche_id", ""))
+	var starter_species: StringName = &""
+	if niche_id != "":
+		starter_species = _NICHE_TO_STARTER_SPECIES.get(StringName(niche_id), &"")
+	if starter_species == &"" and kingdom_id != "":
+		starter_species = _KINGDOM_DEFAULT_STARTERS.get(StringName(kingdom_id), &"")
+
+	if starter_species != &"":
+		run["starting_species_id"] = String(starter_species)
+		var in_run: Array = [String(starter_species)]
+		if niche_id == "lichen":
+			if not in_run.has("pioneer_grass"):
+				in_run.append("pioneer_grass")
+			if not in_run.has("mycelium_thread"):
+				in_run.append("mycelium_thread")
+		run["unlocked_species_in_run"] = in_run
+		run["starting_species_kingdom_id"] = kingdom_id
+	else:
+		if not run.has("starting_species_id"):
+			run["starting_species_id"] = ""
+		if not run.has("unlocked_species_in_run"):
+			run["unlocked_species_in_run"] = []
+		if not run.has("starting_species_kingdom_id"):
+			run["starting_species_kingdom_id"] = ""
+
+	run.erase("niche_id")
+	var active: Array = run.get("active_events", []) as Array
+	for entry in active:
+		if entry is Dictionary:
+			var payload: Dictionary = entry.get("payload", {}) as Dictionary
+			if not payload.has("scope"):
+				payload["scope"] = "world"
+			entry["payload"] = payload
+	run["active_events"] = active
+
+	var tiles: Array = run.get("tiles", []) as Array
+	var migrated_tiles: Array = []
+	for entry in tiles:
+		if not (entry is Dictionary):
+			continue
+		var coord: Variant = entry.get("coord", null)
+		if coord == null:
+			continue
+		var data: Dictionary = entry.get("data", {}) as Dictionary
+		var surface_owner: String = String(entry.get("surface_owner", ""))
+		var subsurface_owner: String = String(entry.get("subsurface_owner", ""))
+		var occupants: Dictionary = {}
+		if surface_owner == "plantae":
+			occupants["plantae"] = String(_pick_species_for_kingdom(starter_species, &"plantae", niche_id))
+		elif surface_owner == "animals":
+			occupants["animals"] = String(_pick_species_for_kingdom(starter_species, &"animals", niche_id))
+		if subsurface_owner == "fungi":
+			occupants["fungi"] = String(_pick_species_for_kingdom(starter_species, &"fungi", niche_id))
+		if occupants.is_empty():
+			continue
+		migrated_tiles.append({
+			"coord": coord,
+			"occupants": occupants,
+			"data": data
+		})
+	run["tiles"] = migrated_tiles
+	save["run"] = run
+
+
+func _pick_species_for_kingdom(starter_species: StringName, kingdom_id: StringName, niche_id: String) -> StringName:
+	if niche_id == "lichen":
+		if kingdom_id == &"plantae":
+			return &"pioneer_grass"
+		if kingdom_id == &"fungi":
+			return &"mycelium_thread"
+	var species_index: SpeciesIndex = load("res://data/species/_index.tres") as SpeciesIndex
+	if species_index != null:
+		for sp in species_index.species:
+			if sp.id == starter_species and sp.kingdom_id == kingdom_id:
+				return starter_species
+	return _KINGDOM_DEFAULT_STARTERS.get(kingdom_id, &"")

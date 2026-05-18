@@ -8,5 +8,5 @@ id = &"disc_niche_parasitic_plantae"
 title = "Roots Without Light"
 body = "Some plants gave up the sun. They learned a faster way: take what the others made.
 The arrangement is not cruel. It is only efficient."
-category = &"niche"
-trigger_id = &"parasitic_plantae"
+category = &"species"
+trigger_id = &"bramble"

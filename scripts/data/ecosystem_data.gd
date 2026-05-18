@@ -1,7 +1,8 @@
 class_name EcosystemData
 extends Resource
 ##
-## A biome region within an era. Has its own completion criterion.
+## A biome region within an era. Has its own completion criterion and
+## constrains the starting-species picker.
 ## Instances live in data/ecosystems/<id>.tres.
 ##
 
@@ -18,15 +19,22 @@ extends Resource
 @export var completion_criterion: StringName = &""
 @export var completion_target: float = 0.0
 
-# Optional niche gate. Empty = any niche.
-@export var completion_required_niche: StringName = &""
+# Biome recipe — weighted mix the procedural map generator samples.
+# Format: {biome_id: weight_float}. Empty = legacy uniform random.
+@export var biome_recipe: Dictionary = {}
 
-# Optional kingdom gate. Empty = any kingdom in the era's available_kingdoms.
-@export var completion_required_kingdom: StringName = &""
+# Cluster size for biome generation. 1.0 = scattered, larger = patchier.
+@export var biome_cluster_size: float = 1.0
+
+# Optional species gate. Empty = any species.
+@export var completion_required_species: StringName = &""
+
+# Optional biome gate. Empty = any biome.
+@export var completion_required_biome: StringName = &""
+
+# Starting-species picker constraint.
+@export var starting_species_filter: Array[StringName] = []
 
 # 1-3 sentence flavor for world-map card + completion fanfare.
 @export var unlock_text: String = ""
 @export var complete_text: String = ""
-
-# Biome preference (Phase 13 wires; Phase 12 stores).
-@export var biome_preference: StringName = &""

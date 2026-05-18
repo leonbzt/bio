@@ -38,6 +38,12 @@ text = "This run earned: 0 EP"
 [node name="BiomassLabel" type="Label" parent="Content/SummarySection"]
 text = "Total biomass earned: 0"
 
+[node name="DiversityLabel" type="Label" parent="Content/SummarySection"]
+text = "Species cultivated: 1 (×1.0 diversity bonus)"
+
+[node name="StarterLabel" type="Label" parent="Content/SummarySection"]
+text = "Beginning: Pioneer Grass"
+
 [node name="ConfirmPrestigeButton" type="Button" parent="Content/SummarySection"]
 text = "Confirm Prestige"
 
@@ -56,10 +62,5 @@ custom_minimum_size = Vector2(360, 420)
 [node name="TreeCanvas" type="Control" parent="Content/TreeSection/TreeScroll"]
 script = ExtResource("2")
 
-[node name="KingdomSection" type="VBoxContainer" parent="Content"]
-visible = false
-
-[node name="KingdomTitle" type="Label" parent="Content/KingdomSection"]
-text = "Choose a kingdom"
-
-[node name="KingdomButtons" type="VBoxContainer" parent="Content/KingdomSection"]
+[node name="CloseButton" type="Button" parent="Content/TreeSection"]
+text = "Close"

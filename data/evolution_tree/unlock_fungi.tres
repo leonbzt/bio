@@ -13,5 +13,6 @@ meta_cost = {
 }
 grants_traits = []
 grants_kingdoms = [&"fungi"]
+grants_species = [&"mycelium_thread"]
 wing = &"hybrid"
 tier = 1

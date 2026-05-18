@@ -8,10 +8,16 @@ id = &"dev_inland_swamp"
 display_name = "Inland Swamp"
 description = "Wet. Decomposing. Crowded. The kind of place where two kingdoms learn to share a body."
 era_id = &"devonian"
-completion_criterion = &"biomass_earned"
-completion_target = 500.0
-completion_required_niche = &"lichen"
-completion_required_kingdom = &""
+biome_recipe = {
+&"forest_edge": 0.3,
+&"grassland": 0.2,
+&"rich_soil": 0.5
+}
+biome_cluster_size = 2.5
+completion_criterion = &"events_survived"
+completion_target = 4.0
+completion_required_species = &""
+completion_required_biome = &""
+starting_species_filter = [&"pioneer_grass", &"mycelium_thread", &"bramble"]
 unlock_text = "Where the water sits, the fungi find the plants. The bargain follows."
 complete_text = "Five hundred units of compounded partnership. The swamp itself is your monument."
-biome_preference = &"rich_soil"

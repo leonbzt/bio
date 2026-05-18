@@ -6,9 +6,11 @@
 script = ExtResource("1")
 id = &"common_grazer"
 display_name = "Common Grazer"
+description = "A roaming herbivore that feeds on surface growth."
 kingdom_id = &"animals"
 sprite = null
 base_traits = Array[Resource]([])
+introduce_cost = {}
 colonize_cost = {
 "biomass": 8.0
 }
@@ -16,5 +18,13 @@ tick_yield = {
 "protein": 0.4,
 "biomass": 0.2
 }
-layer_count = 1
-layer_species = []
+placement_rule = &"animal_anchor"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"herbivore", &"animals"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 0
+unlock_prerequisites = Array[StringName]([])
+era_requires = &""
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.9, 0.65, 0.25, 1)
+tile_marker_shape = &"border"

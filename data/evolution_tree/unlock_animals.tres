@@ -13,6 +13,7 @@ meta_cost = {
 }
 grants_traits = []
 grants_kingdoms = [&"animals"]
+grants_species = [&"common_grazer"]
 wing = &"animals"
 tier = 1
 requires_kingdom_played = [&"plantae", &"fungi"]

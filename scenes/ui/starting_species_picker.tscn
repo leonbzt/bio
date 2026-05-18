@@ -1,0 +1,52 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/starting_species_picker.gd" id="1"]
+[ext_resource type="Theme" path="res://assets/ui/theme.tres" id="2"]
+
+[node name="StartingSpeciesPicker" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource("2")
+mouse_filter = 2
+script = ExtResource("1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.65)
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -168.0
+offset_top = -220.0
+offset_right = 168.0
+offset_bottom = 220.0
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Title" type="Label" parent="Panel/VBox"]
+text = "Ecosystem"
+
+[node name="Description" type="Label" parent="Panel/VBox"]
+autowrap_mode = 2
+text = "Description"
+
+[node name="SpeciesScroll" type="ScrollContainer" parent="Panel/VBox"]
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
+
+[node name="SpeciesGrid" type="GridContainer" parent="Panel/VBox/SpeciesScroll"]
+columns = 2
+size_flags_horizontal = 3
+
+[node name="Actions" type="HBoxContainer" parent="Panel/VBox"]
+alignment = 2
+
+[node name="CancelButton" type="Button" parent="Panel/VBox/Actions"]
+text = "Cancel"

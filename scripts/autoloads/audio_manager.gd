@@ -6,7 +6,7 @@ extends Node
 const MUSIC_BY_KINGDOM := {
 	&"plantae": "res://assets/audio/music/plantae_loop.ogg",
 	&"fungi": "res://assets/audio/music/fungi_loop.ogg",
-	&"symbiosis": "res://assets/audio/music/symbiosis_loop.ogg"
+	&"animals": "res://assets/audio/music/plantae_loop.ogg"
 }
 
 var _music_a: AudioStreamPlayer

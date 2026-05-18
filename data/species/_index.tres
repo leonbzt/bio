@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="SpeciesIndex" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="SpeciesIndex" load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/species_index.gd" id="1"]
 [ext_resource type="Resource" path="res://data/species/pioneer_grass.tres" id="2"]
@@ -7,7 +7,8 @@
 [ext_resource type="Resource" path="res://data/species/lichen_common.tres" id="5"]
 [ext_resource type="Resource" path="res://data/species/common_grazer.tres" id="6"]
 [ext_resource type="Resource" path="res://data/species/common_predator.tres" id="7"]
+[ext_resource type="Resource" path="res://data/species/mycelium_thread_mycorrhizal.tres" id="8"]
 
 [resource]
 script = ExtResource("1")
-species = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])
+species = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])

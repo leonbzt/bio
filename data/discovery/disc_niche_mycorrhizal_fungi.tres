@@ -8,5 +8,5 @@ id = &"disc_niche_mycorrhizal_fungi"
 title = "The Underground Market"
 body = "Sugar from the roots above, in exchange for water and phosphorus from the dark below.
 No one wrote this contract. It is older than writing."
-category = &"niche"
-trigger_id = &"mycorrhizal_fungi"
+category = &"species"
+trigger_id = &"mycelium_thread_mycorrhizal"

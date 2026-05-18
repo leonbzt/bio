@@ -1,9 +1,4 @@
 extends Control
-##
-## World map screen — replaces the "Begin run as..." flow.
-## Player picks an ecosystem; that selection sets the run context
-## (era + ecosystem) before the kingdom/niche cascade.
-##
 
 const ERA_TAB_ACTIVE: Color = Color(1.0, 1.0, 0.85, 1.0)
 const ERA_TAB_INACTIVE: Color = Color(0.65, 0.65, 0.65, 1.0)
@@ -16,22 +11,18 @@ const ERA_TAB_LOCKED: Color = Color(0.4, 0.4, 0.4, 0.6)
 @onready var _close: Button = $Header/CloseButton
 
 var _selected_era_id: StringName = &""
-var _selected_ecosystem_id: StringName = &""
-var _prestige_system: Node = null
 
 
 func _ready() -> void:
 	_close.pressed.connect(_on_close)
-	_continue.pressed.connect(_on_continue)
+	_continue.visible = false
 	EventBus.era_changed.connect(func(_id): _refresh())
 	EventBus.ecosystem_completed.connect(func(_id): _refresh())
-	_prestige_system = get_tree().get_first_node_in_group("prestige_system")
 	var era_system: Node = _get_era_system()
 	if era_system != null:
 		var current_era: EraData = era_system.get_current_era()
 		if current_era != null:
 			_selected_era_id = current_era.id
-	_selected_ecosystem_id = StringName(GameState.meta_save.get("current_ecosystem_id", ""))
 	_refresh()
 
 
@@ -39,7 +30,6 @@ func _refresh() -> void:
 	_refresh_backdrop()
 	_refresh_era_tabs()
 	_refresh_ecosystem_grid()
-	_refresh_continue()
 
 
 func _refresh_backdrop() -> void:
@@ -67,7 +57,6 @@ func _refresh_era_tabs() -> void:
 		var captured_id: StringName = era.id
 		button.pressed.connect(func() -> void:
 			_selected_era_id = captured_id
-			_selected_ecosystem_id = &""
 			_refresh()
 		)
 		if not unlocked:
@@ -86,8 +75,7 @@ func _refresh_ecosystem_grid() -> void:
 	if era_system == null:
 		return
 	for eco in era_system.get_ecosystems_in_era(_selected_era_id):
-		var card := _build_ecosystem_card(eco)
-		_ecosystem_grid.add_child(card)
+		_ecosystem_grid.add_child(_build_ecosystem_card(eco))
 
 
 func _build_ecosystem_card(eco: EcosystemData) -> PanelContainer:
@@ -105,34 +93,24 @@ func _build_ecosystem_card(eco: EcosystemData) -> PanelContainer:
 	sb.content_margin_right = 8
 	sb.content_margin_top = 6
 	sb.content_margin_bottom = 6
-	if eco.id == _selected_ecosystem_id:
-		sb.border_width_left = 2
-		sb.border_width_right = 2
-		sb.border_width_top = 2
-		sb.border_width_bottom = 2
-		sb.border_color = Color(0.95, 0.85, 0.4, 1.0)
 	card.add_theme_stylebox_override("panel", sb)
 
 	var vbox := VBoxContainer.new()
 	card.add_child(vbox)
-
 	var title := Label.new()
 	title.text = ("✓ " if done else "") + eco.display_name
 	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.6) if done else Color(0.95, 0.95, 0.95))
 	vbox.add_child(title)
-
 	var desc := Label.new()
 	desc.text = eco.description
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
 	vbox.add_child(desc)
-
 	var goal := Label.new()
 	goal.text = _goal_string(eco)
 	goal.add_theme_color_override("font_color", Color(0.7, 0.85, 0.6))
 	vbox.add_child(goal)
 
-	var captured_id: StringName = eco.id
 	card.gui_input.connect(func(event: InputEvent) -> void:
 		var pressed: bool = false
 		if event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed:
@@ -140,25 +118,30 @@ func _build_ecosystem_card(eco: EcosystemData) -> PanelContainer:
 		elif event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
 			pressed = true
 		if pressed:
-			_selected_ecosystem_id = captured_id
-			_refresh()
+			_on_ecosystem_card_pressed(eco)
 	)
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
-
 	return card
 
 
 func _goal_string(eco: EcosystemData) -> String:
 	var goal: String = "%s %d" % [String(eco.completion_criterion).capitalize().replace("_", " "), int(eco.completion_target)]
-	if eco.completion_required_niche != &"":
-		goal += " · %s niche" % String(eco.completion_required_niche).capitalize()
-	elif eco.completion_required_kingdom != &"":
-		goal += " · %s" % String(eco.completion_required_kingdom).capitalize()
+	if eco.completion_required_species != &"":
+		goal += " · %s" % String(eco.completion_required_species).capitalize()
+	elif eco.completion_required_biome != &"":
+		goal += " · %s biome" % String(eco.completion_required_biome).capitalize()
 	return goal
 
 
-func _refresh_continue() -> void:
-	_continue.disabled = _selected_ecosystem_id == &""
+func _on_ecosystem_card_pressed(ecosystem: EcosystemData) -> void:
+	var picker_scene := load("res://scenes/ui/starting_species_picker.tscn") as PackedScene
+	if picker_scene == null:
+		return
+	var picker := picker_scene.instantiate()
+	if picker == null:
+		return
+	picker.ecosystem = ecosystem
+	add_child(picker)
 
 
 func _get_era_system() -> Node:
@@ -168,23 +151,4 @@ func _get_era_system() -> Node:
 
 
 func _on_close() -> void:
-	queue_free()
-
-
-func _on_continue() -> void:
-	if _selected_ecosystem_id == &"":
-		return
-	var era_system: Node = _get_era_system()
-	if era_system != null:
-		era_system.set_current_ecosystem(_selected_ecosystem_id)
-	if _prestige_system == null:
-		queue_free()
-		return
-	var scene := preload("res://scenes/ui/prestige_screen.tscn")
-	var screen := scene.instantiate()
-	if screen.has_method("setup"):
-		screen.setup(_prestige_system)
-	if "skip_to_kingdom_select" in screen:
-		screen.skip_to_kingdom_select = true
-	get_parent().add_child(screen)
 	queue_free()

@@ -4,6 +4,15 @@ extends Node
 ##
 
 const GOAL_INDEX_PATH: String = "res://data/goals/_index.tres"
+const _NICHE_TO_SPECIES: Dictionary[StringName, StringName] = {
+	&"photosynthesizer": &"pioneer_grass",
+	&"decomposer": &"mycelium_thread",
+	&"parasitic_plantae": &"bramble",
+	&"mycorrhizal_fungi": &"mycelium_thread_mycorrhizal",
+	&"lichen": &"lichen_common",
+	&"herbivore": &"common_grazer",
+	&"predator": &"common_predator"
+}
 
 var _all_goals: Array[PerRunGoalData] = []
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -60,13 +69,19 @@ func is_met() -> bool:
 func _on_run_started(kingdom_id: StringName) -> void:
 	_last_biomass_sample = 0.0
 	_rng.seed = int(GameState.run_seed) ^ int(Time.get_unix_time_from_system())
-	var niche_id: StringName = GameState.current_niche_id
+	var starter_species: StringName = StringName(GameState.run_save.get("starting_species_id", ""))
 	var candidates: Array[PerRunGoalData] = []
 	for goal in _all_goals:
 		if not goal.kingdoms.is_empty() and not goal.kingdoms.has(kingdom_id):
 			continue
-		if not goal.niches.is_empty() and not goal.niches.has(niche_id):
-			continue
+		if not goal.niches.is_empty():
+			var niche_match: bool = false
+			for niche_id in goal.niches:
+				if _NICHE_TO_SPECIES.get(niche_id, &"") == starter_species:
+					niche_match = true
+					break
+			if not niche_match:
+				continue
 		candidates.append(goal)
 	if candidates.is_empty():
 		candidates = _all_goals

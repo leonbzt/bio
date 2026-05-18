@@ -4,6 +4,7 @@
 [ext_resource type="Script" path="res://scripts/ui/goal_banner.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/ui/resource_label.gd" id="4"]
 [ext_resource type="Theme" path="res://assets/ui/theme.tres" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/ui/species_panel.tscn" id="6"]
 
 [node name="HUD" type="Control"]
 anchor_right = 1.0
@@ -84,7 +85,7 @@ active_kingdoms = [&"animals"]
 script = ExtResource("4")
 resource_id = &"lifeforce"
 tooltip_when_inactive = "Predators draw lifeforce from prey. Unlock the animal kingdom."
-active_niches = [&"lichen", &"predator"]
+active_niches = [&"lichen_common", &"common_predator"]
 
 [node name="BloodCohesionLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
 script = ExtResource("4")
@@ -102,7 +103,7 @@ active_kingdoms = [&"animals"]
 script = ExtResource("4")
 resource_id = &"mycelial_stability"
 tooltip_when_inactive = "Unlock Lichen Heritage to fortify mycelium."
-active_niches = [&"lichen"]
+active_niches = [&"lichen_common"]
 
 [node name="TickIndicator" type="ColorRect" parent="."]
 anchor_left = 1.0
@@ -124,25 +125,18 @@ offset_right = 64.0
 offset_bottom = 40.0
 text = "Menu"
 
-[node name="NicheBadge" type="Label" parent="."]
-visible = false
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -70.0
-offset_top = 4.0
-offset_right = 70.0
-offset_bottom = 20.0
-text = "Photosynthesizer"
+[node name="IdentityStrip" type="PanelContainer" parent="."]
+anchor_left = 0.0
+anchor_right = 1.0
+offset_left = 72.0
+offset_top = 8.0
+offset_right = -40.0
+offset_bottom = 36.0
 
-[node name="MycorrhizalHint" type="Label" parent="."]
-visible = false
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -120.0
-offset_top = 22.0
-offset_right = 120.0
-offset_bottom = 40.0
-text = "Claim tiles under plants for bonus"
+[node name="IdentityLabel" type="Label" parent="IdentityStrip"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+text = "Species — Ecosystem"
 
 [node name="AbilitiesBar" type="HBoxContainer" parent="."]
 anchor_left = 1.0
@@ -155,23 +149,7 @@ offset_right = -16.0
 offset_bottom = -16.0
 alignment = 2
 
-[node name="LayerToggle" type="HBoxContainer" parent="."]
-visible = false
-anchor_left = 0.0
-anchor_top = 1.0
-anchor_right = 0.0
-anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = -56.0
-offset_right = 220.0
-offset_bottom = -16.0
-alignment = 1
-
-[node name="PlantaeButton" type="Button" parent="LayerToggle"]
-text = "Plants"
-
-[node name="FungiButton" type="Button" parent="LayerToggle"]
-text = "Fungi"
+[node name="SpeciesPanel" parent="." instance=ExtResource("6")]
 
 [node name="EventToast" type="PanelContainer" parent="."]
 visible = false

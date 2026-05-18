@@ -6,9 +6,14 @@
 script = ExtResource("1")
 id = &"common_predator"
 display_name = "Common Predator"
+description = "An apex hunter that feeds on other animals."
 kingdom_id = &"animals"
 sprite = null
 base_traits = Array[Resource]([])
+introduce_cost = {
+"biomass": 100.0,
+"protein": 30.0
+}
 colonize_cost = {
 "protein": 10.0
 }
@@ -16,5 +21,13 @@ tick_yield = {
 "protein": 0.6,
 "lifeforce": 0.05
 }
-layer_count = 1
-layer_species = []
+placement_rule = &"animal_anchor"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"predator", &"animals"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 4
+unlock_prerequisites = Array[StringName]([&"common_grazer"])
+era_requires = &""
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.6, 0.2, 0.2, 1)
+tile_marker_shape = &"border"

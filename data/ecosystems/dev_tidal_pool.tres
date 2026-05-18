@@ -8,10 +8,15 @@ id = &"dev_tidal_pool"
 display_name = "Tidal Pool"
 description = "Salt water at the edge of land. The first plants test what the air does to their leaves."
 era_id = &"devonian"
+biome_recipe = {
+&"forest_edge": 0.4,
+&"rich_soil": 0.6
+}
+biome_cluster_size = 2.0
 completion_criterion = &"tiles_colonized"
-completion_target = 30.0
-completion_required_niche = &""
-completion_required_kingdom = &"plantae"
+completion_target = 40.0
+completion_required_species = &""
+completion_required_biome = &""
+starting_species_filter = [&"pioneer_grass", &"mycelium_thread", &"common_grazer"]
 unlock_text = "You unfurl. The light meets the chlorophyll meets the carbon and the carbon stays."
 complete_text = "Thirty leaves. The pool is yours. The dry land is what comes next."
-biome_preference = &"grassland"

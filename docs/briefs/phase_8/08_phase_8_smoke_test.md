@@ -47,6 +47,8 @@ Read first:
     - Alternative test: manually edit `save.json` mid-load to spawn 5 plantae tiles, then enter mycorrhizal fungi run. Verify the niche can colonize on/adjacent to those tiles.
     - If you have time and a cross-kingdom feature you'd like to defer-test, note in the smoke-test log that "mycorrhizal full validation deferred to Phase 10".
 
+    ** deferred to phase 10**
+
 ### Visual sanity
 14. Open the pause menu and confirm tile colors are visually distinct: green / crimson / violet / teal.
 

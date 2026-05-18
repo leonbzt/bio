@@ -187,11 +187,15 @@ func _on_prestige_triggered(_summary: Dictionary) -> void:
 		return
 	if _criterion_progress < eco.completion_target:
 		return
-	# Niche / kingdom gates.
-	if eco.completion_required_niche != &"" and StringName(GameState.run_save.get("niche_id", "")) != eco.completion_required_niche:
-		return
-	if eco.completion_required_kingdom != &"" and StringName(GameState.run_save.get("kingdom_id", "")) != eco.completion_required_kingdom:
-		return
+	# Species / biome gates.
+	if eco.completion_required_species != &"":
+		var starter: StringName = StringName(GameState.run_save.get("starting_species_id", ""))
+		if starter != eco.completion_required_species:
+			return
+	if eco.completion_required_biome != &"":
+		var biome_tiles: int = _count_owned_tiles_on_biome(eco.completion_required_biome)
+		if biome_tiles < int(eco.completion_target):
+			return
 	# Mark complete.
 	var completions: Dictionary = GameState.meta_save.get("ecosystem_completions", {}) as Dictionary
 	completions[String(eco.id)] = true
@@ -201,6 +205,25 @@ func _on_prestige_triggered(_summary: Dictionary) -> void:
 	if is_era_complete(eco.era_id):
 		_maybe_unlock_next_era(eco.era_id)
 	SaveSystem.save_now()
+
+
+func _count_owned_tiles_on_biome(biome_id: StringName) -> int:
+	var world := Engine.get_main_loop() as SceneTree
+	if world == null:
+		return 0
+	var territory: Node = world.root.get_node_or_null("World/Systems/TerritorySystem")
+	var nutrients: Node = world.root.get_node_or_null("World/Systems/NutrientSystem")
+	if territory == null or nutrients == null:
+		return 0
+	if not territory.has_method("get_all_owned_coords") or not nutrients.has_method("get_biome_at"):
+		return 0
+	var count: int = 0
+	var coords: Array[Vector2i] = territory.get_all_owned_coords()
+	for coord in coords:
+		var biome: BiomeData = nutrients.get_biome_at(coord)
+		if biome != null and biome.id == biome_id:
+			count += 1
+	return count
 
 
 func _maybe_unlock_next_era(completed_era_id: StringName) -> void:

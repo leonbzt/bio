@@ -5,28 +5,31 @@
 
 [resource]
 script = ExtResource("1")
-id = &"mycelium_thread"
-display_name = "Mycelium Thread"
-description = "A decomposer network that spreads through substrate."
+id = &"mycelium_thread_mycorrhizal"
+display_name = "Mycorrhizal Mycelium"
+description = "A network-leaning mycelium that thrives bound to roots."
 kingdom_id = &"fungi"
 sprite = null
 base_traits = Array[Resource]([ExtResource("2")])
-introduce_cost = {}
+introduce_cost = {
+"biomass": 30.0,
+"spores": 50.0
+}
 colonize_cost = {
-"spores": 3.0
+"spores": 4.0
 }
 tick_yield = {
 "biomass": 0.3,
 "decay": 0.4,
 "spores": 0.15
 }
-placement_rule = &"fungi_substrate"
+placement_rule = &"mycorrhizal_fungi"
 placement_targets = Array[StringName]([])
-tags = Array[StringName]([&"fungi"])
-tick_effects = Array[StringName]([])
-unlock_ep_cost = 0
-unlock_prerequisites = Array[StringName]([])
+tags = Array[StringName]([])
+tick_effects = Array[StringName]([&"mycorrhizal_bond_apply"])
+unlock_ep_cost = 4
+unlock_prerequisites = Array[StringName]([&"mycelium_thread"])
 era_requires = &""
 recipe_components = Array[StringName]([])
-tile_marker_color = Color(0.55, 0.4, 0.7, 1)
-tile_marker_shape = &"spore"
+tile_marker_color = Color(0.6, 0.4, 0.7, 1)
+tile_marker_shape = &"root"

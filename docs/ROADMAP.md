@@ -139,26 +139,46 @@ The smallest cohesive phase in Tier 2. Three mutually reinforcing pieces that li
 - **Per-ecosystem completion gating** uses the layered-lifeform model: some ecosystems are flagged solvable only by specific species packs (a coral-reef ecosystem requires a 3-layer Coral pack to "complete," even if single-layer kingdoms can survive there).
 - Era-transition narrative passages (see `STORY_AND_TONE.md`).
 
-### Phase 13 — Ecosystem-specific biomes + events + graphics *(was Phase 12)*
-- New biome types per era (tundra, mineral, swamp).
-- Graphics pass: each era has visual identity (tile palettes, background, music variation).
-- Era-locked events (mass extinction at era transitions).
-- **Axis-scoped events**: `EventData` gains `scope: StringName` (`&"world"`, `&"kingdom"`, `&"niche"`, `&"species"`) and `scope_target: StringName`. EcologicalPressure rolls from the union of pools matching the current run's scopes. Backfill existing events as `&"world"` scope.
-- New evolution-tree nodes era-gated.
+### Phase 13 — Species-first model migration *(briefs in progress 2026-05-18, see `docs/SPECIES_MODEL.md`)*
 
-### Phase 14 — Predator + Scavenger niches for Animals; Cordyceps for Fungi *(was Phase 13)*
-- Animal kingdom matures with niche variety.
-- Cross-niche interactions: predators reduce herbivore pressure on plant runs.
-- **Lifeforce** resource fully wired for parasitic fungi (stub from Phase 10 becomes load-bearing).
-- **Protein** and **Cellulose** wired for herbivore/carnivore loop.
-- First 3-layer species pack — **Coral** (animal × algae × symbiont). Algae implemented as a microbial-like sub-species.
+Architectural reshape. **No new player-visible content.** Collapses kingdom/niche/species into species-as-first-class entity; kingdom becomes a tag; niche becomes a runtime-derived label; multi-species coinhabitation becomes the default per-tile state; in-run species introduction loop replaces the niche selector.
 
-### Phase 15 — More layered species packs *(was Phase 14)*
-- **Termite Mound** (animal × fungi × bacteria) — second 3-layer demo, validating the model.
-- **Mycorrhizal Forest** capstone (plantae × fungi at network scale) — granted by `photosynthetic_network`.
-- Expanded discovery log entries — target 50+.
+**Deliverables**:
+- `SpeciesData` extension (placement_rule, introduce_cost, kingdom_id-as-tag, tags array, recipe_components, rendering hints).
+- `EcosystemData` reshape (biome_recipe + cluster_size; species/biome completion gates).
+- `TerritorySystem` per-tile state: `occupants: Dictionary[StringName, StringName]` (kingdom → species).
+- `GrowthSystem` generalized to tick all introduced species, not one kingdom.
+- `ColonizationRulesRegistry` reads species directly; recipe rule added (Lichen).
+- Niche files deleted; `MultiLayerPlacement` deleted; `parasite_steal_system` + `parasite_decay_system` generalized into per-species tick effects.
+- Run flow: world map → ecosystem → starting-species picker → in-run "Introduce species" panel.
+- Diversity multiplier on prestige (×1.0 / ×1.1 / ×1.2 for 1/2/3+ species cultivated).
+- Tile rendering: plantae/fungi share base color (blended for both); animals render as border.
+- Save migration v11 → v12 (lossless for normal Phase 12 runs).
 
-**Exit**: 3+ eras playable, ~30 hours of varied content, animals are a first-class kingdom, layered lifeforms span tiers 1–3.
+**Exit (behavior parity)**: every Phase 12 gameplay path still works in the new model. Plantae photosynth, plantae parasite, fungi decomposer, fungi mycorrhizal, lichen, animal herbivore + predator runs all play through to prestige; all 6 ecosystems still complete; mass extinction narrative still fires; save migration is lossless.
+
+**Originally-scoped Phase 13 content briefs** (biomes, mass extinction teeth, era nodes, per-era visuals) — paused, archived at `docs/briefs/phase_13_paused/`, revive as Phase 14.
+
+### Phase 14 — Content pass on the species-first foundation *(was Phase 13 + Phase 14)*
+- **New biomes**: tundra, mineral_vent, swamp (`BiomeData.chemosynthesis_per_tick` field).
+- **Per-era visual identity**: tile/background tint via `EraData.tint_color`.
+- **Axis-scoped events**: `EventData.scope` + `scope_target` (now scope `&"species_tag"` instead of `&"kingdom"`, per the species-first model).
+- **Mass extinction gameplay teeth**: post-extinction recovery debuff + Extinction Survivor EP bonus.
+- **Era-gated evolution nodes**: cryotolerance, chemosynthetic_pathway, vascular_network, mass_fruiting, extinction_survivor.
+- **New species** to populate the in-run introduction loop: cordyceps (parasite fungi → animal), mycoheterotroph plant, scavenger animal (eats corpses).
+- **Lifeforce / Protein / Cellulose** stub resources wired to concrete interactions.
+- **Insect agents** as the first cross-kingdom autonomous companion (pollination predicate from §Biological additions).
+- ~15 new discovery entries (biomes, events, species, milestones, ecosystem flavor).
+
+### Phase 15 — Multi-species ecosystems mature *(was Phase 15)*
+- **Coral** as a 3-component recipe (animal × plantae-algae × fungi-symbiont).
+- **Termite Mound** as a 3-component recipe (animal × fungi × bacteria-microbe).
+- **Mycorrhizal Forest** capstone — emergent multi-tile structure built from dense plantae+fungi+mycorrhizal_bond clusters (links to `docs/STRUCTURES.md`).
+- **Apex predator cascade** wired (predator-tag suppresses herbivore pressure → plantae yields recover).
+- **Nitrogen fixation** + **allelopathy** + **pioneer succession** predicates wired (each tied to a specific authored species).
+- Expanded discovery entries — target 60+.
+
+**Exit**: 3+ eras playable, multi-species runs are the dominant play pattern, layered/recipe species span tiers 1–3, the biological-interactions table (§SPECIES_MODEL.md) is at least 70% wired.
 
 ---
 

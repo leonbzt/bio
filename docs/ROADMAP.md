@@ -159,16 +159,36 @@ Architectural reshape. **No new player-visible content.** Collapses kingdom/nich
 
 **Originally-scoped Phase 13 content briefs** (biomes, mass extinction teeth, era nodes, per-era visuals) — paused, archived at `docs/briefs/phase_13_paused/`, revive as Phase 14.
 
-### Phase 14 — Content pass on the species-first foundation *(was Phase 13 + Phase 14)*
-- **New biomes**: tundra, mineral_vent, swamp (`BiomeData.chemosynthesis_per_tick` field).
-- **Per-era visual identity**: tile/background tint via `EraData.tint_color`.
-- **Axis-scoped events**: `EventData.scope` + `scope_target` (now scope `&"species_tag"` instead of `&"kingdom"`, per the species-first model).
-- **Mass extinction gameplay teeth**: post-extinction recovery debuff + Extinction Survivor EP bonus.
-- **Era-gated evolution nodes**: cryotolerance, chemosynthetic_pathway, vascular_network, mass_fruiting, extinction_survivor.
-- **New species** to populate the in-run introduction loop: cordyceps (parasite fungi → animal), mycoheterotroph plant, scavenger animal (eats corpses).
-- **Lifeforce / Protein / Cellulose** stub resources wired to concrete interactions.
-- **Insect agents** as the first cross-kingdom autonomous companion (pollination predicate from §Biological additions).
-- ~15 new discovery entries (biomes, events, species, milestones, ecosystem flavor).
+### Phase 14a — Species roster foundation + biome affinity *(briefs written 2026-05-18, see `docs/SPECIES_ROSTER.md`)*
+
+Layered tier rollout, Tier 1 starter (~15 species). Hybrid era gating (most carry over, some signature era-locked). Soft biome preference via per-species multipliers. Hybrid naming (poetic display + Latin tooltip).
+
+**Deliverables**:
+- Schema: `SpeciesData.biome_affinity`, `latin_name`, `lineage_id`.
+- 5 new species: Cyanobacterial Mat, Vent Archaeon, Cryo-Lichen, Tree-Fern Stem, Wood-Rot Bracket.
+- Existing 7 species updated with Latin tooltips, lineage ids, biome affinity.
+- `GrowthSystem` reads `biome_affinity` per tile (single-line stack on top of biome multipliers).
+- `pioneer` tag predicate in ColonizationRulesRegistry — bare-tile placement without adjacency.
+- 8 new discovery entries (5 species + 3 lineage milestones).
+- Save migration v12 → v13 (lineages_played seeded from species_played).
+
+**Exit**: each new species playable in its eligible ecosystems; biome affinity visibly shifts yields; lineage milestone fires after cultivating across 2 eras.
+
+### Phase 14b — Era teeth: biomes + events + mass extinction + era nodes + visuals *(briefs written 2026-05-18)*
+
+Era progression gains mechanical + visual weight. Translates paused-Phase-13 content into species-first language.
+
+**Deliverables**:
+- New biomes: tundra, mineral_vent, swamp + `BiomeData.chemosynthesis_per_tick`.
+- Per-era visual identity: tile palette tint + background tint via `EraData.tint_color`.
+- Axis-scoped events: `EventData.scope` + `scope_target` (`world` / `kingdom` / `species_tag` / `era` / `ecosystem`).
+- 4 new scoped events: cold_snap, sulfur_bloom, wildfire, swamp_fever.
+- Mass extinction gameplay teeth: post-extinction recovery debuff (0.5× → 1.0× over 120 ticks) + +25 EP Extinction Survivor bonus on first prestige in new era.
+- 5 era-gated evolution nodes: cryotolerance, chemosynthetic_pathway, vascular_network, mass_fruiting, extinction_survivor (`EvolutionNodeData.requires_era`).
+- 10 new discovery entries (biomes, events, nodes, milestones).
+- Save migration v13 → v14 (post_extinction, first_run_in_era_completed, first_era_seen).
+
+**Exit**: era-specific play feels mechanically distinct; mass extinction has real weight; era-gated nodes shape build paths.
 
 ### Phase 15 — Multi-species ecosystems mature *(was Phase 15)*
 - **Coral** as a 3-component recipe (animal × plantae-algae × fungi-symbiont).

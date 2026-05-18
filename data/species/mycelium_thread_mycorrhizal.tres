@@ -33,3 +33,10 @@ era_requires = &""
 recipe_components = Array[StringName]([])
 tile_marker_color = Color(0.6, 0.4, 0.7, 1)
 tile_marker_shape = &"root"
+latin_name = "Glomus intraradices (Ordovician-now)"
+lineage_id = &"mycorrhizal"
+biome_affinity = {
+&"forest_edge": 1.2,
+&"rich_soil": 1.1,
+&"grassland": 1.0
+}

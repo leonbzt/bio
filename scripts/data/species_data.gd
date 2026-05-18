@@ -9,6 +9,12 @@ extends Resource
 @export var display_name: String = ""
 @export var description: String = ""
 
+# Latin binomial + era hint surfaced in tooltips.
+@export var latin_name: String = ""
+
+# Groups era-variants of the same biological lineage.
+@export var lineage_id: StringName = &""
+
 # Kingdom tag. Drives interaction predicates (herbivore eats plantae-tagged
 # tiles), per-tile slot assignment (one species per kingdom per tile), and
 # era filtering. NOT a run-state field — runs reference species directly.
@@ -57,3 +63,6 @@ extends Resource
 # Rendering hints (Locked Decision 18).
 @export var tile_marker_color: Color = Color(1, 1, 1, 1)
 @export var tile_marker_shape: StringName = &"square"  # square|circle|cross|leaf|spore|root|border
+
+# Per-biome biomass yield multiplier; missing key defaults to 1.0 at use site.
+@export var biome_affinity: Dictionary = {}

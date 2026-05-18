@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1")
 id = &"common_grazer"
-display_name = "Common Grazer"
+display_name = "Lobe-Finned Browser"
 description = "A roaming herbivore that feeds on surface growth."
 kingdom_id = &"animals"
 sprite = null
@@ -28,3 +28,10 @@ era_requires = &""
 recipe_components = Array[StringName]([])
 tile_marker_color = Color(0.9, 0.65, 0.25, 1)
 tile_marker_shape = &"border"
+latin_name = "Eusthenopteron foordi (Late Devonian)"
+lineage_id = &"tetrapod_browser"
+biome_affinity = {
+&"rich_soil": 1.2,
+&"forest_edge": 1.1,
+&"grassland": 1.0
+}

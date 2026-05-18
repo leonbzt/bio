@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1")
 id = &"common_predator"
-display_name = "Common Predator"
+display_name = "Apex Stalker"
 description = "An apex hunter that feeds on other animals."
 kingdom_id = &"animals"
 sprite = null
@@ -31,3 +31,9 @@ era_requires = &""
 recipe_components = Array[StringName]([])
 tile_marker_color = Color(0.6, 0.2, 0.2, 1)
 tile_marker_shape = &"border"
+latin_name = "Hyneria lindae (Late Devonian)"
+lineage_id = &"tetrapod_predator"
+biome_affinity = {
+&"rich_soil": 1.1,
+&"forest_edge": 1.0
+}

@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 12
+const SAVE_VERSION: int = 13
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -24,6 +24,22 @@ const _NICHE_TO_STARTER_SPECIES: Dictionary[StringName, StringName] = {
 	&"lichen": &"lichen_common",
 	&"herbivore": &"common_grazer",
 	&"predator": &"common_predator"
+}
+
+# Species id -> lineage id; hardcoded so migration can run before content loads.
+const _SPECIES_TO_LINEAGE: Dictionary[StringName, StringName] = {
+	&"pioneer_grass": &"pioneer_stem",
+	&"cyanobacterial_mat": &"pioneer_stem",
+	&"mycelium_thread": &"mycorrhizal",
+	&"mycelium_thread_mycorrhizal": &"mycorrhizal",
+	&"bramble": &"parasitic_climber",
+	&"lichen_common": &"lichen",
+	&"cryo_lichen": &"lichen",
+	&"vent_archaeon": &"extremophile",
+	&"tree_fern_stem": &"arborescent",
+	&"wood_rot_bracket": &"saprotroph",
+	&"common_grazer": &"tetrapod_browser",
+	&"common_predator": &"tetrapod_predator"
 }
 
 
@@ -254,6 +270,8 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 				meta["evolution_tree"] = tree
 	if from_version < 12:
 		_migrate_v11_to_v12(old)
+	if from_version < 13:
+		_migrate_v12_to_v13(old)
 	return old
 
 
@@ -268,6 +286,7 @@ func _build_default_save() -> Dictionary:
 			"kingdoms_played": [],
 			"species_unlocked": ["pioneer_grass", "mycelium_thread"],
 			"species_played": [],
+			"lineages_played": [],
 			"current_era_id": "cryogenian",
 			"current_ecosystem_id": "cryo_polar_ice",
 			"ecosystem_completions": {},
@@ -394,6 +413,9 @@ func _repair_species_unlocked(meta: Dictionary) -> void:
 	if not species_unlocked.has("pioneer_grass"):
 		species_unlocked.append("pioneer_grass")
 		dirty = true
+	if not meta.has("lineages_played"):
+		meta["lineages_played"] = []
+		dirty = true
 	if dirty:
 		meta["species_unlocked"] = species_unlocked
 
@@ -486,6 +508,20 @@ func _migrate_v11_to_v12(save: Dictionary) -> void:
 		})
 	run["tiles"] = migrated_tiles
 	save["run"] = run
+
+
+func _migrate_v12_to_v13(save: Dictionary) -> void:
+	var meta: Dictionary = save.get("meta", {}) as Dictionary
+	if not meta.has("lineages_played"):
+		meta["lineages_played"] = []
+	var lineages: Array = meta.get("lineages_played", []) as Array
+	var species_played: Array = meta.get("species_played", []) as Array
+	for sp_id in species_played:
+		var lineage: StringName = _SPECIES_TO_LINEAGE.get(StringName(sp_id), &"")
+		if lineage != &"" and not lineages.has(String(lineage)):
+			lineages.append(String(lineage))
+	meta["lineages_played"] = lineages
+	save["meta"] = meta
 
 
 func _pick_species_for_kingdom(starter_species: StringName, kingdom_id: StringName, niche_id: String) -> StringName:

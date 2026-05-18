@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1")
 id = &"bramble"
-display_name = "Bramble"
+display_name = "Climbing Bramble"
 description = "A parasitic plant that thrives beside other life."
 kingdom_id = &"plantae"
 sprite = null
@@ -30,3 +30,10 @@ era_requires = &""
 recipe_components = Array[StringName]([])
 tile_marker_color = Color(0.4, 0.35, 0.2, 1)
 tile_marker_shape = &"cross"
+latin_name = "Trimerophyton robustius (Early Devonian)"
+lineage_id = &"parasitic_climber"
+biome_affinity = {
+&"forest_edge": 1.1,
+&"rich_soil": 1.0,
+&"grassland": 0.9
+}

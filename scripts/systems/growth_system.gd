@@ -122,6 +122,10 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 					affinity_mult = float(species.biome_affinity.get(biome.id, 1.0))
 					affinity_biome_id = biome.id
 					per_tile *= affinity_mult
+					if bool(_territory.get_tile_data(coord, "structure_mycorrhizal_hub", false)):
+						per_tile *= 1.50
+					if bool(_territory.get_tile_data(coord, "structure_old_growth", false)):
+						per_tile *= 2.00
 				per_tile *= biomass_mult
 				if MetaModifiers.is_unlocked(&"extinction_survivor"):
 					per_tile *= 1.10

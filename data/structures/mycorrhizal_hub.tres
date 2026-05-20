@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"mycorrhizal_hub"
+display_name = "Mycorrhizal Hub"
+description = "Mycelium dense enough to connect roots across an entire stand. Plants borrow nutrients through the underground."
+pattern_type = &"square_NxM_with_adjacent"
+pattern_params = {
+"width": 3,
+"height": 3,
+"kingdom_id": "fungi",
+"adjacent_kingdom_id": "plantae",
+"min_adjacent": 4
+}
+bonus_handler = &"mycorrhizal_hub"
+halo_color = Color(0.75, 0.5, 0.9, 0.55)

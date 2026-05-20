@@ -5,8 +5,11 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="3"]
 [ext_resource type="Script" path="res://scripts/systems/tile_input_router.gd" id="4"]
 [ext_resource type="Script" path="res://scripts/systems/territory_system.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/systems/obstacle_system.gd" id="14"]
 [ext_resource type="Script" path="res://scripts/systems/nutrient_system.gd" id="6"]
+[ext_resource type="Script" path="res://scripts/systems/fog_system.gd" id="16"]
 [ext_resource type="Script" path="res://scripts/systems/growth_system.gd" id="7"]
+[ext_resource type="Script" path="res://scripts/systems/structure_registry.gd" id="18"]
 [ext_resource type="Script" path="res://scripts/systems/offline_progress.gd" id="8"]
 [ext_resource type="Script" path="res://scripts/systems/ecological_pressure.gd" id="9"]
 [ext_resource type="Script" path="res://scripts/systems/herbivore_manager.gd" id="10"]
@@ -42,11 +45,20 @@ script = ExtResource("4")
 [node name="TerritorySystem" type="Node" parent="Systems"]
 script = ExtResource("5")
 
+[node name="ObstacleSystem" type="Node" parent="Systems"]
+script = ExtResource("14")
+
+[node name="FogSystem" type="Node" parent="Systems"]
+script = ExtResource("16")
+
 [node name="NutrientSystem" type="Node" parent="Systems"]
 script = ExtResource("6")
 
 [node name="GrowthSystem" type="Node" parent="Systems"]
 script = ExtResource("7")
+
+[node name="StructureRegistry" type="Node" parent="Systems"]
+script = ExtResource("18")
 
 [node name="EcologicalPressure" type="Node" parent="Systems"]
 script = ExtResource("9")

@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 15
+const SAVE_VERSION: int = 16
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -285,6 +285,8 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 		_migrate_v13_to_v14(old)
 	if from_version < 15:
 		_migrate_v14_to_v15(old)
+	if from_version < 16:
+		_migrate_v15_to_v16(old)
 	return old
 
 
@@ -300,6 +302,7 @@ func _build_default_save() -> Dictionary:
 			"species_unlocked": ["pioneer_grass", "mycelium_thread"],
 			"species_played": [],
 			"lineages_played": [],
+			"structures_discovered": [],
 			"current_era_id": "cryogenian",
 			"current_ecosystem_id": "cryo_polar_ice",
 			"ecosystem_completions": {},
@@ -334,6 +337,9 @@ func _build_default_save() -> Dictionary:
 				"mycelial_stability": 0.0
 			},
 			"biome_map": {},
+			"fog_revealed": [],
+			"obstacles": [],
+			"active_structures": [],
 			"tiles": [],
 			"organisms": [],
 			"active_events": [],
@@ -611,6 +617,69 @@ func _migrate_v14_to_v15(save: Dictionary) -> void:
 			"clusters_formed_lifetime": 0
 		}
 	save["meta"] = meta
+
+
+func _migrate_v15_to_v16(save: Dictionary) -> void:
+	var run: Dictionary = save.get("run", {}) as Dictionary
+
+	if not run.has("fog_revealed"):
+		# Reveal around existing owned tiles so visibility isn't lost.
+		var revealed: Array = []
+		var tiles: Array = run.get("tiles", []) as Array
+		var seen: Dictionary = {}
+		for entry in tiles:
+			if not (entry is Dictionary):
+				continue
+			var coord: Variant = entry.get("coord", null)
+			if coord is Array and coord.size() == 2:
+				_flood_reveal(int(coord[0]), int(coord[1]), 2, seen)
+		for k in seen.keys():
+			revealed.append(k)
+		run["fog_revealed"] = revealed
+
+	if not run.has("obstacles"):
+		# Generate deterministically from run_seed if present; otherwise empty.
+		if run.has("run_seed") and int(run.get("run_seed", 0)) != 0:
+			run["obstacles"] = _generate_obstacles(int(run["run_seed"]))
+		else:
+			run["obstacles"] = []
+
+	if not run.has("active_structures"):
+		run["active_structures"] = []
+
+	save["run"] = run
+
+	var meta: Dictionary = save.get("meta", {}) as Dictionary
+	if not meta.has("structures_discovered"):
+		meta["structures_discovered"] = []
+	save["meta"] = meta
+
+
+# Helper to flood reveal around a coord (radius in each direction).
+static func _flood_reveal(cx: int, cy: int, radius: int, into: Dictionary) -> void:
+	for dy in range(-radius, radius + 1):
+		for dx in range(-radius, radius + 1):
+			into["%d,%d" % [cx + dx, cy + dy]] = true
+
+
+# Deterministic obstacle generator (mirrors ObstacleSystem).
+static func _generate_obstacles(seed: int) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	const GRID_W: int = 32
+	const GRID_H: int = 48
+	const RATE: float = 0.05
+	const START_CLEAR_RADIUS: int = 3
+	var cx: int = int(GRID_W / 2)
+	var cy: int = int(GRID_H / 2)
+	var out: Array = []
+	for y in range(GRID_H):
+		for x in range(GRID_W):
+			if abs(x - cx) <= START_CLEAR_RADIUS and abs(y - cy) <= START_CLEAR_RADIUS:
+				continue
+			if rng.randf() < RATE:
+				out.append("%d,%d" % [x, y])
+	return out
 
 
 func _pick_species_for_kingdom(starter_species: StringName, kingdom_id: StringName, niche_id: String) -> StringName:

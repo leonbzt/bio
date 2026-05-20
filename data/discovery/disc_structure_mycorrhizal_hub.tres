@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_structure_mycorrhizal_hub"
+title = "Roots Find Roots"
+body = "Underground threads find each other and learn to share. The plants above the threads grow without knowing why.\nYou watched it form. The hidden side of every forest is older than the visible side."
+category = &"structure"
+trigger_id = &"mycorrhizal_hub"

@@ -1,0 +1,2781 @@
+diff --git a/data/discovery/_index.tres b/data/discovery/_index.tres
+index 9d98095..e31a501 100644
+--- a/data/discovery/_index.tres
++++ b/data/discovery/_index.tres
+@@ -1,4 +1,4 @@
+-[gd_resource type="Resource" script_class="DiscoveryIndex" load_steps=58 format=3]
++[gd_resource type="Resource" script_class="DiscoveryIndex" load_steps=62 format=3]
+ 
+ [ext_resource type="Script" path="res://scripts/data/discovery_index.gd" id="1"]
+ [ext_resource type="Resource" path="res://data/discovery/disc_kingdom_plantae.tres" id="2"]
+@@ -57,7 +57,11 @@
+ [ext_resource type="Resource" path="res://data/discovery/disc_node_cryotolerance.tres" id="55"]
+ [ext_resource type="Resource" path="res://data/discovery/disc_node_chemosynthetic_pathway.tres" id="56"]
+ [ext_resource type="Resource" path="res://data/discovery/disc_milestone_extinction_survivor.tres" id="57"]
++[ext_resource type="Resource" path="res://data/discovery/disc_structure_mycorrhizal_hub.tres" id="58"]
++[ext_resource type="Resource" path="res://data/discovery/disc_structure_old_growth_stand.tres" id="59"]
++[ext_resource type="Resource" path="res://data/discovery/disc_structure_fairy_ring.tres" id="60"]
++[ext_resource type="Resource" path="res://data/discovery/disc_structure_decay_pit.tres" id="61"]
+ 
+ [resource]
+ script = ExtResource("1")
+-entries = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36"), ExtResource("37"), ExtResource("38"), ExtResource("39"), ExtResource("40"), ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49"), ExtResource("50"), ExtResource("51"), ExtResource("52"), ExtResource("53"), ExtResource("54"), ExtResource("55"), ExtResource("56"), ExtResource("57")])
++entries = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36"), ExtResource("37"), ExtResource("38"), ExtResource("39"), ExtResource("40"), ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49"), ExtResource("50"), ExtResource("51"), ExtResource("52"), ExtResource("53"), ExtResource("54"), ExtResource("55"), ExtResource("56"), ExtResource("57"), ExtResource("58"), ExtResource("59"), ExtResource("60"), ExtResource("61")])
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index a7575da..6167041 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -45,6 +45,9 @@ signal tile_tapped(coord: Vector2i)
+ signal tile_colonized(coord: Vector2i, owner_id: StringName)
+ signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
+ 
++# Structures
++signal structure_promoted(structure_id: StringName, anchor: Vector2i)
++
+ # Organisms
+ signal organism_spawned(organism_id: int, species_id: StringName, coord: Vector2i)
+ signal organism_died(organism_id: int, cause: StringName)
+@@ -455,7 +458,10 @@ Increment `SAVE_VERSION` and add a `migrate()` case any time the JSON schema cha
+ | v11 | era/ecosystem state added (`current_era_id`, `current_ecosystem_id`, `ecosystem_completions`, `eras_unlocked`) |
+ | v12 | species-first migration (`species_unlocked`, `species_played`, `starting_species_id`, per-tile `occupants`) |
+ | v13 | `meta.lineages_played` added; backfilled from `meta.species_played` |
++| v14 | `meta.post_extinction`, `meta.first_run_in_era_completed`, `meta.first_era_seen` added |
++| v15 | `run.tile_ages`, `run.species_tile_counts`, `meta.lifetime_counters` added |
++| v16 | `run.fog_revealed`, `run.obstacles`, `run.active_structures`, `meta.structures_discovered` added |
+ 
+ ---
+ 
+-**Last updated**: Phase 11 goals + abilities scaffolding. Update this doc whenever a contract changes; do not update it speculatively.
++**Last updated**: Phase 15b fog/obstacles/structures. Update this doc whenever a contract changes; do not update it speculatively.
+diff --git a/scenes/ui/hud.tscn b/scenes/ui/hud.tscn
+index 8f8146f..a7a25c2 100644
+--- a/scenes/ui/hud.tscn
++++ b/scenes/ui/hud.tscn
+@@ -127,12 +127,23 @@ offset_right = 64.0
+ offset_bottom = 40.0
+ text = "Menu"
+ 
++[node name="RecipesButton" type="Button" parent="."]
++anchor_left = 1.0
++anchor_top = 0.0
++anchor_right = 1.0
++anchor_bottom = 0.0
++offset_left = -112.0
++offset_top = 8.0
++offset_right = -40.0
++offset_bottom = 40.0
++text = "Recipes"
++
+ [node name="IdentityStrip" type="PanelContainer" parent="."]
+ anchor_left = 0.0
+ anchor_right = 1.0
+ offset_left = 72.0
+ offset_top = 8.0
+-offset_right = -40.0
++offset_right = -128.0
+ offset_bottom = 36.0
+ 
+ [node name="IdentityLabel" type="Label" parent="IdentityStrip"]
+diff --git a/scenes/world/world.tscn b/scenes/world/world.tscn
+index 982ec7c..84bcd0b 100644
+--- a/scenes/world/world.tscn
++++ b/scenes/world/world.tscn
+@@ -5,8 +5,11 @@
+ [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="3"]
+ [ext_resource type="Script" path="res://scripts/systems/tile_input_router.gd" id="4"]
+ [ext_resource type="Script" path="res://scripts/systems/territory_system.gd" id="5"]
++[ext_resource type="Script" path="res://scripts/systems/obstacle_system.gd" id="14"]
+ [ext_resource type="Script" path="res://scripts/systems/nutrient_system.gd" id="6"]
++[ext_resource type="Script" path="res://scripts/systems/fog_system.gd" id="16"]
+ [ext_resource type="Script" path="res://scripts/systems/growth_system.gd" id="7"]
++[ext_resource type="Script" path="res://scripts/systems/structure_registry.gd" id="18"]
+ [ext_resource type="Script" path="res://scripts/systems/offline_progress.gd" id="8"]
+ [ext_resource type="Script" path="res://scripts/systems/ecological_pressure.gd" id="9"]
+ [ext_resource type="Script" path="res://scripts/systems/herbivore_manager.gd" id="10"]
+@@ -42,12 +45,21 @@ script = ExtResource("4")
+ [node name="TerritorySystem" type="Node" parent="Systems"]
+ script = ExtResource("5")
+ 
++[node name="ObstacleSystem" type="Node" parent="Systems"]
++script = ExtResource("14")
++
++[node name="FogSystem" type="Node" parent="Systems"]
++script = ExtResource("16")
++
+ [node name="NutrientSystem" type="Node" parent="Systems"]
+ script = ExtResource("6")
+ 
+ [node name="GrowthSystem" type="Node" parent="Systems"]
+ script = ExtResource("7")
+ 
++[node name="StructureRegistry" type="Node" parent="Systems"]
++script = ExtResource("18")
++
+ [node name="EcologicalPressure" type="Node" parent="Systems"]
+ script = ExtResource("9")
+ 
+diff --git a/scripts/autoloads/discovery_log.gd b/scripts/autoloads/discovery_log.gd
+index ea44df1..97c93b4 100644
+--- a/scripts/autoloads/discovery_log.gd
++++ b/scripts/autoloads/discovery_log.gd
+@@ -28,10 +28,12 @@ func _enter_tree() -> void:
+ 	EventBus.era_changed.connect(_on_era_changed)
+ 	EventBus.ecosystem_completed.connect(_on_ecosystem_completed)
+ 	EventBus.era_transition_started.connect(_on_era_transition_started)
++	EventBus.structure_promoted.connect(_on_structure_promoted)
+ 
+ 
+ func _ready() -> void:
+ 	add_to_group("discovery_log")
++	call_deferred("_subscribe_fog")
+ 	var index: DiscoveryIndex = load(DISCOVERY_INDEX_PATH) as DiscoveryIndex
+ 	if index == null:
+ 		push_error("DiscoveryLog: missing discovery index")
+@@ -245,18 +247,48 @@ func _on_era_transition_started(_from: StringName, _to: StringName) -> void:
+ 		unlock(era_entry)
+ 
+ 
++func _on_structure_promoted(structure_id: StringName, _anchor: Vector2i) -> void:
++	var entry := find_entry_for_trigger(&"structure", structure_id)
++	if entry != &"":
++		unlock(entry)
++
++
+ func _check_biomes_in_play() -> void:
+ 	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+ 	var biome_map: Dictionary = run.get("biome_map", {}) as Dictionary
++	var fog: Node = _get_fog_system()
+ 	var seen: Dictionary = {}
+-	for biome_id in biome_map.values():
+-		seen[StringName(biome_id)] = true
++	for k in biome_map.keys():
++		var coord: Vector2i = _parse_coord_key(String(k))
++		if fog != null and fog.has_method("is_revealed") and not fog.is_revealed(coord):
++			continue
++		seen[StringName(biome_map[k])] = true
+ 	for biome_id in seen.keys():
+ 		var entry: StringName = find_entry_for_trigger(&"biome", StringName(biome_id))
+ 		if entry != &"":
+ 			unlock(entry)
+ 
+ 
++func _subscribe_fog() -> void:
++	var fog: Node = _get_fog_system()
++	if fog != null and fog.has_signal("fog_updated"):
++		fog.fog_updated.connect(_check_biomes_in_play)
++
++
++func _get_fog_system() -> Node:
++	var tree := Engine.get_main_loop() as SceneTree
++	if tree == null:
++		return null
++	return tree.root.get_node_or_null("World/Systems/FogSystem")
++
++
++func _parse_coord_key(s: String) -> Vector2i:
++	var parts := s.split(",", false)
++	if parts.size() != 2:
++		return Vector2i.ZERO
++	return Vector2i(int(parts[0]), int(parts[1]))
++
++
+ func _lookup_node(node_id: StringName) -> EvolutionNodeData:
+ 	var ps := get_tree().get_first_node_in_group("prestige_system")
+ 	if ps == null:
+diff --git a/scripts/autoloads/event_bus.gd b/scripts/autoloads/event_bus.gd
+index 41ea4e9..a01b013 100644
+--- a/scripts/autoloads/event_bus.gd
++++ b/scripts/autoloads/event_bus.gd
+@@ -19,6 +19,9 @@ signal tile_tapped(coord: Vector2i)
+ signal tile_colonized(coord: Vector2i, owner_id: StringName)
+ signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
+ 
++# Structures
++signal structure_promoted(structure_id: StringName, anchor: Vector2i)
++
+ # Organisms
+ signal organism_spawned(organism_id: int, species_id: StringName, coord: Vector2i)
+ signal organism_died(organism_id: int, cause: StringName)
+diff --git a/scripts/autoloads/save_system.gd b/scripts/autoloads/save_system.gd
+index 84d8809..940e64c 100644
+--- a/scripts/autoloads/save_system.gd
++++ b/scripts/autoloads/save_system.gd
+@@ -5,7 +5,7 @@ extends Node
+ ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
+ ##
+ 
+-const SAVE_VERSION: int = 15
++const SAVE_VERSION: int = 16
+ const SAVE_PATH: String = "user://save.json"
+ const TEMP_PATH: String = "user://save.json.tmp"
+ const BACKUP_PATH: String = "user://save.json.bak"
+@@ -285,6 +285,8 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
+ 		_migrate_v13_to_v14(old)
+ 	if from_version < 15:
+ 		_migrate_v14_to_v15(old)
++	if from_version < 16:
++		_migrate_v15_to_v16(old)
+ 	return old
+ 
+ 
+@@ -300,6 +302,7 @@ func _build_default_save() -> Dictionary:
+ 			"species_unlocked": ["pioneer_grass", "mycelium_thread"],
+ 			"species_played": [],
+ 			"lineages_played": [],
++			"structures_discovered": [],
+ 			"current_era_id": "cryogenian",
+ 			"current_ecosystem_id": "cryo_polar_ice",
+ 			"ecosystem_completions": {},
+@@ -334,6 +337,9 @@ func _build_default_save() -> Dictionary:
+ 				"mycelial_stability": 0.0
+ 			},
+ 			"biome_map": {},
++			"fog_revealed": [],
++			"obstacles": [],
++			"active_structures": [],
+ 			"tiles": [],
+ 			"organisms": [],
+ 			"active_events": [],
+@@ -613,6 +619,69 @@ func _migrate_v14_to_v15(save: Dictionary) -> void:
+ 	save["meta"] = meta
+ 
+ 
++func _migrate_v15_to_v16(save: Dictionary) -> void:
++	var run: Dictionary = save.get("run", {}) as Dictionary
++
++	if not run.has("fog_revealed"):
++		# Reveal around existing owned tiles so visibility isn't lost.
++		var revealed: Array = []
++		var tiles: Array = run.get("tiles", []) as Array
++		var seen: Dictionary = {}
++		for entry in tiles:
++			if not (entry is Dictionary):
++				continue
++			var coord: Variant = entry.get("coord", null)
++			if coord is Array and coord.size() == 2:
++				_flood_reveal(int(coord[0]), int(coord[1]), 2, seen)
++		for k in seen.keys():
++			revealed.append(k)
++		run["fog_revealed"] = revealed
++
++	if not run.has("obstacles"):
++		# Generate deterministically from run_seed if present; otherwise empty.
++		if run.has("run_seed") and int(run.get("run_seed", 0)) != 0:
++			run["obstacles"] = _generate_obstacles(int(run["run_seed"]))
++		else:
++			run["obstacles"] = []
++
++	if not run.has("active_structures"):
++		run["active_structures"] = []
++
++	save["run"] = run
++
++	var meta: Dictionary = save.get("meta", {}) as Dictionary
++	if not meta.has("structures_discovered"):
++		meta["structures_discovered"] = []
++	save["meta"] = meta
++
++
++# Helper to flood reveal around a coord (radius in each direction).
++static func _flood_reveal(cx: int, cy: int, radius: int, into: Dictionary) -> void:
++	for dy in range(-radius, radius + 1):
++		for dx in range(-radius, radius + 1):
++			into["%d,%d" % [cx + dx, cy + dy]] = true
++
++
++# Deterministic obstacle generator (mirrors ObstacleSystem).
++static func _generate_obstacles(seed: int) -> Array:
++	var rng := RandomNumberGenerator.new()
++	rng.seed = seed
++	const GRID_W: int = 32
++	const GRID_H: int = 48
++	const RATE: float = 0.05
++	const START_CLEAR_RADIUS: int = 3
++	var cx: int = int(GRID_W / 2)
++	var cy: int = int(GRID_H / 2)
++	var out: Array = []
++	for y in range(GRID_H):
++		for x in range(GRID_W):
++			if abs(x - cx) <= START_CLEAR_RADIUS and abs(y - cy) <= START_CLEAR_RADIUS:
++				continue
++			if rng.randf() < RATE:
++				out.append("%d,%d" % [x, y])
++	return out
++
++
+ func _pick_species_for_kingdom(starter_species: StringName, kingdom_id: StringName, niche_id: String) -> StringName:
+ 	if niche_id == "lichen":
+ 		if kingdom_id == &"plantae":
+diff --git a/scripts/entities/tile_grid.gd b/scripts/entities/tile_grid.gd
+index 1eee7ff..6ae313d 100644
+--- a/scripts/entities/tile_grid.gd
++++ b/scripts/entities/tile_grid.gd
+@@ -11,6 +11,7 @@ const ATLAS_BIOME_SWAMP: Vector2i = Vector2i(3, 0)
+ const ATLAS_BIOME_GRASSLAND: Vector2i = Vector2i(4, 0)
+ const ATLAS_BIOME_RICH_SOIL: Vector2i = Vector2i(5, 0)
+ const ATLAS_BIOME_FOREST_EDGE: Vector2i = Vector2i(6, 0)
++const ATLAS_BIOME_ROCK: Vector2i = Vector2i(7, 0)
+ 
+ const LAYER_BASE: int = 0
+ 
+@@ -44,6 +45,8 @@ const EDGE_INSET_FUNGI: float = 3.5
+ const PULSE_CHANCE: float = 0.18        # ~18% of owned tiles pulse per tick (more frequent)
+ const PULSE_DURATION: float = 0.35      # longer hold, easier to track at a glance
+ const PULSE_BRIGHTNESS_BUMP: float = 0.60   # bigger flash — pops against dark biomes
++const FOG_COLOR: Color = Color(0.04, 0.04, 0.06, 1.0)
++const FOG_EDGE_COLOR: Color = Color(0.08, 0.08, 0.10, 1.0)
+ class _EdgesOverlay extends Node2D:
+ 	var tile_grid
+ 
+@@ -55,6 +58,35 @@ class _EdgesOverlay extends Node2D:
+ 		# can re-enable by removing this early return.
+ 		return
+ 
++
++class _FogOverlay extends Node2D:
++	var tile_grid
++
++	func _draw() -> void:
++		if tile_grid == null:
++			return
++		for y in range(tile_grid.GRID_HEIGHT):
++			for x in range(tile_grid.GRID_WIDTH):
++				var c := Vector2i(x, y)
++				if tile_grid._revealed_set.has(c):
++					continue
++				var origin: Vector2 = tile_grid.map_to_local(c) - Vector2(tile_grid.TILE_SIZE * 0.5, tile_grid.TILE_SIZE * 0.5)
++				draw_rect(Rect2(origin, Vector2(tile_grid.TILE_SIZE, tile_grid.TILE_SIZE)), tile_grid.FOG_COLOR, true)
++
++
++class _HaloOverlay extends Node2D:
++	var tile_grid
++
++	func _draw() -> void:
++		if tile_grid == null:
++			return
++		for key in tile_grid._structure_halos.keys():
++			var coords: Array = tile_grid._structure_halos[key]
++			var color: Color = tile_grid._halo_colors.get(key, Color(1, 1, 1, 0.5))
++			for c in coords:
++				var origin: Vector2 = tile_grid.map_to_local(c) - Vector2(tile_grid.TILE_SIZE * 0.5, tile_grid.TILE_SIZE * 0.5)
++				draw_rect(Rect2(origin, Vector2(tile_grid.TILE_SIZE, tile_grid.TILE_SIZE)), color, false, 1.5)
++
+ @export var tile_texture: Texture2D = preload("res://assets/art/tiles/placeholder_tile.png")
+ 
+ var _tile_occupants: Dictionary[Vector2i, Dictionary] = {}
+@@ -63,7 +95,13 @@ var _fill_nodes: Dictionary[Vector2i, ColorRect] = {}
+ var _border_nodes: Dictionary[Vector2i, Polygon2D] = {}
+ var _overlay_layer: Node2D
+ var _edges_overlay: _EdgesOverlay   # single child; _draw() renders all cluster edges
++var _fog_overlay: _FogOverlay
++var _halo_overlay: _HaloOverlay
+ var _pulse_rng: RandomNumberGenerator = RandomNumberGenerator.new()  # Phase 15a
++var _revealed_set: Dictionary[Vector2i, bool] = {}
++var _obstacle_set: Dictionary[Vector2i, bool] = {}
++var _structure_halos: Dictionary[String, Array] = {}
++var _halo_colors: Dictionary[String, Color] = {}
+ 
+ 
+ func _ready() -> void:
+@@ -81,6 +119,16 @@ func _ready() -> void:
+ 	_edges_overlay.tile_grid = self
+ 	_edges_overlay.z_index = 2
+ 	_overlay_layer.add_child(_edges_overlay)
++	_halo_overlay = _HaloOverlay.new()
++	_halo_overlay.name = "StructureHalos"
++	_halo_overlay.tile_grid = self
++	_halo_overlay.z_index = 3
++	_overlay_layer.add_child(_halo_overlay)
++	_fog_overlay = _FogOverlay.new()
++	_fog_overlay.name = "FogOverlay"
++	_fog_overlay.tile_grid = self
++	_fog_overlay.z_index = 4
++	_overlay_layer.add_child(_fog_overlay)
+ 	EventBus.era_changed.connect(_on_era_changed)
+ 	EventBus.run_loaded.connect(_on_run_loaded)
+ 	EventBus.tick.connect(_on_tick_pulse)  # Phase 15a
+@@ -116,6 +164,7 @@ func _build_tileset() -> TileSet:
+ 	atlas.create_tile(ATLAS_BIOME_GRASSLAND)
+ 	atlas.create_tile(ATLAS_BIOME_RICH_SOIL)
+ 	atlas.create_tile(ATLAS_BIOME_FOREST_EDGE)
++	atlas.create_tile(ATLAS_BIOME_ROCK)
+ 	return set
+ 
+ 
+@@ -124,7 +173,7 @@ func _build_atlas_texture() -> Texture2D:
+ 	if base_image.is_empty():
+ 		return tile_texture
+ 	base_image.convert(Image.FORMAT_RGBA8)
+-	var atlas_width: int = max(base_image.get_width(), TILE_SIZE) + TILE_SIZE * 6
++	var atlas_width: int = max(base_image.get_width(), TILE_SIZE) + TILE_SIZE * 7
+ 	var atlas_height: int = max(base_image.get_height(), TILE_SIZE)
+ 	var atlas_image := Image.create(atlas_width, atlas_height, false, Image.FORMAT_RGBA8)
+ 	atlas_image.fill(Color(0, 0, 0, 0))
+@@ -198,11 +247,62 @@ func _build_atlas_texture() -> Texture2D:
+ 		0.10,
+ 		false
+ 	)
++	# Rock: neutral dark gray, minimal era tint.
++	_draw_biome_tile(
++		atlas_image,
++		Vector2i(TILE_SIZE * 7, 0),
++		Color8(0x55, 0x55, 0x55),
++		Color8(0x2a, 0x2a, 0x2c),
++		era_tint,
++		0.05,
++		false
++	)
+ 	return ImageTexture.create_from_image(atlas_image)
+ 
+ 
+ func _populate() -> void:
+ 	_populate_base_from_biomes()
++	_fog_overlay.queue_redraw()
++	_halo_overlay.queue_redraw()
++
++
++func set_fog_state(revealed: Array[Vector2i]) -> void:
++	_revealed_set.clear()
++	for c in revealed:
++		_revealed_set[c] = true
++	if _fog_overlay != null:
++		_fog_overlay.queue_redraw()
++
++
++func reveal_tiles(coords: Array[Vector2i]) -> void:
++	for c in coords:
++		_revealed_set[c] = true
++	if _fog_overlay != null:
++		_fog_overlay.queue_redraw()
++
++
++func set_obstacles(coords: Array[Vector2i]) -> void:
++	_obstacle_set.clear()
++	for c in coords:
++		_obstacle_set[c] = true
++	_populate_base_from_biomes()
++
++
++func add_structure_halo(key: String, tiles: Array[Vector2i], color: Color) -> void:
++	_structure_halos[key] = tiles
++	_halo_colors[key] = color
++	_redraw_halos()
++
++
++func remove_structure_halo(key: String) -> void:
++	_structure_halos.erase(key)
++	_halo_colors.erase(key)
++	_redraw_halos()
++
++
++func _redraw_halos() -> void:
++	if _halo_overlay != null:
++		_halo_overlay.queue_redraw()
+ 
+ 
+ func set_occupant(coord: Vector2i, kingdom_id: StringName, species_id: StringName) -> void:
+@@ -420,6 +520,9 @@ func clear_owned() -> void:
+ 	for coord in _border_nodes.keys():
+ 		_border_nodes[coord].queue_free()
+ 	_border_nodes.clear()
++	_structure_halos.clear()
++	_halo_colors.clear()
++	_redraw_halos()
+ 	_queue_edges_redraw()
+ 
+ 
+@@ -451,6 +554,8 @@ func _populate_base_from_biomes() -> void:
+ 
+ 
+ func _atlas_for_coord(coord: Vector2i) -> Vector2i:
++	if _obstacle_set.has(coord):
++		return ATLAS_BIOME_ROCK
+ 	var nutrients: Node = _get_nutrient_system()
+ 	if nutrients == null or not nutrients.has_method("get_biome_at"):
+ 		return ATLAS_BASE
+diff --git a/scripts/systems/ability_system.gd b/scripts/systems/ability_system.gd
+index 083a77a..46ea436 100644
+--- a/scripts/systems/ability_system.gd
++++ b/scripts/systems/ability_system.gd
+@@ -50,7 +50,8 @@ func is_ability_available(id: StringName) -> bool:
+ 		return false
+ 	var ability: AbilityData = _abilities_by_id[id]
+ 	if ability.unlock_node_id != &"" and not MetaModifiers.is_unlocked(ability.unlock_node_id):
+-		return false
++		if not _has_fairy_ring_override(ability):
++			return false
+ 	if ability.requires_event_active != &"":
+ 		if not _pressure.is_event_active(ability.requires_event_active):
+ 			return false
+@@ -105,7 +106,8 @@ func get_toxin_bloom_cost() -> Dictionary:
+ 
+ func _is_ability_usable(ability: AbilityData) -> bool:
+ 	if ability.unlock_node_id != &"" and not MetaModifiers.is_unlocked(ability.unlock_node_id):
+-		return false
++		if not _has_fairy_ring_override(ability):
++			return false
+ 	if ability.requires_event_active != &"":
+ 		if not _pressure.is_event_active(ability.requires_event_active):
+ 			return false
+@@ -114,6 +116,13 @@ func _is_ability_usable(ability: AbilityData) -> bool:
+ 	return true
+ 
+ 
++func _has_fairy_ring_override(ability: AbilityData) -> bool:
++	if ability.id != &"sporulate":
++		return false
++	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
++	return bool(run.get("fairy_ring_active", false))
++
++
+ func _on_tile_tapped(coord: Vector2i) -> void:
+ 	if _pending_ability_id == &"":
+ 		return
+diff --git a/scripts/systems/colonization_rules_registry.gd b/scripts/systems/colonization_rules_registry.gd
+index c5e51e9..42c3a93 100644
+--- a/scripts/systems/colonization_rules_registry.gd
++++ b/scripts/systems/colonization_rules_registry.gd
+@@ -8,6 +8,12 @@ const COST_GROWTH_FACTOR: float = 1.05
+ func evaluate(coord: Vector2i, species: SpeciesData) -> Dictionary:
+ 	if species == null:
+ 		return _invalid()
++	var fog: Node = _get_fog_system()
++	if fog != null and fog.has_method("is_revealed") and not fog.is_revealed(coord):
++		return _invalid()
++	var obstacles: Node = _get_obstacle_system()
++	if obstacles != null and obstacles.has_method("is_obstacle") and obstacles.is_obstacle(coord):
++		return _invalid()
+ 	match species.placement_rule:
+ 		&"adjacent_empty":
+ 			return _rule_adjacent_empty(coord, species)
+@@ -260,6 +266,20 @@ func _get_territory() -> Node:
+ 	return get_tree().root.get_node_or_null("World/Systems/TerritorySystem")
+ 
+ 
++func _get_fog_system() -> Node:
++	var tree := Engine.get_main_loop() as SceneTree
++	if tree == null:
++		return null
++	return tree.root.get_node_or_null("World/Systems/FogSystem")
++
++
++func _get_obstacle_system() -> Node:
++	var tree := Engine.get_main_loop() as SceneTree
++	if tree == null:
++		return null
++	return tree.root.get_node_or_null("World/Systems/ObstacleSystem")
++
++
+ func _get_corpses() -> Node:
+ 	return get_tree().root.get_node_or_null("World/Systems/CorpseSystem")
+ 
+diff --git a/scripts/systems/growth_system.gd b/scripts/systems/growth_system.gd
+index 9dd3b15..a75b916 100644
+--- a/scripts/systems/growth_system.gd
++++ b/scripts/systems/growth_system.gd
+@@ -122,6 +122,10 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
+ 					affinity_mult = float(species.biome_affinity.get(biome.id, 1.0))
+ 					affinity_biome_id = biome.id
+ 					per_tile *= affinity_mult
++					if bool(_territory.get_tile_data(coord, "structure_mycorrhizal_hub", false)):
++						per_tile *= 1.50
++					if bool(_territory.get_tile_data(coord, "structure_old_growth", false)):
++						per_tile *= 2.00
+ 				per_tile *= biomass_mult
+ 				if MetaModifiers.is_unlocked(&"extinction_survivor"):
+ 					per_tile *= 1.10
+diff --git a/scripts/systems/herbivore_manager.gd b/scripts/systems/herbivore_manager.gd
+index 2691640..56cdad5 100644
+--- a/scripts/systems/herbivore_manager.gd
++++ b/scripts/systems/herbivore_manager.gd
+@@ -81,6 +81,14 @@ func _on_tick(_delta_seconds: float) -> void:
+ 		return
+ 	_logged_no_tiles = false
+ 
++	var target_coords: Array[Vector2i] = []
++	for coord in owned_coords:
++		if bool(_territory.get_tile_data(coord, "structure_old_growth", false)):
++			continue
++		target_coords.append(coord)
++	if target_coords.is_empty():
++		target_coords = owned_coords
++
+ 	var chew_ticks: int = _get_payload_int("chew_ticks", 4)
+ 	var speed_ticks: int = _get_payload_int("speed_ticks", 2)
+ 
+@@ -99,7 +107,7 @@ func _on_tick(_delta_seconds: float) -> void:
+ 		state["chew_ticks"] = 0
+ 		if int(state["move_ticks"]) >= speed_ticks:
+ 			state["move_ticks"] = 0
+-			var target := _nearest_owned(herbivore.coord, owned_coords)
++			var target := _nearest_owned(herbivore.coord, target_coords)
+ 			var next_coord := _step_toward(herbivore.coord, target)
+ 			herbivore.set_coord(next_coord, _coord_to_world(next_coord))
+ 
+diff --git a/scripts/systems/nutrient_system.gd b/scripts/systems/nutrient_system.gd
+index 5aa57c3..cce053f 100644
+--- a/scripts/systems/nutrient_system.gd
++++ b/scripts/systems/nutrient_system.gd
+@@ -89,7 +89,10 @@ func _on_tick(_delta_seconds: float) -> void:
+ 		if biome.sunlight_per_tick != 0.0:
+ 			ResourceLedger.add(ResourceLedger.SUNLIGHT, biome.sunlight_per_tick * sun_mult)
+ 		if biome.nutrient_per_tick != 0.0:
+-			ResourceLedger.add(ResourceLedger.NUTRIENTS, biome.nutrient_per_tick * nut_mult)
++			var local_nut_mult := nut_mult
++			if bool(_territory.get_tile_data(coord, "structure_decay_pit_aura", false)):
++				local_nut_mult *= 1.30
++			ResourceLedger.add(ResourceLedger.NUTRIENTS, biome.nutrient_per_tick * local_nut_mult)
+ 		if biome.decay_per_tick != 0.0:
+ 			ResourceLedger.add(ResourceLedger.DECAY, biome.decay_per_tick)
+ 
+diff --git a/scripts/ui/biome_legend.gd b/scripts/ui/biome_legend.gd
+index 9215416..a284243 100644
+--- a/scripts/ui/biome_legend.gd
++++ b/scripts/ui/biome_legend.gd
+@@ -15,6 +15,9 @@ func _ready() -> void:
+ 	_load_biomes()
+ 	EventBus.run_loaded.connect(_on_run_loaded)
+ 	EventBus.era_changed.connect(func(_e): _refresh())
++	var fog: Node = _get_fog_system()
++	if fog != null and fog.has_signal("fog_updated"):
++		fog.fog_updated.connect(func(): call_deferred("_refresh"))
+ 	_refresh()
+ 
+ 
+@@ -49,9 +52,13 @@ func _refresh() -> void:
+ func _unique_biomes_in_play() -> Array[StringName]:
+ 	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+ 	var biome_map: Dictionary = run.get("biome_map", {}) as Dictionary
++	var fog: Node = _get_fog_system()
+ 	var seen: Dictionary[StringName, bool] = {}
+-	for v in biome_map.values():
+-		seen[StringName(v)] = true
++	for k in biome_map.keys():
++		var coord: Vector2i = _parse_coord_key(String(k))
++		if fog != null and fog.has_method("is_revealed") and not fog.is_revealed(coord):
++			continue
++		seen[StringName(biome_map[k])] = true
+ 	var result: Array[StringName] = []
+ 	for k in seen.keys():
+ 		result.append(k)
+@@ -59,6 +66,20 @@ func _unique_biomes_in_play() -> Array[StringName]:
+ 	return result
+ 
+ 
++func _get_fog_system() -> Node:
++	var tree := Engine.get_main_loop() as SceneTree
++	if tree == null:
++		return null
++	return tree.root.get_node_or_null("World/Systems/FogSystem")
++
++
++func _parse_coord_key(s: String) -> Vector2i:
++	var parts := s.split(",", false)
++	if parts.size() != 2:
++		return Vector2i.ZERO
++	return Vector2i(int(parts[0]), int(parts[1]))
++
++
+ func _build_chip(biome: BiomeData) -> Control:
+ 	var chip := HBoxContainer.new()
+ 	chip.add_theme_constant_override("separation", 3)
+diff --git a/scripts/ui/hud.gd b/scripts/ui/hud.gd
+index 4f0cdea..f6233dd 100644
+--- a/scripts/ui/hud.gd
++++ b/scripts/ui/hud.gd
+@@ -18,10 +18,12 @@ const RESOURCE_NAMES: Dictionary = {
+ 
+ const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
+ const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
++const STRUCTURE_INDEX_PATH: String = "res://data/structures/_index.tres"
+ 
+ @onready var _tick_indicator: ColorRect = $TickIndicator
+ @onready var _abilities_bar: HBoxContainer = $AbilitiesBar
+ @onready var _pause_button: Button = $PauseButton
++@onready var _recipes_button: Button = $RecipesButton
+ @onready var _toast_panel: PanelContainer = $EventToast
+ @onready var _toast_title: Label = $EventToast/ToastContent/ToastTitle
+ @onready var _toast_body: Label = $EventToast/ToastContent/ToastBody
+@@ -40,6 +42,7 @@ var _labels: Dictionary[StringName, Label] = {}
+ var _is_replaying: bool = false
+ var _events_by_id: Dictionary[StringName, EventData] = {}
+ var _species_by_id: Dictionary[StringName, SpeciesData] = {}
++var _structures_by_id: Dictionary[StringName, StructureData] = {}
+ var _toast_event_id: StringName = StringName()
+ var _toast_tween: Tween = null
+ var _buttons_by_id: Dictionary[StringName, Button] = {}
+@@ -50,7 +53,9 @@ func _ready() -> void:
+ 	_sync_labels()
+ 	_build_event_index()
+ 	_build_species_index()
++	_build_structure_index()
+ 	_pause_button.pressed.connect(_on_pause_pressed)
++	_recipes_button.pressed.connect(_open_recipe_book)
+ 	EventBus.resource_changed.connect(_on_resource_changed)
+ 	EventBus.tick.connect(_on_tick)
+ 	EventBus.input_mode_changed.connect(_on_input_mode_changed)
+@@ -62,6 +67,7 @@ func _ready() -> void:
+ 	EventBus.run_loaded.connect(_on_run_loaded_for_ui)
+ 	EventBus.era_transition_started.connect(_on_era_transition_started)
+ 	EventBus.evolution_node_unlocked.connect(func(_id): _refresh_abilities())
++	EventBus.structure_promoted.connect(_on_structure_promoted)
+ 	_refresh_identity_strip()
+ 	_refresh_abilities()
+ 
+@@ -173,6 +179,16 @@ func _build_species_index() -> void:
+ 			_species_by_id[species.id] = species
+ 
+ 
++func _build_structure_index() -> void:
++	_structures_by_id.clear()
++	var index: StructureIndex = load(STRUCTURE_INDEX_PATH) as StructureIndex
++	if index == null:
++		return
++	for sd in index.structures:
++		if sd != null:
++			_structures_by_id[sd.id] = sd
++
++
+ func _on_event_started(event_id: StringName, _payload: Dictionary) -> void:
+ 	_toast_event_id = event_id
+ 	var title: String = String(event_id)
+@@ -215,6 +231,33 @@ func _hide_toast() -> void:
+ 	)
+ 
+ 
++func _open_recipe_book() -> void:
++	if has_node("RecipeBookInstance"):
++		return
++	var scene: PackedScene = load("res://scenes/ui/recipe_book.tscn") as PackedScene
++	if scene == null:
++		return
++	var instance: Node = scene.instantiate()
++	instance.name = "RecipeBookInstance"
++	add_child(instance)
++
++
++func _on_structure_promoted(structure_id: StringName, _anchor: Vector2i) -> void:
++	var sd: StructureData = _structures_by_id.get(structure_id, null)
++	var name: String = String(structure_id).replace("_", " ").capitalize()
++	if sd != null:
++		name = sd.display_name
++	var scene: PackedScene = load("res://scenes/ui/structure_banner.tscn") as PackedScene
++	if scene == null:
++		return
++	var instance: Node = scene.instantiate()
++	if instance.has_method("set_text"):
++		instance.set_text("Structure discovered: %s" % name)
++	add_child(instance)
++	if instance.has_method("play"):
++		instance.play()
++
++
+ func _refresh_identity_strip() -> void:
+ 	var species_id: StringName = StringName(GameState.run_save.get("starting_species_id", ""))
+ 	var species_name: String = String(species_id).replace("_", " ").capitalize()
+@@ -227,7 +270,7 @@ func _refresh_identity_strip() -> void:
+ 			var eco: EcosystemData = era_system.get_current_ecosystem()
+ 			if eco != null:
+ 				eco_name = eco.display_name
+-	_identity_label.text = "%s — %s" % [species_name if species_name != "" else "No Run", eco_name]
++	_identity_label.text = "%s - %s" % [species_name if species_name != "" else "No Run", eco_name]
+ 
+ 
+ func _on_era_transition_started(_from_era: StringName, to_era: StringName) -> void:
+diff --git a/scripts/ui/starting_species_picker.gd b/scripts/ui/starting_species_picker.gd
+index d9518b6..d03c3d7 100644
+--- a/scripts/ui/starting_species_picker.gd
++++ b/scripts/ui/starting_species_picker.gd
+@@ -63,6 +63,7 @@ func _get_candidates() -> Array[SpeciesData]:
+ 	var result: Array[SpeciesData] = []
+ 	if ecosystem == null:
+ 		return result
++	# Fog does not apply here; the picker runs before the world exists.
+ 	var unlocked: Array = GameState.meta_save.get("species_unlocked", []) as Array
+ 	var filter: Array[StringName] = ecosystem.starting_species_filter
+ 	if filter.is_empty():
+diff --git a/data/discovery/disc_structure_decay_pit.tres b/data/discovery/disc_structure_decay_pit.tres
+new file mode 100644
+index 0000000..3af41c2
+--- /dev/null
++++ b/data/discovery/disc_structure_decay_pit.tres
+@@ -0,0 +1,11 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_structure_decay_pit"
++title = "Where Everything Returns"
++body = "Bodies fall here. Fungi eat them. The nutrients move outward through the soil into the next generation.\nYou learn that decomposition is not an ending. It is the engine that keeps everything else moving."
++category = &"structure"
++trigger_id = &"decay_pit"
+diff --git a/data/discovery/disc_structure_fairy_ring.tres b/data/discovery/disc_structure_fairy_ring.tres
+new file mode 100644
+index 0000000..9ab97e3
+--- /dev/null
++++ b/data/discovery/disc_structure_fairy_ring.tres
+@@ -0,0 +1,11 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_structure_fairy_ring"
++title = "The Hollow Center"
++body = "Mycelium grows outward from one point. After enough seasons, a perfect ring remains around an empty middle.\nThe spores it releases find every corner of your territory now. The geometry was always the answer."
++category = &"structure"
++trigger_id = &"fairy_ring"
+diff --git a/data/discovery/disc_structure_mycorrhizal_hub.tres b/data/discovery/disc_structure_mycorrhizal_hub.tres
+new file mode 100644
+index 0000000..d3a9002
+--- /dev/null
++++ b/data/discovery/disc_structure_mycorrhizal_hub.tres
+@@ -0,0 +1,11 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_structure_mycorrhizal_hub"
++title = "Roots Find Roots"
++body = "Underground threads find each other and learn to share. The plants above the threads grow without knowing why.\nYou watched it form. The hidden side of every forest is older than the visible side."
++category = &"structure"
++trigger_id = &"mycorrhizal_hub"
+diff --git a/data/discovery/disc_structure_old_growth_stand.tres b/data/discovery/disc_structure_old_growth_stand.tres
+new file mode 100644
+index 0000000..45d753f
+--- /dev/null
++++ b/data/discovery/disc_structure_old_growth_stand.tres
+@@ -0,0 +1,11 @@
++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"disc_structure_old_growth_stand"
++title = "The Canopy Closes"
++body = "Sixteen trees stand together long enough that they become a single thing: a forest.\nWhat walks through asking to eat them is turned around. The forest has its own answer."
++category = &"structure"
++trigger_id = &"old_growth_stand"
+diff --git a/data/structures/_index.tres b/data/structures/_index.tres
+new file mode 100644
+index 0000000..c3f2796
+--- /dev/null
++++ b/data/structures/_index.tres
+@@ -0,0 +1,11 @@
++[gd_resource type="Resource" script_class="StructureIndex" load_steps=6 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/structure_index.gd" id="1"]
++[ext_resource type="Resource" path="res://data/structures/mycorrhizal_hub.tres" id="2"]
++[ext_resource type="Resource" path="res://data/structures/old_growth_stand.tres" id="3"]
++[ext_resource type="Resource" path="res://data/structures/fairy_ring.tres" id="4"]
++[ext_resource type="Resource" path="res://data/structures/decay_pit.tres" id="5"]
++
++[resource]
++script = ExtResource("1")
++structures = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")])
+diff --git a/data/structures/decay_pit.tres b/data/structures/decay_pit.tres
+new file mode 100644
+index 0000000..30fc0f4
+--- /dev/null
++++ b/data/structures/decay_pit.tres
+@@ -0,0 +1,19 @@
++[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"decay_pit"
++display_name = "Decay Pit"
++description = "Where corpses fall and fungi feast. Nutrients pour back into surrounding soil."
++pattern_type = &"area_on_biome"
++pattern_params = {
++"width": 2,
++"height": 2,
++"kingdom_id": "fungi",
++"biome_id": "rich_soil",
++"require_adjacent_corpse": true
++}
++bonus_handler = &"decay_pit"
++halo_color = Color(0.8, 0.5, 0.5, 0.55)
+diff --git a/data/structures/fairy_ring.tres b/data/structures/fairy_ring.tres
+new file mode 100644
+index 0000000..dd8bcfe
+--- /dev/null
++++ b/data/structures/fairy_ring.tres
+@@ -0,0 +1,16 @@
++[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"fairy_ring"
++display_name = "Fairy Ring"
++description = "Mycelium grows outward from a central point in a perfect ring. The center stays mysteriously bare."
++pattern_type = &"ring_radius_N"
++pattern_params = {
++"radius": 1,
++"kingdom_id": "fungi"
++}
++bonus_handler = &"fairy_ring"
++halo_color = Color(0.5, 0.8, 0.95, 0.55)
+diff --git a/data/structures/mycorrhizal_hub.tres b/data/structures/mycorrhizal_hub.tres
+new file mode 100644
+index 0000000..f54dba9
+--- /dev/null
++++ b/data/structures/mycorrhizal_hub.tres
+@@ -0,0 +1,19 @@
++[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"mycorrhizal_hub"
++display_name = "Mycorrhizal Hub"
++description = "Mycelium dense enough to connect roots across an entire stand. Plants borrow nutrients through the underground."
++pattern_type = &"square_NxM_with_adjacent"
++pattern_params = {
++"width": 3,
++"height": 3,
++"kingdom_id": "fungi",
++"adjacent_kingdom_id": "plantae",
++"min_adjacent": 4
++}
++bonus_handler = &"mycorrhizal_hub"
++halo_color = Color(0.75, 0.5, 0.9, 0.55)
+diff --git a/data/structures/old_growth_stand.tres b/data/structures/old_growth_stand.tres
+new file mode 100644
+index 0000000..fc595b5
+--- /dev/null
++++ b/data/structures/old_growth_stand.tres
+@@ -0,0 +1,17 @@
++[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
++
++[resource]
++script = ExtResource("1")
++id = &"old_growth_stand"
++display_name = "Old-Growth Stand"
++description = "Ancient trees so dense the canopy seals over. Light filters. The herd avoids it."
++pattern_type = &"block_NxM_same_species"
++pattern_params = {
++"width": 4,
++"height": 4,
++"kingdom_id": "plantae"
++}
++bonus_handler = &"old_growth_stand"
++halo_color = Color(0.4, 0.85, 0.3, 0.55)
+diff --git a/docs/briefs/phase_15b/phase_15b.diff b/docs/briefs/phase_15b/phase_15b.diff
+new file mode 100644
+index 0000000..1a8f97b
+--- /dev/null
++++ b/docs/briefs/phase_15b/phase_15b.diff
+@@ -0,0 +1,976 @@
++diff --git a/data/discovery/_index.tres b/data/discovery/_index.tres
++index 9d98095..e31a501 100644
++--- a/data/discovery/_index.tres
+++++ b/data/discovery/_index.tres
++@@ -1,4 +1,4 @@
++-[gd_resource type="Resource" script_class="DiscoveryIndex" load_steps=58 format=3]
+++[gd_resource type="Resource" script_class="DiscoveryIndex" load_steps=62 format=3]
++ 
++ [ext_resource type="Script" path="res://scripts/data/discovery_index.gd" id="1"]
++ [ext_resource type="Resource" path="res://data/discovery/disc_kingdom_plantae.tres" id="2"]
++@@ -57,7 +57,11 @@
++ [ext_resource type="Resource" path="res://data/discovery/disc_node_cryotolerance.tres" id="55"]
++ [ext_resource type="Resource" path="res://data/discovery/disc_node_chemosynthetic_pathway.tres" id="56"]
++ [ext_resource type="Resource" path="res://data/discovery/disc_milestone_extinction_survivor.tres" id="57"]
+++[ext_resource type="Resource" path="res://data/discovery/disc_structure_mycorrhizal_hub.tres" id="58"]
+++[ext_resource type="Resource" path="res://data/discovery/disc_structure_old_growth_stand.tres" id="59"]
+++[ext_resource type="Resource" path="res://data/discovery/disc_structure_fairy_ring.tres" id="60"]
+++[ext_resource type="Resource" path="res://data/discovery/disc_structure_decay_pit.tres" id="61"]
++ 
++ [resource]
++ script = ExtResource("1")
++-entries = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36"), ExtResource("37"), ExtResource("38"), ExtResource("39"), ExtResource("40"), ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49"), ExtResource("50"), ExtResource("51"), ExtResource("52"), ExtResource("53"), ExtResource("54"), ExtResource("55"), ExtResource("56"), ExtResource("57")])
+++entries = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36"), ExtResource("37"), ExtResource("38"), ExtResource("39"), ExtResource("40"), ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49"), ExtResource("50"), ExtResource("51"), ExtResource("52"), ExtResource("53"), ExtResource("54"), ExtResource("55"), ExtResource("56"), ExtResource("57"), ExtResource("58"), ExtResource("59"), ExtResource("60"), ExtResource("61")])
++diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
++index a7575da..6167041 100644
++--- a/docs/ARCHITECTURE.md
+++++ b/docs/ARCHITECTURE.md
++@@ -45,6 +45,9 @@ signal tile_tapped(coord: Vector2i)
++ signal tile_colonized(coord: Vector2i, owner_id: StringName)
++ signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
++ 
+++# Structures
+++signal structure_promoted(structure_id: StringName, anchor: Vector2i)
+++
++ # Organisms
++ signal organism_spawned(organism_id: int, species_id: StringName, coord: Vector2i)
++ signal organism_died(organism_id: int, cause: StringName)
++@@ -455,7 +458,10 @@ Increment `SAVE_VERSION` and add a `migrate()` case any time the JSON schema cha
++ | v11 | era/ecosystem state added (`current_era_id`, `current_ecosystem_id`, `ecosystem_completions`, `eras_unlocked`) |
++ | v12 | species-first migration (`species_unlocked`, `species_played`, `starting_species_id`, per-tile `occupants`) |
++ | v13 | `meta.lineages_played` added; backfilled from `meta.species_played` |
+++| v14 | `meta.post_extinction`, `meta.first_run_in_era_completed`, `meta.first_era_seen` added |
+++| v15 | `run.tile_ages`, `run.species_tile_counts`, `meta.lifetime_counters` added |
+++| v16 | `run.fog_revealed`, `run.obstacles`, `run.active_structures`, `meta.structures_discovered` added |
++ 
++ ---
++ 
++-**Last updated**: Phase 11 goals + abilities scaffolding. Update this doc whenever a contract changes; do not update it speculatively.
+++**Last updated**: Phase 15b fog/obstacles/structures. Update this doc whenever a contract changes; do not update it speculatively.
++diff --git a/scenes/ui/hud.tscn b/scenes/ui/hud.tscn
++index 8f8146f..a7a25c2 100644
++--- a/scenes/ui/hud.tscn
+++++ b/scenes/ui/hud.tscn
++@@ -127,12 +127,23 @@ offset_right = 64.0
++ offset_bottom = 40.0
++ text = "Menu"
++ 
+++[node name="RecipesButton" type="Button" parent="."]
+++anchor_left = 1.0
+++anchor_top = 0.0
+++anchor_right = 1.0
+++anchor_bottom = 0.0
+++offset_left = -112.0
+++offset_top = 8.0
+++offset_right = -40.0
+++offset_bottom = 40.0
+++text = "Recipes"
+++
++ [node name="IdentityStrip" type="PanelContainer" parent="."]
++ anchor_left = 0.0
++ anchor_right = 1.0
++ offset_left = 72.0
++ offset_top = 8.0
++-offset_right = -40.0
+++offset_right = -128.0
++ offset_bottom = 36.0
++ 
++ [node name="IdentityLabel" type="Label" parent="IdentityStrip"]
++diff --git a/scenes/world/world.tscn b/scenes/world/world.tscn
++index 982ec7c..84bcd0b 100644
++--- a/scenes/world/world.tscn
+++++ b/scenes/world/world.tscn
++@@ -5,8 +5,11 @@
++ [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="3"]
++ [ext_resource type="Script" path="res://scripts/systems/tile_input_router.gd" id="4"]
++ [ext_resource type="Script" path="res://scripts/systems/territory_system.gd" id="5"]
+++[ext_resource type="Script" path="res://scripts/systems/obstacle_system.gd" id="14"]
++ [ext_resource type="Script" path="res://scripts/systems/nutrient_system.gd" id="6"]
+++[ext_resource type="Script" path="res://scripts/systems/fog_system.gd" id="16"]
++ [ext_resource type="Script" path="res://scripts/systems/growth_system.gd" id="7"]
+++[ext_resource type="Script" path="res://scripts/systems/structure_registry.gd" id="18"]
++ [ext_resource type="Script" path="res://scripts/systems/offline_progress.gd" id="8"]
++ [ext_resource type="Script" path="res://scripts/systems/ecological_pressure.gd" id="9"]
++ [ext_resource type="Script" path="res://scripts/systems/herbivore_manager.gd" id="10"]
++@@ -42,12 +45,21 @@ script = ExtResource("4")
++ [node name="TerritorySystem" type="Node" parent="Systems"]
++ script = ExtResource("5")
++ 
+++[node name="ObstacleSystem" type="Node" parent="Systems"]
+++script = ExtResource("14")
+++
+++[node name="FogSystem" type="Node" parent="Systems"]
+++script = ExtResource("16")
+++
++ [node name="NutrientSystem" type="Node" parent="Systems"]
++ script = ExtResource("6")
++ 
++ [node name="GrowthSystem" type="Node" parent="Systems"]
++ script = ExtResource("7")
++ 
+++[node name="StructureRegistry" type="Node" parent="Systems"]
+++script = ExtResource("18")
+++
++ [node name="EcologicalPressure" type="Node" parent="Systems"]
++ script = ExtResource("9")
++ 
++diff --git a/scripts/autoloads/discovery_log.gd b/scripts/autoloads/discovery_log.gd
++index ea44df1..97c93b4 100644
++--- a/scripts/autoloads/discovery_log.gd
+++++ b/scripts/autoloads/discovery_log.gd
++@@ -28,10 +28,12 @@ func _enter_tree() -> void:
++ 	EventBus.era_changed.connect(_on_era_changed)
++ 	EventBus.ecosystem_completed.connect(_on_ecosystem_completed)
++ 	EventBus.era_transition_started.connect(_on_era_transition_started)
+++	EventBus.structure_promoted.connect(_on_structure_promoted)
++ 
++ 
++ func _ready() -> void:
++ 	add_to_group("discovery_log")
+++	call_deferred("_subscribe_fog")
++ 	var index: DiscoveryIndex = load(DISCOVERY_INDEX_PATH) as DiscoveryIndex
++ 	if index == null:
++ 		push_error("DiscoveryLog: missing discovery index")
++@@ -245,18 +247,48 @@ func _on_era_transition_started(_from: StringName, _to: StringName) -> void:
++ 		unlock(era_entry)
++ 
++ 
+++func _on_structure_promoted(structure_id: StringName, _anchor: Vector2i) -> void:
+++	var entry := find_entry_for_trigger(&"structure", structure_id)
+++	if entry != &"":
+++		unlock(entry)
+++
+++
++ func _check_biomes_in_play() -> void:
++ 	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
++ 	var biome_map: Dictionary = run.get("biome_map", {}) as Dictionary
+++	var fog: Node = _get_fog_system()
++ 	var seen: Dictionary = {}
++-	for biome_id in biome_map.values():
++-		seen[StringName(biome_id)] = true
+++	for k in biome_map.keys():
+++		var coord: Vector2i = _parse_coord_key(String(k))
+++		if fog != null and fog.has_method("is_revealed") and not fog.is_revealed(coord):
+++			continue
+++		seen[StringName(biome_map[k])] = true
++ 	for biome_id in seen.keys():
++ 		var entry: StringName = find_entry_for_trigger(&"biome", StringName(biome_id))
++ 		if entry != &"":
++ 			unlock(entry)
++ 
++ 
+++func _subscribe_fog() -> void:
+++	var fog: Node = _get_fog_system()
+++	if fog != null and fog.has_signal("fog_updated"):
+++		fog.fog_updated.connect(_check_biomes_in_play)
+++
+++
+++func _get_fog_system() -> Node:
+++	var tree := Engine.get_main_loop() as SceneTree
+++	if tree == null:
+++		return null
+++	return tree.root.get_node_or_null("World/Systems/FogSystem")
+++
+++
+++func _parse_coord_key(s: String) -> Vector2i:
+++	var parts := s.split(",", false)
+++	if parts.size() != 2:
+++		return Vector2i.ZERO
+++	return Vector2i(int(parts[0]), int(parts[1]))
+++
+++
++ func _lookup_node(node_id: StringName) -> EvolutionNodeData:
++ 	var ps := get_tree().get_first_node_in_group("prestige_system")
++ 	if ps == null:
++diff --git a/scripts/autoloads/event_bus.gd b/scripts/autoloads/event_bus.gd
++index 41ea4e9..a01b013 100644
++--- a/scripts/autoloads/event_bus.gd
+++++ b/scripts/autoloads/event_bus.gd
++@@ -19,6 +19,9 @@ signal tile_tapped(coord: Vector2i)
++ signal tile_colonized(coord: Vector2i, owner_id: StringName)
++ signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
++ 
+++# Structures
+++signal structure_promoted(structure_id: StringName, anchor: Vector2i)
+++
++ # Organisms
++ signal organism_spawned(organism_id: int, species_id: StringName, coord: Vector2i)
++ signal organism_died(organism_id: int, cause: StringName)
++diff --git a/scripts/autoloads/save_system.gd b/scripts/autoloads/save_system.gd
++index 84d8809..940e64c 100644
++--- a/scripts/autoloads/save_system.gd
+++++ b/scripts/autoloads/save_system.gd
++@@ -5,7 +5,7 @@ extends Node
++ ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
++ ##
++ 
++-const SAVE_VERSION: int = 15
+++const SAVE_VERSION: int = 16
++ const SAVE_PATH: String = "user://save.json"
++ const TEMP_PATH: String = "user://save.json.tmp"
++ const BACKUP_PATH: String = "user://save.json.bak"
++@@ -285,6 +285,8 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
++ 		_migrate_v13_to_v14(old)
++ 	if from_version < 15:
++ 		_migrate_v14_to_v15(old)
+++	if from_version < 16:
+++		_migrate_v15_to_v16(old)
++ 	return old
++ 
++ 
++@@ -300,6 +302,7 @@ func _build_default_save() -> Dictionary:
++ 			"species_unlocked": ["pioneer_grass", "mycelium_thread"],
++ 			"species_played": [],
++ 			"lineages_played": [],
+++			"structures_discovered": [],
++ 			"current_era_id": "cryogenian",
++ 			"current_ecosystem_id": "cryo_polar_ice",
++ 			"ecosystem_completions": {},
++@@ -334,6 +337,9 @@ func _build_default_save() -> Dictionary:
++ 				"mycelial_stability": 0.0
++ 			},
++ 			"biome_map": {},
+++			"fog_revealed": [],
+++			"obstacles": [],
+++			"active_structures": [],
++ 			"tiles": [],
++ 			"organisms": [],
++ 			"active_events": [],
++@@ -613,6 +619,69 @@ func _migrate_v14_to_v15(save: Dictionary) -> void:
++ 	save["meta"] = meta
++ 
++ 
+++func _migrate_v15_to_v16(save: Dictionary) -> void:
+++	var run: Dictionary = save.get("run", {}) as Dictionary
+++
+++	if not run.has("fog_revealed"):
+++		# Reveal around existing owned tiles so visibility isn't lost.
+++		var revealed: Array = []
+++		var tiles: Array = run.get("tiles", []) as Array
+++		var seen: Dictionary = {}
+++		for entry in tiles:
+++			if not (entry is Dictionary):
+++				continue
+++			var coord: Variant = entry.get("coord", null)
+++			if coord is Array and coord.size() == 2:
+++				_flood_reveal(int(coord[0]), int(coord[1]), 2, seen)
+++		for k in seen.keys():
+++			revealed.append(k)
+++		run["fog_revealed"] = revealed
+++
+++	if not run.has("obstacles"):
+++		# Generate deterministically from run_seed if present; otherwise empty.
+++		if run.has("run_seed") and int(run.get("run_seed", 0)) != 0:
+++			run["obstacles"] = _generate_obstacles(int(run["run_seed"]))
+++		else:
+++			run["obstacles"] = []
+++
+++	if not run.has("active_structures"):
+++		run["active_structures"] = []
+++
+++	save["run"] = run
+++
+++	var meta: Dictionary = save.get("meta", {}) as Dictionary
+++	if not meta.has("structures_discovered"):
+++		meta["structures_discovered"] = []
+++	save["meta"] = meta
+++
+++
+++# Helper to flood reveal around a coord (radius in each direction).
+++static func _flood_reveal(cx: int, cy: int, radius: int, into: Dictionary) -> void:
+++	for dy in range(-radius, radius + 1):
+++		for dx in range(-radius, radius + 1):
+++			into["%d,%d" % [cx + dx, cy + dy]] = true
+++
+++
+++# Deterministic obstacle generator (mirrors ObstacleSystem).
+++static func _generate_obstacles(seed: int) -> Array:
+++	var rng := RandomNumberGenerator.new()
+++	rng.seed = seed
+++	const GRID_W: int = 32
+++	const GRID_H: int = 48
+++	const RATE: float = 0.05
+++	const START_CLEAR_RADIUS: int = 3
+++	var cx: int = int(GRID_W / 2)
+++	var cy: int = int(GRID_H / 2)
+++	var out: Array = []
+++	for y in range(GRID_H):
+++		for x in range(GRID_W):
+++			if abs(x - cx) <= START_CLEAR_RADIUS and abs(y - cy) <= START_CLEAR_RADIUS:
+++				continue
+++			if rng.randf() < RATE:
+++				out.append("%d,%d" % [x, y])
+++	return out
+++
+++
++ func _pick_species_for_kingdom(starter_species: StringName, kingdom_id: StringName, niche_id: String) -> StringName:
++ 	if niche_id == "lichen":
++ 		if kingdom_id == &"plantae":
++diff --git a/scripts/entities/tile_grid.gd b/scripts/entities/tile_grid.gd
++index 1eee7ff..6ae313d 100644
++--- a/scripts/entities/tile_grid.gd
+++++ b/scripts/entities/tile_grid.gd
++@@ -11,6 +11,7 @@ const ATLAS_BIOME_SWAMP: Vector2i = Vector2i(3, 0)
++ const ATLAS_BIOME_GRASSLAND: Vector2i = Vector2i(4, 0)
++ const ATLAS_BIOME_RICH_SOIL: Vector2i = Vector2i(5, 0)
++ const ATLAS_BIOME_FOREST_EDGE: Vector2i = Vector2i(6, 0)
+++const ATLAS_BIOME_ROCK: Vector2i = Vector2i(7, 0)
++ 
++ const LAYER_BASE: int = 0
++ 
++@@ -44,6 +45,8 @@ const EDGE_INSET_FUNGI: float = 3.5
++ const PULSE_CHANCE: float = 0.18        # ~18% of owned tiles pulse per tick (more frequent)
++ const PULSE_DURATION: float = 0.35      # longer hold, easier to track at a glance
++ const PULSE_BRIGHTNESS_BUMP: float = 0.60   # bigger flash — pops against dark biomes
+++const FOG_COLOR: Color = Color(0.04, 0.04, 0.06, 1.0)
+++const FOG_EDGE_COLOR: Color = Color(0.08, 0.08, 0.10, 1.0)
++ class _EdgesOverlay extends Node2D:
++ 	var tile_grid
++ 
++@@ -55,6 +58,35 @@ class _EdgesOverlay extends Node2D:
++ 		# can re-enable by removing this early return.
++ 		return
++ 
+++
+++class _FogOverlay extends Node2D:
+++	var tile_grid
+++
+++	func _draw() -> void:
+++		if tile_grid == null:
+++			return
+++		for y in range(tile_grid.GRID_HEIGHT):
+++			for x in range(tile_grid.GRID_WIDTH):
+++				var c := Vector2i(x, y)
+++				if tile_grid._revealed_set.has(c):
+++					continue
+++				var origin: Vector2 = tile_grid.map_to_local(c) - Vector2(tile_grid.TILE_SIZE * 0.5, tile_grid.TILE_SIZE * 0.5)
+++				draw_rect(Rect2(origin, Vector2(tile_grid.TILE_SIZE, tile_grid.TILE_SIZE)), tile_grid.FOG_COLOR, true)
+++
+++
+++class _HaloOverlay extends Node2D:
+++	var tile_grid
+++
+++	func _draw() -> void:
+++		if tile_grid == null:
+++			return
+++		for key in tile_grid._structure_halos.keys():
+++			var coords: Array = tile_grid._structure_halos[key]
+++			var color: Color = tile_grid._halo_colors.get(key, Color(1, 1, 1, 0.5))
+++			for c in coords:
+++				var origin: Vector2 = tile_grid.map_to_local(c) - Vector2(tile_grid.TILE_SIZE * 0.5, tile_grid.TILE_SIZE * 0.5)
+++				draw_rect(Rect2(origin, Vector2(tile_grid.TILE_SIZE, tile_grid.TILE_SIZE)), color, false, 1.5)
+++
++ @export var tile_texture: Texture2D = preload("res://assets/art/tiles/placeholder_tile.png")
++ 
++ var _tile_occupants: Dictionary[Vector2i, Dictionary] = {}
++@@ -63,7 +95,13 @@ var _fill_nodes: Dictionary[Vector2i, ColorRect] = {}
++ var _border_nodes: Dictionary[Vector2i, Polygon2D] = {}
++ var _overlay_layer: Node2D
++ var _edges_overlay: _EdgesOverlay   # single child; _draw() renders all cluster edges
+++var _fog_overlay: _FogOverlay
+++var _halo_overlay: _HaloOverlay
++ var _pulse_rng: RandomNumberGenerator = RandomNumberGenerator.new()  # Phase 15a
+++var _revealed_set: Dictionary[Vector2i, bool] = {}
+++var _obstacle_set: Dictionary[Vector2i, bool] = {}
+++var _structure_halos: Dictionary[String, Array] = {}
+++var _halo_colors: Dictionary[String, Color] = {}
++ 
++ 
++ func _ready() -> void:
++@@ -81,6 +119,16 @@ func _ready() -> void:
++ 	_edges_overlay.tile_grid = self
++ 	_edges_overlay.z_index = 2
++ 	_overlay_layer.add_child(_edges_overlay)
+++	_halo_overlay = _HaloOverlay.new()
+++	_halo_overlay.name = "StructureHalos"
+++	_halo_overlay.tile_grid = self
+++	_halo_overlay.z_index = 3
+++	_overlay_layer.add_child(_halo_overlay)
+++	_fog_overlay = _FogOverlay.new()
+++	_fog_overlay.name = "FogOverlay"
+++	_fog_overlay.tile_grid = self
+++	_fog_overlay.z_index = 4
+++	_overlay_layer.add_child(_fog_overlay)
++ 	EventBus.era_changed.connect(_on_era_changed)
++ 	EventBus.run_loaded.connect(_on_run_loaded)
++ 	EventBus.tick.connect(_on_tick_pulse)  # Phase 15a
++@@ -116,6 +164,7 @@ func _build_tileset() -> TileSet:
++ 	atlas.create_tile(ATLAS_BIOME_GRASSLAND)
++ 	atlas.create_tile(ATLAS_BIOME_RICH_SOIL)
++ 	atlas.create_tile(ATLAS_BIOME_FOREST_EDGE)
+++	atlas.create_tile(ATLAS_BIOME_ROCK)
++ 	return set
++ 
++ 
++@@ -124,7 +173,7 @@ func _build_atlas_texture() -> Texture2D:
++ 	if base_image.is_empty():
++ 		return tile_texture
++ 	base_image.convert(Image.FORMAT_RGBA8)
++-	var atlas_width: int = max(base_image.get_width(), TILE_SIZE) + TILE_SIZE * 6
+++	var atlas_width: int = max(base_image.get_width(), TILE_SIZE) + TILE_SIZE * 7
++ 	var atlas_height: int = max(base_image.get_height(), TILE_SIZE)
++ 	var atlas_image := Image.create(atlas_width, atlas_height, false, Image.FORMAT_RGBA8)
++ 	atlas_image.fill(Color(0, 0, 0, 0))
++@@ -198,11 +247,62 @@ func _build_atlas_texture() -> Texture2D:
++ 		0.10,
++ 		false
++ 	)
+++	# Rock: neutral dark gray, minimal era tint.
+++	_draw_biome_tile(
+++		atlas_image,
+++		Vector2i(TILE_SIZE * 7, 0),
+++		Color8(0x55, 0x55, 0x55),
+++		Color8(0x2a, 0x2a, 0x2c),
+++		era_tint,
+++		0.05,
+++		false
+++	)
++ 	return ImageTexture.create_from_image(atlas_image)
++ 
++ 
++ func _populate() -> void:
++ 	_populate_base_from_biomes()
+++	_fog_overlay.queue_redraw()
+++	_halo_overlay.queue_redraw()
+++
+++
+++func set_fog_state(revealed: Array[Vector2i]) -> void:
+++	_revealed_set.clear()
+++	for c in revealed:
+++		_revealed_set[c] = true
+++	if _fog_overlay != null:
+++		_fog_overlay.queue_redraw()
+++
+++
+++func reveal_tiles(coords: Array[Vector2i]) -> void:
+++	for c in coords:
+++		_revealed_set[c] = true
+++	if _fog_overlay != null:
+++		_fog_overlay.queue_redraw()
+++
+++
+++func set_obstacles(coords: Array[Vector2i]) -> void:
+++	_obstacle_set.clear()
+++	for c in coords:
+++		_obstacle_set[c] = true
+++	_populate_base_from_biomes()
+++
+++
+++func add_structure_halo(key: String, tiles: Array[Vector2i], color: Color) -> void:
+++	_structure_halos[key] = tiles
+++	_halo_colors[key] = color
+++	_redraw_halos()
+++
+++
+++func remove_structure_halo(key: String) -> void:
+++	_structure_halos.erase(key)
+++	_halo_colors.erase(key)
+++	_redraw_halos()
+++
+++
+++func _redraw_halos() -> void:
+++	if _halo_overlay != null:
+++		_halo_overlay.queue_redraw()
++ 
++ 
++ func set_occupant(coord: Vector2i, kingdom_id: StringName, species_id: StringName) -> void:
++@@ -420,6 +520,9 @@ func clear_owned() -> void:
++ 	for coord in _border_nodes.keys():
++ 		_border_nodes[coord].queue_free()
++ 	_border_nodes.clear()
+++	_structure_halos.clear()
+++	_halo_colors.clear()
+++	_redraw_halos()
++ 	_queue_edges_redraw()
++ 
++ 
++@@ -451,6 +554,8 @@ func _populate_base_from_biomes() -> void:
++ 
++ 
++ func _atlas_for_coord(coord: Vector2i) -> Vector2i:
+++	if _obstacle_set.has(coord):
+++		return ATLAS_BIOME_ROCK
++ 	var nutrients: Node = _get_nutrient_system()
++ 	if nutrients == null or not nutrients.has_method("get_biome_at"):
++ 		return ATLAS_BASE
++diff --git a/scripts/systems/ability_system.gd b/scripts/systems/ability_system.gd
++index 083a77a..46ea436 100644
++--- a/scripts/systems/ability_system.gd
+++++ b/scripts/systems/ability_system.gd
++@@ -50,7 +50,8 @@ func is_ability_available(id: StringName) -> bool:
++ 		return false
++ 	var ability: AbilityData = _abilities_by_id[id]
++ 	if ability.unlock_node_id != &"" and not MetaModifiers.is_unlocked(ability.unlock_node_id):
++-		return false
+++		if not _has_fairy_ring_override(ability):
+++			return false
++ 	if ability.requires_event_active != &"":
++ 		if not _pressure.is_event_active(ability.requires_event_active):
++ 			return false
++@@ -105,7 +106,8 @@ func get_toxin_bloom_cost() -> Dictionary:
++ 
++ func _is_ability_usable(ability: AbilityData) -> bool:
++ 	if ability.unlock_node_id != &"" and not MetaModifiers.is_unlocked(ability.unlock_node_id):
++-		return false
+++		if not _has_fairy_ring_override(ability):
+++			return false
++ 	if ability.requires_event_active != &"":
++ 		if not _pressure.is_event_active(ability.requires_event_active):
++ 			return false
++@@ -114,6 +116,13 @@ func _is_ability_usable(ability: AbilityData) -> bool:
++ 	return true
++ 
++ 
+++func _has_fairy_ring_override(ability: AbilityData) -> bool:
+++	if ability.id != &"sporulate":
+++		return false
+++	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+++	return bool(run.get("fairy_ring_active", false))
+++
+++
++ func _on_tile_tapped(coord: Vector2i) -> void:
++ 	if _pending_ability_id == &"":
++ 		return
++diff --git a/scripts/systems/colonization_rules_registry.gd b/scripts/systems/colonization_rules_registry.gd
++index c5e51e9..42c3a93 100644
++--- a/scripts/systems/colonization_rules_registry.gd
+++++ b/scripts/systems/colonization_rules_registry.gd
++@@ -8,6 +8,12 @@ const COST_GROWTH_FACTOR: float = 1.05
++ func evaluate(coord: Vector2i, species: SpeciesData) -> Dictionary:
++ 	if species == null:
++ 		return _invalid()
+++	var fog: Node = _get_fog_system()
+++	if fog != null and fog.has_method("is_revealed") and not fog.is_revealed(coord):
+++		return _invalid()
+++	var obstacles: Node = _get_obstacle_system()
+++	if obstacles != null and obstacles.has_method("is_obstacle") and obstacles.is_obstacle(coord):
+++		return _invalid()
++ 	match species.placement_rule:
++ 		&"adjacent_empty":
++ 			return _rule_adjacent_empty(coord, species)
++@@ -260,6 +266,20 @@ func _get_territory() -> Node:
++ 	return get_tree().root.get_node_or_null("World/Systems/TerritorySystem")
++ 
++ 
+++func _get_fog_system() -> Node:
+++	var tree := Engine.get_main_loop() as SceneTree
+++	if tree == null:
+++		return null
+++	return tree.root.get_node_or_null("World/Systems/FogSystem")
+++
+++
+++func _get_obstacle_system() -> Node:
+++	var tree := Engine.get_main_loop() as SceneTree
+++	if tree == null:
+++		return null
+++	return tree.root.get_node_or_null("World/Systems/ObstacleSystem")
+++
+++
++ func _get_corpses() -> Node:
++ 	return get_tree().root.get_node_or_null("World/Systems/CorpseSystem")
++ 
++diff --git a/scripts/systems/growth_system.gd b/scripts/systems/growth_system.gd
++index 9dd3b15..a75b916 100644
++--- a/scripts/systems/growth_system.gd
+++++ b/scripts/systems/growth_system.gd
++@@ -122,6 +122,10 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
++ 					affinity_mult = float(species.biome_affinity.get(biome.id, 1.0))
++ 					affinity_biome_id = biome.id
++ 					per_tile *= affinity_mult
+++					if bool(_territory.get_tile_data(coord, "structure_mycorrhizal_hub", false)):
+++						per_tile *= 1.50
+++					if bool(_territory.get_tile_data(coord, "structure_old_growth", false)):
+++						per_tile *= 2.00
++ 				per_tile *= biomass_mult
++ 				if MetaModifiers.is_unlocked(&"extinction_survivor"):
++ 					per_tile *= 1.10
++diff --git a/scripts/systems/herbivore_manager.gd b/scripts/systems/herbivore_manager.gd
++index 2691640..56cdad5 100644
++--- a/scripts/systems/herbivore_manager.gd
+++++ b/scripts/systems/herbivore_manager.gd
++@@ -81,6 +81,14 @@ func _on_tick(_delta_seconds: float) -> void:
++ 		return
++ 	_logged_no_tiles = false
++ 
+++	var target_coords: Array[Vector2i] = []
+++	for coord in owned_coords:
+++		if bool(_territory.get_tile_data(coord, "structure_old_growth", false)):
+++			continue
+++		target_coords.append(coord)
+++	if target_coords.is_empty():
+++		target_coords = owned_coords
+++
++ 	var chew_ticks: int = _get_payload_int("chew_ticks", 4)
++ 	var speed_ticks: int = _get_payload_int("speed_ticks", 2)
++ 
++@@ -99,7 +107,7 @@ func _on_tick(_delta_seconds: float) -> void:
++ 		state["chew_ticks"] = 0
++ 		if int(state["move_ticks"]) >= speed_ticks:
++ 			state["move_ticks"] = 0
++-			var target := _nearest_owned(herbivore.coord, owned_coords)
+++			var target := _nearest_owned(herbivore.coord, target_coords)
++ 			var next_coord := _step_toward(herbivore.coord, target)
++ 			herbivore.set_coord(next_coord, _coord_to_world(next_coord))
++ 
++diff --git a/scripts/systems/nutrient_system.gd b/scripts/systems/nutrient_system.gd
++index 5aa57c3..cce053f 100644
++--- a/scripts/systems/nutrient_system.gd
+++++ b/scripts/systems/nutrient_system.gd
++@@ -89,7 +89,10 @@ func _on_tick(_delta_seconds: float) -> void:
++ 		if biome.sunlight_per_tick != 0.0:
++ 			ResourceLedger.add(ResourceLedger.SUNLIGHT, biome.sunlight_per_tick * sun_mult)
++ 		if biome.nutrient_per_tick != 0.0:
++-			ResourceLedger.add(ResourceLedger.NUTRIENTS, biome.nutrient_per_tick * nut_mult)
+++			var local_nut_mult := nut_mult
+++			if bool(_territory.get_tile_data(coord, "structure_decay_pit_aura", false)):
+++				local_nut_mult *= 1.30
+++			ResourceLedger.add(ResourceLedger.NUTRIENTS, biome.nutrient_per_tick * local_nut_mult)
++ 		if biome.decay_per_tick != 0.0:
++ 			ResourceLedger.add(ResourceLedger.DECAY, biome.decay_per_tick)
++ 
++diff --git a/scripts/ui/biome_legend.gd b/scripts/ui/biome_legend.gd
++index 9215416..a284243 100644
++--- a/scripts/ui/biome_legend.gd
+++++ b/scripts/ui/biome_legend.gd
++@@ -15,6 +15,9 @@ func _ready() -> void:
++ 	_load_biomes()
++ 	EventBus.run_loaded.connect(_on_run_loaded)
++ 	EventBus.era_changed.connect(func(_e): _refresh())
+++	var fog: Node = _get_fog_system()
+++	if fog != null and fog.has_signal("fog_updated"):
+++		fog.fog_updated.connect(func(): call_deferred("_refresh"))
++ 	_refresh()
++ 
++ 
++@@ -49,9 +52,13 @@ func _refresh() -> void:
++ func _unique_biomes_in_play() -> Array[StringName]:
++ 	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
++ 	var biome_map: Dictionary = run.get("biome_map", {}) as Dictionary
+++	var fog: Node = _get_fog_system()
++ 	var seen: Dictionary[StringName, bool] = {}
++-	for v in biome_map.values():
++-		seen[StringName(v)] = true
+++	for k in biome_map.keys():
+++		var coord: Vector2i = _parse_coord_key(String(k))
+++		if fog != null and fog.has_method("is_revealed") and not fog.is_revealed(coord):
+++			continue
+++		seen[StringName(biome_map[k])] = true
++ 	var result: Array[StringName] = []
++ 	for k in seen.keys():
++ 		result.append(k)
++@@ -59,6 +66,20 @@ func _unique_biomes_in_play() -> Array[StringName]:
++ 	return result
++ 
++ 
+++func _get_fog_system() -> Node:
+++	var tree := Engine.get_main_loop() as SceneTree
+++	if tree == null:
+++		return null
+++	return tree.root.get_node_or_null("World/Systems/FogSystem")
+++
+++
+++func _parse_coord_key(s: String) -> Vector2i:
+++	var parts := s.split(",", false)
+++	if parts.size() != 2:
+++		return Vector2i.ZERO
+++	return Vector2i(int(parts[0]), int(parts[1]))
+++
+++
++ func _build_chip(biome: BiomeData) -> Control:
++ 	var chip := HBoxContainer.new()
++ 	chip.add_theme_constant_override("separation", 3)
++diff --git a/scripts/ui/hud.gd b/scripts/ui/hud.gd
++index 4f0cdea..f6233dd 100644
++--- a/scripts/ui/hud.gd
+++++ b/scripts/ui/hud.gd
++@@ -18,10 +18,12 @@ const RESOURCE_NAMES: Dictionary = {
++ 
++ const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
++ const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
+++const STRUCTURE_INDEX_PATH: String = "res://data/structures/_index.tres"
++ 
++ @onready var _tick_indicator: ColorRect = $TickIndicator
++ @onready var _abilities_bar: HBoxContainer = $AbilitiesBar
++ @onready var _pause_button: Button = $PauseButton
+++@onready var _recipes_button: Button = $RecipesButton
++ @onready var _toast_panel: PanelContainer = $EventToast
++ @onready var _toast_title: Label = $EventToast/ToastContent/ToastTitle
++ @onready var _toast_body: Label = $EventToast/ToastContent/ToastBody
++@@ -40,6 +42,7 @@ var _labels: Dictionary[StringName, Label] = {}
++ var _is_replaying: bool = false
++ var _events_by_id: Dictionary[StringName, EventData] = {}
++ var _species_by_id: Dictionary[StringName, SpeciesData] = {}
+++var _structures_by_id: Dictionary[StringName, StructureData] = {}
++ var _toast_event_id: StringName = StringName()
++ var _toast_tween: Tween = null
++ var _buttons_by_id: Dictionary[StringName, Button] = {}
++@@ -50,7 +53,9 @@ func _ready() -> void:
++ 	_sync_labels()
++ 	_build_event_index()
++ 	_build_species_index()
+++	_build_structure_index()
++ 	_pause_button.pressed.connect(_on_pause_pressed)
+++	_recipes_button.pressed.connect(_open_recipe_book)
++ 	EventBus.resource_changed.connect(_on_resource_changed)
++ 	EventBus.tick.connect(_on_tick)
++ 	EventBus.input_mode_changed.connect(_on_input_mode_changed)
++@@ -62,6 +67,7 @@ func _ready() -> void:
++ 	EventBus.run_loaded.connect(_on_run_loaded_for_ui)
++ 	EventBus.era_transition_started.connect(_on_era_transition_started)
++ 	EventBus.evolution_node_unlocked.connect(func(_id): _refresh_abilities())
+++	EventBus.structure_promoted.connect(_on_structure_promoted)
++ 	_refresh_identity_strip()
++ 	_refresh_abilities()
++ 
++@@ -173,6 +179,16 @@ func _build_species_index() -> void:
++ 			_species_by_id[species.id] = species
++ 
++ 
+++func _build_structure_index() -> void:
+++	_structures_by_id.clear()
+++	var index: StructureIndex = load(STRUCTURE_INDEX_PATH) as StructureIndex
+++	if index == null:
+++		return
+++	for sd in index.structures:
+++		if sd != null:
+++			_structures_by_id[sd.id] = sd
+++
+++
++ func _on_event_started(event_id: StringName, _payload: Dictionary) -> void:
++ 	_toast_event_id = event_id
++ 	var title: String = String(event_id)
++@@ -215,6 +231,33 @@ func _hide_toast() -> void:
++ 	)
++ 
++ 
+++func _open_recipe_book() -> void:
+++	if has_node("RecipeBookInstance"):
+++		return
+++	var scene: PackedScene = load("res://scenes/ui/recipe_book.tscn") as PackedScene
+++	if scene == null:
+++		return
+++	var instance: Node = scene.instantiate()
+++	instance.name = "RecipeBookInstance"
+++	add_child(instance)
+++
+++
+++func _on_structure_promoted(structure_id: StringName, _anchor: Vector2i) -> void:
+++	var sd: StructureData = _structures_by_id.get(structure_id, null)
+++	var name: String = String(structure_id).replace("_", " ").capitalize()
+++	if sd != null:
+++		name = sd.display_name
+++	var scene: PackedScene = load("res://scenes/ui/structure_banner.tscn") as PackedScene
+++	if scene == null:
+++		return
+++	var instance: Node = scene.instantiate()
+++	if instance.has_method("set_text"):
+++		instance.set_text("Structure discovered: %s" % name)
+++	add_child(instance)
+++	if instance.has_method("play"):
+++		instance.play()
+++
+++
++ func _refresh_identity_strip() -> void:
++ 	var species_id: StringName = StringName(GameState.run_save.get("starting_species_id", ""))
++ 	var species_name: String = String(species_id).replace("_", " ").capitalize()
++@@ -227,7 +270,7 @@ func _refresh_identity_strip() -> void:
++ 			var eco: EcosystemData = era_system.get_current_ecosystem()
++ 			if eco != null:
++ 				eco_name = eco.display_name
++-	_identity_label.text = "%s — %s" % [species_name if species_name != "" else "No Run", eco_name]
+++	_identity_label.text = "%s - %s" % [species_name if species_name != "" else "No Run", eco_name]
++ 
++ 
++ func _on_era_transition_started(_from_era: StringName, to_era: StringName) -> void:
++diff --git a/scripts/ui/starting_species_picker.gd b/scripts/ui/starting_species_picker.gd
++index d9518b6..d03c3d7 100644
++--- a/scripts/ui/starting_species_picker.gd
+++++ b/scripts/ui/starting_species_picker.gd
++@@ -63,6 +63,7 @@ func _get_candidates() -> Array[SpeciesData]:
++ 	var result: Array[SpeciesData] = []
++ 	if ecosystem == null:
++ 		return result
+++	# Fog does not apply here; the picker runs before the world exists.
++ 	var unlocked: Array = GameState.meta_save.get("species_unlocked", []) as Array
++ 	var filter: Array[StringName] = ecosystem.starting_species_filter
++ 	if filter.is_empty():
++diff --git a/data/discovery/disc_structure_decay_pit.tres b/data/discovery/disc_structure_decay_pit.tres
++new file mode 100644
++index 0000000..3af41c2
++--- /dev/null
+++++ b/data/discovery/disc_structure_decay_pit.tres
++@@ -0,0 +1,11 @@
+++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+++
+++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+++
+++[resource]
+++script = ExtResource("1")
+++id = &"disc_structure_decay_pit"
+++title = "Where Everything Returns"
+++body = "Bodies fall here. Fungi eat them. The nutrients move outward through the soil into the next generation.\nYou learn that decomposition is not an ending. It is the engine that keeps everything else moving."
+++category = &"structure"
+++trigger_id = &"decay_pit"
++diff --git a/data/discovery/disc_structure_fairy_ring.tres b/data/discovery/disc_structure_fairy_ring.tres
++new file mode 100644
++index 0000000..9ab97e3
++--- /dev/null
+++++ b/data/discovery/disc_structure_fairy_ring.tres
++@@ -0,0 +1,11 @@
+++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+++
+++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+++
+++[resource]
+++script = ExtResource("1")
+++id = &"disc_structure_fairy_ring"
+++title = "The Hollow Center"
+++body = "Mycelium grows outward from one point. After enough seasons, a perfect ring remains around an empty middle.\nThe spores it releases find every corner of your territory now. The geometry was always the answer."
+++category = &"structure"
+++trigger_id = &"fairy_ring"
++diff --git a/data/discovery/disc_structure_mycorrhizal_hub.tres b/data/discovery/disc_structure_mycorrhizal_hub.tres
++new file mode 100644
++index 0000000..d3a9002
++--- /dev/null
+++++ b/data/discovery/disc_structure_mycorrhizal_hub.tres
++@@ -0,0 +1,11 @@
+++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+++
+++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+++
+++[resource]
+++script = ExtResource("1")
+++id = &"disc_structure_mycorrhizal_hub"
+++title = "Roots Find Roots"
+++body = "Underground threads find each other and learn to share. The plants above the threads grow without knowing why.\nYou watched it form. The hidden side of every forest is older than the visible side."
+++category = &"structure"
+++trigger_id = &"mycorrhizal_hub"
++diff --git a/data/discovery/disc_structure_old_growth_stand.tres b/data/discovery/disc_structure_old_growth_stand.tres
++new file mode 100644
++index 0000000..45d753f
++--- /dev/null
+++++ b/data/discovery/disc_structure_old_growth_stand.tres
++@@ -0,0 +1,11 @@
+++[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+++
+++[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+++
+++[resource]
+++script = ExtResource("1")
+++id = &"disc_structure_old_growth_stand"
+++title = "The Canopy Closes"
+++body = "Sixteen trees stand together long enough that they become a single thing: a forest.\nWhat walks through asking to eat them is turned around. The forest has its own answer."
+++category = &"structure"
+++trigger_id = &"old_growth_stand"
++diff --git a/data/structures/_index.tres b/data/structures/_index.tres
++new file mode 100644
++index 0000000..c3f2796
++--- /dev/null
+++++ b/data/structures/_index.tres
++@@ -0,0 +1,11 @@
+++[gd_resource type="Resource" script_class="StructureIndex" load_steps=6 format=3]
+++
+++[ext_resource type="Script" path="res://scripts/data/structure_index.gd" id="1"]
+++[ext_resource type="Resource" path="res://data/structures/mycorrhizal_hub.tres" id="2"]
+++[ext_resource type="Resource" path="res://data/structures/old_growth_stand.tres" id="3"]
+++[ext_resource type="Resource" path="res://data/structures/fairy_ring.tres" id="4"]
+++[ext_resource type="Resource" path="res://data/structures/decay_pit.tres" id="5"]
+++
+++[resource]
+++script = ExtResource("1")
+++structures = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")])
++diff --git a/data/structures/decay_pit.tres b/data/structures/decay_pit.tres
++new file mode 100644
++index 0000000..30fc0f4
++--- /dev/null
+++++ b/data/structures/decay_pit.tres
++@@ -0,0 +1,19 @@
+++[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
+++
+++[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
+++
+++[resource]
+++script = ExtResource("1")
+++id = &"decay_pit"
+++display_name = "Decay Pit"
+++description = "Where corpses fall and fungi feast. Nutrients pour back into surrounding soil."
+++pattern_type = &"area_on_biome"
+++pattern_params = {
+++"width": 2,
+++"height": 2,
+++"kingdom_id": "fungi",
+++"biome_id": "rich_soil",
+++"require_adjacent_corpse": true
+++}
+++bonus_handler = &"decay_pit"
+++halo_color = Color(0.8, 0.5, 0.5, 0.55)
++diff --git a/data/structures/fairy_ring.tres b/data/structures/fairy_ring.tres
++new file mode 100644
++index 0000000..dd8bcfe
++--- /dev/null
+++++ b/data/structures/fairy_ring.tres
++@@ -0,0 +1,16 @@
+++[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
+++
+++[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
+++
+++[resource]
+++script = ExtResource("1")
+++id = &"fairy_ring"
+++display_name = "Fairy Ring"
+++description = "Mycelium grows outward from a central point in a perfect ring. The center stays mysteriously bare."
+++pattern_type = &"ring_radius_N"
+++pattern_params = {
+++"radius": 1,
+++"kingdom_id": "fungi"
+++}
+++bonus_handler = &"fairy_ring"
+++halo_color = Color(0.5, 0.8, 0.95, 0.55)
++diff --git a/data/structures/mycorrhizal_hub.tres b/data/structures/mycorrhizal_hub.tres
++new file mode 100644
++index 0000000..f54dba9
++--- /dev/null
+++++ b/data/structures/mycorrhizal_hub.tres
++@@ -0,0 +1,19 @@
+++[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
+++
+++[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
+++
+++[resource]
+++script = ExtResource("1")
+++id = &"mycorrhizal_hub"
+++display_name = "Mycorrhizal Hub"
+++description = "Mycelium dense enough to connect roots across an entire stand. Plants borrow nutrients through the underground."
+++pattern_type = &"square_NxM_with_adjacent"
+++pattern_params = {
+++"width": 3,
+++"height": 3,
+++"kingdom_id": "fungi",
+++"adjacent_kingdom_id": "plantae",
+++"min_adjacent": 4
+++}
+++bonus_handler = &"mycorrhizal_hub"
+++halo_color = Color(0.75, 0.5, 0.9, 0.55)
++diff --git a/data/structures/old_growth_stand.tres b/data/structures/old_growth_stand.tres
++new file mode 100644
++index 0000000..fc595b5
++--- /dev/null
+++++ b/data/structures/old_growth_stand.tres
++@@ -0,0 +1,17 @@
+++[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
+++
+++[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
+++
+++[resource]
+++script = ExtResource("1")
+++id = &"old_growth_stand"
+++display_name = "Old-Growth Stand"
+++description = "Ancient trees so dense the canopy seals over. Light filters. The herd avoids it."
+++pattern_type = &"block_NxM_same_species"
+++pattern_params = {
+++"width": 4,
+++"height": 4,
+++"kingdom_id": "plantae"
+++}
+++bonus_handler = &"old_growth_stand"
+++halo_color = Color(0.4, 0.85, 0.3, 0.55)
+diff --git a/scenes/ui/recipe_book.tscn b/scenes/ui/recipe_book.tscn
+new file mode 100644
+index 0000000..adff958
+--- /dev/null
++++ b/scenes/ui/recipe_book.tscn
+@@ -0,0 +1,43 @@
++[gd_scene format=3]
++
++[ext_resource type="Script" path="res://scripts/ui/recipe_book.gd" id="1"]
++[ext_resource type="Theme" path="res://assets/ui/theme.tres" id="2"]
++
++[node name="RecipeBook" type="Control"]
++anchor_right = 1.0
++anchor_bottom = 1.0
++theme = ExtResource("2")
++script = ExtResource("1")
++mouse_filter = 2
++
++[node name="RecipePanel" type="PanelContainer" parent="."]
++anchor_left = 0.5
++anchor_top = 0.5
++anchor_right = 0.5
++anchor_bottom = 0.5
++offset_left = -140.0
++offset_top = -180.0
++offset_right = 140.0
++offset_bottom = 180.0
++custom_minimum_size = Vector2(280, 360)
++
++[node name="Margin" type="MarginContainer" parent="RecipePanel"]
++anchor_right = 1.0
++anchor_bottom = 1.0
++
++[node name="VBox" type="VBoxContainer" parent="RecipePanel/Margin"]
++anchor_right = 1.0
++anchor_bottom = 1.0
++
++[node name="Header" type="HBoxContainer" parent="RecipePanel/Margin/VBox"]
++anchor_right = 1.0
++
++[node name="Title" type="Label" parent="RecipePanel/Margin/VBox/Header"]
++text = "Structures"
++size_flags_horizontal = 3
++
++[node name="CloseButton" type="Button" parent="RecipePanel/Margin/VBox/Header"]
++text = "X"
++
++[node name="List" type="VBoxContainer" parent="RecipePanel/Margin/VBox"]
++size_flags_vertical = 3
+diff --git a/scenes/ui/structure_banner.tscn b/scenes/ui/structure_banner.tscn
+new file mode 100644
+index 0000000..7d93f7c
+--- /dev/null
++++ b/scenes/ui/structure_banner.tscn
+@@ -0,0 +1,27 @@
++[gd_scene format=3]
++
++[ext_resource type="Script" path="res://scripts/ui/structure_banner.gd" id="1"]
++[ext_resource type="Theme" path="res://assets/ui/theme.tres" id="2"]
++
++[node name="StructureBanner" type="PanelContainer"]
++anchor_left = 0.5
++anchor_right = 0.5
++anchor_top = 0.0
++anchor_bottom = 0.0
++offset_left = -140.0
++offset_top = 8.0
++offset_right = 140.0
++offset_bottom = 40.0
++custom_minimum_size = Vector2(280, 32)
++theme = ExtResource("2")
++script = ExtResource("1")
++
++[node name="Margin" type="MarginContainer" parent="."]
++anchor_right = 1.0
++anchor_bottom = 1.0
++
++[node name="Label" type="Label" parent="Margin"]
++anchor_right = 1.0
++anchor_bottom = 1.0
++text = "Structure discovered"
++horizontal_alignment = 1
+diff --git a/scripts/data/structure_data.gd b/scripts/data/structure_data.gd
+new file mode 100644
+index 0000000..dfa1813
+--- /dev/null
++++ b/scripts/data/structure_data.gd
+@@ -0,0 +1,13 @@
++class_name StructureData
++extends Resource
++
++@export var id: StringName = &""
++@export var display_name: String = ""
++@export var description: String = ""
++
++@export var pattern_type: StringName = &""
++@export var pattern_params: Dictionary = {}
++
++@export var bonus_handler: StringName = &""
++
++@export var halo_color: Color = Color(1.0, 0.9, 0.4, 0.5)
+diff --git a/scripts/data/structure_index.gd b/scripts/data/structure_index.gd
+new file mode 100644
+index 0000000..14f33c8
+--- /dev/null
++++ b/scripts/data/structure_index.gd
+@@ -0,0 +1,4 @@
++class_name StructureIndex
++extends Resource
++
++@export var structures: Array[StructureData] = []
+diff --git a/scripts/systems/fog_system.gd b/scripts/systems/fog_system.gd
+new file mode 100644
+index 0000000..8bff719
+--- /dev/null
++++ b/scripts/systems/fog_system.gd
+@@ -0,0 +1,92 @@
++extends Node
++
++signal fog_updated()
++
++const REVEAL_RADIUS: int = 2
++
++var _revealed: Dictionary[Vector2i, bool] = {}
++
++@onready var _tile_grid: Node = get_node("../../TileGrid")
++@onready var _territory: Node = get_node("../TerritorySystem")
++
++
++func _ready() -> void:
++	EventBus.run_loaded.connect(_on_run_loaded)
++	EventBus.tile_colonized.connect(_on_tile_colonized)
++	if not GameState.run_save.is_empty():
++		_on_run_loaded(SaveSystem.SAVE_VERSION)
++
++
++func _on_run_loaded(_v: int) -> void:
++	_revealed.clear()
++	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
++	var raw: Array = run.get("fog_revealed", []) as Array
++	for k in raw:
++		var coord: Vector2i = _parse_coord(String(k))
++		_revealed[coord] = true
++	if _revealed.is_empty():
++		var cx: int = int(_tile_grid.GRID_WIDTH / 2)
++		var cy: int = int(_tile_grid.GRID_HEIGHT / 2)
++		reveal_area(Vector2i(cx, cy), REVEAL_RADIUS)
++		return
++	_push_to_tile_grid()
++	fog_updated.emit()
++
++
++func _on_tile_colonized(coord: Vector2i, _owner_id: StringName) -> void:
++	reveal_area(coord, REVEAL_RADIUS)
++
++
++func reveal_area(center: Vector2i, radius: int) -> void:
++	var newly_revealed: Array[Vector2i] = []
++	for dy in range(-radius, radius + 1):
++		for dx in range(-radius, radius + 1):
++			var c: Vector2i = Vector2i(center.x + dx, center.y + dy)
++			if not _is_in_bounds(c):
++				continue
++			if _revealed.has(c):
++				continue
++			_revealed[c] = true
++			newly_revealed.append(c)
++	if newly_revealed.is_empty():
++		return
++	_persist()
++	if _tile_grid.has_method("reveal_tiles"):
++		_tile_grid.reveal_tiles(newly_revealed)
++	fog_updated.emit()
++
++
++func is_revealed(coord: Vector2i) -> bool:
++	return _revealed.has(coord)
++
++
++func get_revealed_count() -> int:
++	return _revealed.size()
++
++
++func _is_in_bounds(c: Vector2i) -> bool:
++	return c.x >= 0 and c.y >= 0 and c.x < _tile_grid.GRID_WIDTH and c.y < _tile_grid.GRID_HEIGHT
++
++
++func _persist() -> void:
++	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
++	var arr: Array = []
++	for c in _revealed.keys():
++		arr.append("%d,%d" % [c.x, c.y])
++	run["fog_revealed"] = arr
++
++
++func _push_to_tile_grid() -> void:
++	if not _tile_grid.has_method("set_fog_state"):
++		return
++	var arr: Array[Vector2i] = []
++	for c in _revealed.keys():
++		arr.append(c)
++	_tile_grid.set_fog_state(arr)
++
++
++func _parse_coord(s: String) -> Vector2i:
++	var parts := s.split(",", false)
++	if parts.size() != 2:
++		return Vector2i.ZERO
++	return Vector2i(int(parts[0]), int(parts[1]))
+diff --git a/scripts/systems/obstacle_system.gd b/scripts/systems/obstacle_system.gd
+new file mode 100644
+index 0000000..7b5de9f
+--- /dev/null
++++ b/scripts/systems/obstacle_system.gd
+@@ -0,0 +1,81 @@
++extends Node
++
++const OBSTACLE_RATE: float = 0.05
++const GRID_W: int = 32
++const GRID_H: int = 48
++const START_CLEAR_RADIUS: int = 3
++
++var _obstacles: Dictionary[Vector2i, bool] = {}
++
++@onready var _tile_grid: Node = get_node("../../TileGrid")
++@onready var _territory: Node = get_node("../TerritorySystem")
++
++
++func _ready() -> void:
++	EventBus.run_loaded.connect(_on_run_loaded)
++	if not GameState.run_save.is_empty():
++		_on_run_loaded(SaveSystem.SAVE_VERSION)
++
++
++func _on_run_loaded(_v: int) -> void:
++	_obstacles.clear()
++	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
++	var raw: Array = run.get("obstacles", []) as Array
++	if raw.is_empty():
++		if int(GameState.run_seed) != 0:
++			var generated: Array = _generate_obstacles(int(GameState.run_seed))
++			for s in generated:
++				_obstacles[_parse_coord(String(s))] = true
++			run["obstacles"] = generated
++			GameState.run_save = run
++			SaveSystem.save_now()
++	else:
++		for s in raw:
++			_obstacles[_parse_coord(String(s))] = true
++
++	if _territory.has_method("is_tile_occupied"):
++		var kept: Array[Vector2i] = []
++		for c in _obstacles.keys():
++			if _territory.is_tile_occupied(c):
++				continue
++			kept.append(c)
++		_obstacles.clear()
++		for c in kept:
++			_obstacles[c] = true
++
++	_push_to_tile_grid()
++
++
++func is_obstacle(coord: Vector2i) -> bool:
++	return _obstacles.has(coord)
++
++
++static func _generate_obstacles(seed: int) -> Array:
++	var rng := RandomNumberGenerator.new()
++	rng.seed = seed
++	var out: Array = []
++	var cx: int = int(GRID_W / 2)
++	var cy: int = int(GRID_H / 2)
++	for y in range(GRID_H):
++		for x in range(GRID_W):
++			if abs(x - cx) <= START_CLEAR_RADIUS and abs(y - cy) <= START_CLEAR_RADIUS:
++				continue
++			if rng.randf() < OBSTACLE_RATE:
++				out.append("%d,%d" % [x, y])
++	return out
++
++
++func _push_to_tile_grid() -> void:
++	if not _tile_grid.has_method("set_obstacles"):
++		return
++	var arr: Array[Vector2i] = []
++	for c in _obstacles.keys():
++		arr.append(c)
++	_tile_grid.set_obstacles(arr)
++
++
++func _parse_coord(s: String) -> Vector2i:
++	var parts := s.split(",", false)
++	if parts.size() != 2:
++		return Vector2i.ZERO
++	return Vector2i(int(parts[0]), int(parts[1]))
+diff --git a/scripts/systems/structure_registry.gd b/scripts/systems/structure_registry.gd
+new file mode 100644
+index 0000000..bae5404
+--- /dev/null
++++ b/scripts/systems/structure_registry.gd
+@@ -0,0 +1,366 @@
++extends Node
++
++const SCAN_INTERVAL_TICKS: int = 5
++const STRUCTURE_INDEX_PATH: String = "res://data/structures/_index.tres"
++
++var _structures: Array[StructureData] = []
++var _structures_by_id: Dictionary[StringName, StructureData] = {}
++var _active: Array[Dictionary] = []
++var _last_scan_tick: int = 0
++
++@onready var _territory: Node = get_node("../TerritorySystem")
++@onready var _tile_grid: Node = get_node("../../TileGrid")
++
++
++func _ready() -> void:
++	_load_structures()
++	EventBus.tick.connect(_on_tick)
++	EventBus.run_loaded.connect(_on_run_loaded)
++	EventBus.tile_colonized.connect(func(_c, _o): _maybe_scan_on_change())
++	EventBus.tile_lost.connect(func(_c, _o): _maybe_scan_on_change())
++
++
++func _load_structures() -> void:
++	_structures.clear()
++	_structures_by_id.clear()
++	var index: StructureIndex = load(STRUCTURE_INDEX_PATH) as StructureIndex
++	if index == null:
++		return
++	for sd in index.structures:
++		if sd != null:
++			_structures.append(sd)
++			_structures_by_id[sd.id] = sd
++
++
++func _on_run_loaded(_v: int) -> void:
++	_active.clear()
++	_clear_all_structure_bonuses()
++	_scan()
++
++
++func _on_tick(_delta: float) -> void:
++	_last_scan_tick += 1
++	if _last_scan_tick < SCAN_INTERVAL_TICKS:
++		return
++	_last_scan_tick = 0
++	_scan()
++
++
++func _maybe_scan_on_change() -> void:
++	_scan()
++
++
++func _scan() -> void:
++	var newly_active: Array[Dictionary] = []
++	for sd in _structures:
++		var matches: Array = _find_pattern_matches(sd)
++		for m in matches:
++			newly_active.append({
++				"id": sd.id,
++				"anchor": m["anchor"],
++				"tiles": m["tiles"]
++			})
++
++	var old_keys: Dictionary = {}
++	for entry in _active:
++		old_keys[_active_key(entry)] = entry
++	var new_keys: Dictionary = {}
++	for entry in newly_active:
++		new_keys[_active_key(entry)] = entry
++
++	for k in old_keys.keys():
++		if not new_keys.has(k):
++			_revert_structure(old_keys[k])
++
++	for k in new_keys.keys():
++		if not old_keys.has(k):
++			_promote_structure(new_keys[k])
++
++	_active = newly_active
++	_persist_active()
++
++
++func _active_key(entry: Dictionary) -> String:
++	return "%s@%s" % [String(entry["id"]), str(entry["anchor"])]
++
++
++func _promote_structure(entry: Dictionary) -> void:
++	var sd: StructureData = _structures_by_id.get(entry["id"], null)
++	if sd == null:
++		return
++	_apply_bonus(sd, entry)
++	if _tile_grid.has_method("add_structure_halo"):
++		_tile_grid.add_structure_halo(_active_key(entry), entry["tiles"], sd.halo_color)
++	EventBus.structure_promoted.emit(sd.id, entry["anchor"])
++	var played: Array = GameState.meta_save.get("structures_discovered", []) as Array
++	if not played.has(String(sd.id)):
++		played.append(String(sd.id))
++		GameState.meta_save["structures_discovered"] = played
++		SaveSystem.save_now()
++
++
++func _revert_structure(entry: Dictionary) -> void:
++	var sd: StructureData = _structures_by_id.get(entry["id"], null)
++	if sd == null:
++		return
++	_revert_bonus(sd, entry)
++	if _tile_grid.has_method("remove_structure_halo"):
++		_tile_grid.remove_structure_halo(_active_key(entry))
++
++
++func _apply_bonus(sd: StructureData, entry: Dictionary) -> void:
++	match sd.bonus_handler:
++		&"mycorrhizal_hub":
++			_bonus_mycorrhizal_hub(entry, true)
++		&"old_growth_stand":
++			_bonus_old_growth_stand(entry, true)
++		&"fairy_ring":
++			_bonus_fairy_ring(entry, true)
++		&"decay_pit":
++			_bonus_decay_pit(entry, true)
++		_:
++			push_warning("StructureRegistry: unknown bonus handler %s" % String(sd.bonus_handler))
++
++
++func _revert_bonus(sd: StructureData, entry: Dictionary) -> void:
++	match sd.bonus_handler:
++		&"mycorrhizal_hub":
++			_bonus_mycorrhizal_hub(entry, false)
++		&"old_growth_stand":
++			_bonus_old_growth_stand(entry, false)
++		&"fairy_ring":
++			_bonus_fairy_ring(entry, false)
++		&"decay_pit":
++			_bonus_decay_pit(entry, false)
++
++
++func _clear_all_structure_bonuses() -> void:
++	for entry in _active:
++		var sd: StructureData = _structures_by_id.get(entry["id"], null)
++		if sd != null:
++			_revert_bonus(sd, entry)
++
++
++func _persist_active() -> void:
++	var arr: Array = []
++	for entry in _active:
++		var tile_list: Array = []
++		for c in entry["tiles"]:
++			tile_list.append([c.x, c.y])
++		arr.append({
++			"id": String(entry["id"]),
++			"anchor": [entry["anchor"].x, entry["anchor"].y],
++			"tiles": tile_list
++		})
++	GameState.run_save["active_structures"] = arr
++
++
++func _find_pattern_matches(sd: StructureData) -> Array:
++	match sd.pattern_type:
++		&"block_NxM_same_species":
++			return _match_block(sd.pattern_params)
++		&"ring_radius_N":
++			return _match_ring(sd.pattern_params)
++		&"square_NxM_with_adjacent":
++			return _match_block_with_adjacent(sd.pattern_params)
++		&"area_on_biome":
++			return _match_area_on_biome(sd.pattern_params)
++		_:
++			return []
++
++
++func _match_block(params: Dictionary) -> Array:
++	var w: int = int(params.get("width", 3))
++	var h: int = int(params.get("height", 3))
++	var kingdom_id: StringName = StringName(params.get("kingdom_id", ""))
++	var out: Array = []
++	for y in range(_tile_grid.GRID_HEIGHT - h + 1):
++		for x in range(_tile_grid.GRID_WIDTH - w + 1):
++			var anchor: Vector2i = Vector2i(x, y)
++			var coords: Array[Vector2i] = []
++			var first_species: StringName = &""
++			var ok: bool = true
++			for dy in range(h):
++				for dx in range(w):
++					var c: Vector2i = Vector2i(x + dx, y + dy)
++					var sp: StringName = _territory.get_occupant(c, kingdom_id)
++					if sp == &"":
++						ok = false
++						break
++					if first_species == &"":
++						first_species = sp
++					elif sp != first_species:
++						ok = false
++						break
++					coords.append(c)
++				if not ok:
++					break
++			if ok:
++				out.append({"anchor": anchor, "tiles": coords})
++	return out
++
++
++func _match_block_with_adjacent(params: Dictionary) -> Array:
++	var block_matches: Array = _match_block(params)
++	var adj_kingdom: StringName = StringName(params.get("adjacent_kingdom_id", ""))
++	var min_adj: int = int(params.get("min_adjacent", 4))
++	var out: Array = []
++	for m in block_matches:
++		var coord_set: Dictionary = {}
++		for c in m["tiles"]:
++			coord_set[c] = true
++		var adj_count: int = 0
++		var seen_adj: Dictionary = {}
++		for c in m["tiles"]:
++			for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
++				var n: Vector2i = c + offset
++				if coord_set.has(n) or seen_adj.has(n):
++					continue
++				if _territory.get_occupant(n, adj_kingdom) != &"":
++					seen_adj[n] = true
++					adj_count += 1
++		if adj_count >= min_adj:
++			out.append(m)
++	return out
++
++
++func _match_ring(params: Dictionary) -> Array:
++	var radius: int = int(params.get("radius", 1))
++	var kingdom_id: StringName = StringName(params.get("kingdom_id", ""))
++	var out: Array = []
++	for cy in range(radius, _tile_grid.GRID_HEIGHT - radius):
++		for cx in range(radius, _tile_grid.GRID_WIDTH - radius):
++			var center: Vector2i = Vector2i(cx, cy)
++			if _territory.get_occupant(center, kingdom_id) != &"":
++				continue
++			var ring_coords: Array[Vector2i] = []
++			var first_species: StringName = &""
++			var ok: bool = true
++			for dy in range(-radius, radius + 1):
++				for dx in range(-radius, radius + 1):
++					if max(abs(dx), abs(dy)) != radius:
++						continue
++					var c: Vector2i = Vector2i(cx + dx, cy + dy)
++					var sp: StringName = _territory.get_occupant(c, kingdom_id)
++					if sp == &"":
++						ok = false
++						break
++					if first_species == &"":
++						first_species = sp
++					elif sp != first_species:
++						ok = false
++						break
++					ring_coords.append(c)
++				if not ok:
++					break
++			if ok:
++				out.append({"anchor": center, "tiles": ring_coords})
++	return out
++
++
++func _match_area_on_biome(params: Dictionary) -> Array:
++	var w: int = int(params.get("width", 2))
++	var h: int = int(params.get("height", 2))
++	var kingdom_id: StringName = StringName(params.get("kingdom_id", ""))
++	var biome_id: StringName = StringName(params.get("biome_id", ""))
++	var require_corpse_adj: bool = bool(params.get("require_adjacent_corpse", false))
++	var nutrients: Node = get_node_or_null("../NutrientSystem")
++	var corpses: Node = get_node_or_null("../CorpseSystem")
++	var out: Array = []
++	for y in range(_tile_grid.GRID_HEIGHT - h + 1):
++		for x in range(_tile_grid.GRID_WIDTH - w + 1):
++			var anchor: Vector2i = Vector2i(x, y)
++			var coords: Array[Vector2i] = []
++			var first_species: StringName = &""
++			var ok: bool = true
++			for dy in range(h):
++				for dx in range(w):
++					var c: Vector2i = Vector2i(x + dx, y + dy)
++					var sp: StringName = _territory.get_occupant(c, kingdom_id)
++					if sp == &"":
++						ok = false
++						break
++					if first_species == &"":
++						first_species = sp
++					elif sp != first_species:
++						ok = false
++						break
++					if nutrients != null and nutrients.has_method("get_biome_at"):
++						var biome: BiomeData = nutrients.get_biome_at(c)
++						if biome == null or biome.id != biome_id:
++							ok = false
++							break
++					coords.append(c)
++				if not ok:
++					break
++			if ok and require_corpse_adj:
++				ok = _has_adjacent_corpse(coords, corpses)
++			if ok:
++				out.append({"anchor": anchor, "tiles": coords})
++	return out
++
++
++func _has_adjacent_corpse(coords: Array[Vector2i], corpses: Node) -> bool:
++	if corpses == null or not corpses.has_method("is_corpse_at"):
++		return false
++	var coord_set: Dictionary = {}
++	for c in coords:
++		coord_set[c] = true
++	for c in coords:
++		for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
++			var n: Vector2i = c + offset
++			if coord_set.has(n):
++				continue
++			if corpses.is_corpse_at(n):
++				return true
++	return false
++
++
++func _bonus_mycorrhizal_hub(entry: Dictionary, apply: bool) -> void:
++	var bounds := _bounds_from_tiles(entry["tiles"])
++	for y in range(bounds["min_y"] - 1, bounds["max_y"] + 2):
++		for x in range(bounds["min_x"] - 1, bounds["max_x"] + 2):
++			var c := Vector2i(x, y)
++			if not _is_in_bounds(c):
++				continue
++			_territory.set_tile_data(c, "structure_mycorrhizal_hub", apply)
++
++
++func _bonus_old_growth_stand(entry: Dictionary, apply: bool) -> void:
++	for c in entry["tiles"]:
++		_territory.set_tile_data(c, "structure_old_growth", apply)
++
++
++func _bonus_fairy_ring(entry: Dictionary, apply: bool) -> void:
++	var run: Dictionary = GameState.run_save
++	run["fairy_ring_active"] = apply
++	GameState.run_save = run
++
++
++func _bonus_decay_pit(entry: Dictionary, apply: bool) -> void:
++	for c in entry["tiles"]:
++		for dy in range(-3, 4):
++			for dx in range(-3, 4):
++				if abs(dx) + abs(dy) > 3:
++					continue
++				var n: Vector2i = Vector2i(c.x + dx, c.y + dy)
++				if not _is_in_bounds(n):
++					continue
++				_territory.set_tile_data(n, "structure_decay_pit_aura", apply)
++
++
++func _bounds_from_tiles(tiles: Array[Vector2i]) -> Dictionary:
++	var min_x: int = 9999
++	var min_y: int = 9999
++	var max_x: int = -9999
++	var max_y: int = -9999
++	for c in tiles:
++		min_x = mini(min_x, c.x)
++		min_y = mini(min_y, c.y)
++		max_x = maxi(max_x, c.x)
++		max_y = maxi(max_y, c.y)
++	return {"min_x": min_x, "min_y": min_y, "max_x": max_x, "max_y": max_y}
++
++
++func _is_in_bounds(c: Vector2i) -> bool:
++	return c.x >= 0 and c.y >= 0 and c.x < _tile_grid.GRID_WIDTH and c.y < _tile_grid.GRID_HEIGHT
+diff --git a/scripts/ui/recipe_book.gd b/scripts/ui/recipe_book.gd
+new file mode 100644
+index 0000000..1af87dc
+--- /dev/null
++++ b/scripts/ui/recipe_book.gd
+@@ -0,0 +1,127 @@
++extends Control
++
++const STRUCTURE_INDEX_PATH: String = "res://data/structures/_index.tres"
++
++@onready var _panel: PanelContainer = $RecipePanel
++@onready var _list: VBoxContainer = $RecipePanel/Margin/VBox/List
++@onready var _close: Button = $RecipePanel/Margin/VBox/Header/CloseButton
++
++
++func _ready() -> void:
++	_close.pressed.connect(queue_free)
++	EventBus.structure_promoted.connect(func(_id, _anchor): _build_entries())
++	_build_entries()
++
++
++func _gui_input(event: InputEvent) -> void:
++	if event is InputEventMouseButton and event.pressed:
++		var local_pos: Vector2 = _panel.get_local_mouse_position()
++		if local_pos.x < 0 or local_pos.y < 0 or local_pos.x > _panel.size.x or local_pos.y > _panel.size.y:
++			queue_free()
++
++
++func _build_entries() -> void:
++	for child in _list.get_children():
++		child.queue_free()
++	var index: StructureIndex = load(STRUCTURE_INDEX_PATH) as StructureIndex
++	if index == null:
++		return
++	var discovered: Array = GameState.meta_save.get("structures_discovered", []) as Array
++	for sd in index.structures:
++		if sd == null:
++			continue
++		var is_known: bool = discovered.has(String(sd.id))
++		_list.add_child(_build_entry(sd, is_known))
++
++
++func _build_entry(sd: StructureData, known: bool) -> Control:
++	var panel := PanelContainer.new()
++	panel.add_theme_stylebox_override("panel", _entry_stylebox(sd, known))
++	var vbox := VBoxContainer.new()
++	vbox.add_theme_constant_override("separation", 2)
++	panel.add_child(vbox)
++
++	var header := HBoxContainer.new()
++	header.add_theme_constant_override("separation", 4)
++	var swatch := ColorRect.new()
++	swatch.custom_minimum_size = Vector2(12, 12)
++	swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
++	swatch.color = sd.halo_color if known else Color(0.4, 0.4, 0.4)
++	header.add_child(swatch)
++	var title := Label.new()
++	title.text = sd.display_name if known else "???"
++	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
++	header.add_child(title)
++	vbox.add_child(header)
++
++	var desc := Label.new()
++	desc.text = sd.description if known else _silhouette_hint(sd)
++	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++	desc.add_theme_font_override("font", KingdomTheme.SMALL_FONT)
++	desc.add_theme_font_size_override("font_size", KingdomTheme.SMALL_FONT_SIZE)
++	desc.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8) if known else Color(0.5, 0.5, 0.5))
++	vbox.add_child(desc)
++
++	if known:
++		var pattern_text := Label.new()
++		pattern_text.text = _format_pattern(sd)
++		pattern_text.add_theme_font_override("font", KingdomTheme.SMALL_FONT)
++		pattern_text.add_theme_font_size_override("font_size", KingdomTheme.SMALL_FONT_SIZE)
++		pattern_text.add_theme_color_override("font_color", Color(0.65, 0.75, 0.55))
++		vbox.add_child(pattern_text)
++	return panel
++
++
++func _entry_stylebox(sd: StructureData, known: bool) -> StyleBoxFlat:
++	var sb := StyleBoxFlat.new()
++	sb.bg_color = Color(0.10, 0.10, 0.12) if known else Color(0.06, 0.06, 0.08)
++	sb.border_color = sd.halo_color if known else Color(0.25, 0.25, 0.28)
++	sb.set_border_width_all(1)
++	sb.set_corner_radius_all(2)
++	sb.content_margin_left = 4
++	sb.content_margin_right = 4
++	sb.content_margin_top = 3
++	sb.content_margin_bottom = 3
++	return sb
++
++
++func _silhouette_hint(sd: StructureData) -> String:
++	match sd.pattern_type:
++		&"block_NxM_same_species":
++			return "Some say a thick patch of one kind brings the form."
++		&"ring_radius_N":
++			return "A circle of similar around a hollow center."
++		&"square_NxM_with_adjacent":
++			return "Two kingdoms must touch in numbers."
++		&"area_on_biome":
++			return "The right soil + the right neighbors."
++		_:
++			return "Unknown form."
++
++
++func _format_pattern(sd: StructureData) -> String:
++	var p: Dictionary = sd.pattern_params
++	match sd.pattern_type:
++		&"block_NxM_same_species":
++			return "Pattern: %dx%d block, same species, %s kingdom" % [
++				int(p.get("width", 0)), int(p.get("height", 0)),
++				String(p.get("kingdom_id", ""))
++			]
++		&"square_NxM_with_adjacent":
++			return "Pattern: %dx%d %s block, >=%d adjacent %s" % [
++				int(p.get("width", 0)), int(p.get("height", 0)),
++				String(p.get("kingdom_id", "")), int(p.get("min_adjacent", 0)),
++				String(p.get("adjacent_kingdom_id", ""))
++			]
++		&"ring_radius_N":
++			return "Pattern: hollow ring radius %d, %s kingdom" % [
++				int(p.get("radius", 0)), String(p.get("kingdom_id", ""))
++			]
++		&"area_on_biome":
++			return "Pattern: %dx%d %s block on %s biome%s" % [
++				int(p.get("width", 0)), int(p.get("height", 0)),
++				String(p.get("kingdom_id", "")), String(p.get("biome_id", "")),
++				" + corpse adj" if p.get("require_adjacent_corpse", false) else ""
++			]
++		_:
++			return "Pattern: ???"
+diff --git a/scripts/ui/structure_banner.gd b/scripts/ui/structure_banner.gd
+new file mode 100644
+index 0000000..0dd9609
+--- /dev/null
++++ b/scripts/ui/structure_banner.gd
+@@ -0,0 +1,16 @@
++extends PanelContainer
++
++@onready var _label: Label = $Margin/Label
++
++
++func set_text(text: String) -> void:
++	_label.text = text
++
++
++func play(duration: float = 2.5) -> void:
++	modulate.a = 0.0
++	var tween := create_tween()
++	tween.tween_property(self, "modulate:a", 1.0, 0.15)
++	tween.tween_interval(duration)
++	tween.tween_property(self, "modulate:a", 0.0, 0.2)
++	tween.tween_callback(queue_free)

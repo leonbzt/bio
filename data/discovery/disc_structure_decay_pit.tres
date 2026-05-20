@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_structure_decay_pit"
+title = "Where Everything Returns"
+body = "Bodies fall here. Fungi eat them. The nutrients move outward through the soil into the next generation.\nYou learn that decomposition is not an ending. It is the engine that keeps everything else moving."
+category = &"structure"
+trigger_id = &"decay_pit"

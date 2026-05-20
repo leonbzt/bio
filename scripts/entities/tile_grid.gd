@@ -11,6 +11,7 @@ const ATLAS_BIOME_SWAMP: Vector2i = Vector2i(3, 0)
 const ATLAS_BIOME_GRASSLAND: Vector2i = Vector2i(4, 0)
 const ATLAS_BIOME_RICH_SOIL: Vector2i = Vector2i(5, 0)
 const ATLAS_BIOME_FOREST_EDGE: Vector2i = Vector2i(6, 0)
+const ATLAS_BIOME_ROCK: Vector2i = Vector2i(7, 0)
 
 const LAYER_BASE: int = 0
 
@@ -44,6 +45,8 @@ const EDGE_INSET_FUNGI: float = 3.5
 const PULSE_CHANCE: float = 0.18        # ~18% of owned tiles pulse per tick (more frequent)
 const PULSE_DURATION: float = 0.35      # longer hold, easier to track at a glance
 const PULSE_BRIGHTNESS_BUMP: float = 0.60   # bigger flash — pops against dark biomes
+const FOG_COLOR: Color = Color(0.04, 0.04, 0.06, 1.0)
+const FOG_EDGE_COLOR: Color = Color(0.08, 0.08, 0.10, 1.0)
 class _EdgesOverlay extends Node2D:
 	var tile_grid
 
@@ -55,6 +58,35 @@ class _EdgesOverlay extends Node2D:
 		# can re-enable by removing this early return.
 		return
 
+
+class _FogOverlay extends Node2D:
+	var tile_grid
+
+	func _draw() -> void:
+		if tile_grid == null:
+			return
+		for y in range(tile_grid.GRID_HEIGHT):
+			for x in range(tile_grid.GRID_WIDTH):
+				var c := Vector2i(x, y)
+				if tile_grid._revealed_set.has(c):
+					continue
+				var origin: Vector2 = tile_grid.map_to_local(c) - Vector2(tile_grid.TILE_SIZE * 0.5, tile_grid.TILE_SIZE * 0.5)
+				draw_rect(Rect2(origin, Vector2(tile_grid.TILE_SIZE, tile_grid.TILE_SIZE)), tile_grid.FOG_COLOR, true)
+
+
+class _HaloOverlay extends Node2D:
+	var tile_grid
+
+	func _draw() -> void:
+		if tile_grid == null:
+			return
+		for key in tile_grid._structure_halos.keys():
+			var coords: Array = tile_grid._structure_halos[key]
+			var color: Color = tile_grid._halo_colors.get(key, Color(1, 1, 1, 0.5))
+			for c in coords:
+				var origin: Vector2 = tile_grid.map_to_local(c) - Vector2(tile_grid.TILE_SIZE * 0.5, tile_grid.TILE_SIZE * 0.5)
+				draw_rect(Rect2(origin, Vector2(tile_grid.TILE_SIZE, tile_grid.TILE_SIZE)), color, false, 1.5)
+
 @export var tile_texture: Texture2D = preload("res://assets/art/tiles/placeholder_tile.png")
 
 var _tile_occupants: Dictionary[Vector2i, Dictionary] = {}
@@ -63,7 +95,13 @@ var _fill_nodes: Dictionary[Vector2i, ColorRect] = {}
 var _border_nodes: Dictionary[Vector2i, Polygon2D] = {}
 var _overlay_layer: Node2D
 var _edges_overlay: _EdgesOverlay   # single child; _draw() renders all cluster edges
+var _fog_overlay: _FogOverlay
+var _halo_overlay: _HaloOverlay
 var _pulse_rng: RandomNumberGenerator = RandomNumberGenerator.new()  # Phase 15a
+var _revealed_set: Dictionary[Vector2i, bool] = {}
+var _obstacle_set: Dictionary[Vector2i, bool] = {}
+var _structure_halos: Dictionary[String, Array] = {}
+var _halo_colors: Dictionary[String, Color] = {}
 
 
 func _ready() -> void:
@@ -81,6 +119,16 @@ func _ready() -> void:
 	_edges_overlay.tile_grid = self
 	_edges_overlay.z_index = 2
 	_overlay_layer.add_child(_edges_overlay)
+	_halo_overlay = _HaloOverlay.new()
+	_halo_overlay.name = "StructureHalos"
+	_halo_overlay.tile_grid = self
+	_halo_overlay.z_index = 3
+	_overlay_layer.add_child(_halo_overlay)
+	_fog_overlay = _FogOverlay.new()
+	_fog_overlay.name = "FogOverlay"
+	_fog_overlay.tile_grid = self
+	_fog_overlay.z_index = 4
+	_overlay_layer.add_child(_fog_overlay)
 	EventBus.era_changed.connect(_on_era_changed)
 	EventBus.run_loaded.connect(_on_run_loaded)
 	EventBus.tick.connect(_on_tick_pulse)  # Phase 15a
@@ -116,6 +164,7 @@ func _build_tileset() -> TileSet:
 	atlas.create_tile(ATLAS_BIOME_GRASSLAND)
 	atlas.create_tile(ATLAS_BIOME_RICH_SOIL)
 	atlas.create_tile(ATLAS_BIOME_FOREST_EDGE)
+	atlas.create_tile(ATLAS_BIOME_ROCK)
 	return set
 
 
@@ -124,7 +173,7 @@ func _build_atlas_texture() -> Texture2D:
 	if base_image.is_empty():
 		return tile_texture
 	base_image.convert(Image.FORMAT_RGBA8)
-	var atlas_width: int = max(base_image.get_width(), TILE_SIZE) + TILE_SIZE * 6
+	var atlas_width: int = max(base_image.get_width(), TILE_SIZE) + TILE_SIZE * 7
 	var atlas_height: int = max(base_image.get_height(), TILE_SIZE)
 	var atlas_image := Image.create(atlas_width, atlas_height, false, Image.FORMAT_RGBA8)
 	atlas_image.fill(Color(0, 0, 0, 0))
@@ -198,11 +247,62 @@ func _build_atlas_texture() -> Texture2D:
 		0.10,
 		false
 	)
+	# Rock: neutral dark gray, minimal era tint.
+	_draw_biome_tile(
+		atlas_image,
+		Vector2i(TILE_SIZE * 7, 0),
+		Color8(0x55, 0x55, 0x55),
+		Color8(0x2a, 0x2a, 0x2c),
+		era_tint,
+		0.05,
+		false
+	)
 	return ImageTexture.create_from_image(atlas_image)
 
 
 func _populate() -> void:
 	_populate_base_from_biomes()
+	_fog_overlay.queue_redraw()
+	_halo_overlay.queue_redraw()
+
+
+func set_fog_state(revealed: Array[Vector2i]) -> void:
+	_revealed_set.clear()
+	for c in revealed:
+		_revealed_set[c] = true
+	if _fog_overlay != null:
+		_fog_overlay.queue_redraw()
+
+
+func reveal_tiles(coords: Array[Vector2i]) -> void:
+	for c in coords:
+		_revealed_set[c] = true
+	if _fog_overlay != null:
+		_fog_overlay.queue_redraw()
+
+
+func set_obstacles(coords: Array[Vector2i]) -> void:
+	_obstacle_set.clear()
+	for c in coords:
+		_obstacle_set[c] = true
+	_populate_base_from_biomes()
+
+
+func add_structure_halo(key: String, tiles: Array[Vector2i], color: Color) -> void:
+	_structure_halos[key] = tiles
+	_halo_colors[key] = color
+	_redraw_halos()
+
+
+func remove_structure_halo(key: String) -> void:
+	_structure_halos.erase(key)
+	_halo_colors.erase(key)
+	_redraw_halos()
+
+
+func _redraw_halos() -> void:
+	if _halo_overlay != null:
+		_halo_overlay.queue_redraw()
 
 
 func set_occupant(coord: Vector2i, kingdom_id: StringName, species_id: StringName) -> void:
@@ -420,6 +520,9 @@ func clear_owned() -> void:
 	for coord in _border_nodes.keys():
 		_border_nodes[coord].queue_free()
 	_border_nodes.clear()
+	_structure_halos.clear()
+	_halo_colors.clear()
+	_redraw_halos()
 	_queue_edges_redraw()
 
 
@@ -451,6 +554,8 @@ func _populate_base_from_biomes() -> void:
 
 
 func _atlas_for_coord(coord: Vector2i) -> Vector2i:
+	if _obstacle_set.has(coord):
+		return ATLAS_BIOME_ROCK
 	var nutrients: Node = _get_nutrient_system()
 	if nutrients == null or not nutrients.has_method("get_biome_at"):
 		return ATLAS_BASE

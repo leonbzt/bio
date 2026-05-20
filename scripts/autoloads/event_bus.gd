@@ -19,6 +19,9 @@ signal tile_tapped(coord: Vector2i)
 signal tile_colonized(coord: Vector2i, owner_id: StringName)
 signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
 
+# Structures
+signal structure_promoted(structure_id: StringName, anchor: Vector2i)
+
 # Organisms
 signal organism_spawned(organism_id: int, species_id: StringName, coord: Vector2i)
 signal organism_died(organism_id: int, cause: StringName)

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"old_growth_stand"
+display_name = "Old-Growth Stand"
+description = "Ancient trees so dense the canopy seals over. Light filters. The herd avoids it."
+pattern_type = &"block_NxM_same_species"
+pattern_params = {
+"width": 4,
+"height": 4,
+"kingdom_id": "plantae"
+}
+bonus_handler = &"old_growth_stand"
+halo_color = Color(0.4, 0.85, 0.3, 0.55)

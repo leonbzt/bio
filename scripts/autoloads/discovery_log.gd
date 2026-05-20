@@ -28,10 +28,12 @@ func _enter_tree() -> void:
 	EventBus.era_changed.connect(_on_era_changed)
 	EventBus.ecosystem_completed.connect(_on_ecosystem_completed)
 	EventBus.era_transition_started.connect(_on_era_transition_started)
+	EventBus.structure_promoted.connect(_on_structure_promoted)
 
 
 func _ready() -> void:
 	add_to_group("discovery_log")
+	call_deferred("_subscribe_fog")
 	var index: DiscoveryIndex = load(DISCOVERY_INDEX_PATH) as DiscoveryIndex
 	if index == null:
 		push_error("DiscoveryLog: missing discovery index")
@@ -245,16 +247,46 @@ func _on_era_transition_started(_from: StringName, _to: StringName) -> void:
 		unlock(era_entry)
 
 
+func _on_structure_promoted(structure_id: StringName, _anchor: Vector2i) -> void:
+	var entry := find_entry_for_trigger(&"structure", structure_id)
+	if entry != &"":
+		unlock(entry)
+
+
 func _check_biomes_in_play() -> void:
 	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
 	var biome_map: Dictionary = run.get("biome_map", {}) as Dictionary
+	var fog: Node = _get_fog_system()
 	var seen: Dictionary = {}
-	for biome_id in biome_map.values():
-		seen[StringName(biome_id)] = true
+	for k in biome_map.keys():
+		var coord: Vector2i = _parse_coord_key(String(k))
+		if fog != null and fog.has_method("is_revealed") and not fog.is_revealed(coord):
+			continue
+		seen[StringName(biome_map[k])] = true
 	for biome_id in seen.keys():
 		var entry: StringName = find_entry_for_trigger(&"biome", StringName(biome_id))
 		if entry != &"":
 			unlock(entry)
+
+
+func _subscribe_fog() -> void:
+	var fog: Node = _get_fog_system()
+	if fog != null and fog.has_signal("fog_updated"):
+		fog.fog_updated.connect(_check_biomes_in_play)
+
+
+func _get_fog_system() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("World/Systems/FogSystem")
+
+
+func _parse_coord_key(s: String) -> Vector2i:
+	var parts := s.split(",", false)
+	if parts.size() != 2:
+		return Vector2i.ZERO
+	return Vector2i(int(parts[0]), int(parts[1]))
 
 
 func _lookup_node(node_id: StringName) -> EvolutionNodeData:

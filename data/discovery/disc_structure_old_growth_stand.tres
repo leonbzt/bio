@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_structure_old_growth_stand"
+title = "The Canopy Closes"
+body = "Sixteen trees stand together long enough that they become a single thing: a forest.\nWhat walks through asking to eat them is turned around. The forest has its own answer."
+category = &"structure"
+trigger_id = &"old_growth_stand"

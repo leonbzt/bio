@@ -15,6 +15,9 @@ func _ready() -> void:
 	_load_biomes()
 	EventBus.run_loaded.connect(_on_run_loaded)
 	EventBus.era_changed.connect(func(_e): _refresh())
+	var fog: Node = _get_fog_system()
+	if fog != null and fog.has_signal("fog_updated"):
+		fog.fog_updated.connect(func(): call_deferred("_refresh"))
 	_refresh()
 
 
@@ -49,14 +52,32 @@ func _refresh() -> void:
 func _unique_biomes_in_play() -> Array[StringName]:
 	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
 	var biome_map: Dictionary = run.get("biome_map", {}) as Dictionary
+	var fog: Node = _get_fog_system()
 	var seen: Dictionary[StringName, bool] = {}
-	for v in biome_map.values():
-		seen[StringName(v)] = true
+	for k in biome_map.keys():
+		var coord: Vector2i = _parse_coord_key(String(k))
+		if fog != null and fog.has_method("is_revealed") and not fog.is_revealed(coord):
+			continue
+		seen[StringName(biome_map[k])] = true
 	var result: Array[StringName] = []
 	for k in seen.keys():
 		result.append(k)
 	result.sort_custom(func(a, b): return String(a) < String(b))
 	return result
+
+
+func _get_fog_system() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("World/Systems/FogSystem")
+
+
+func _parse_coord_key(s: String) -> Vector2i:
+	var parts := s.split(",", false)
+	if parts.size() != 2:
+		return Vector2i.ZERO
+	return Vector2i(int(parts[0]), int(parts[1]))
 
 
 func _build_chip(biome: BiomeData) -> Control:

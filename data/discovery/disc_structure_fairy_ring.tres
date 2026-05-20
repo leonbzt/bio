@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_structure_fairy_ring"
+title = "The Hollow Center"
+body = "Mycelium grows outward from one point. After enough seasons, a perfect ring remains around an empty middle.\nThe spores it releases find every corner of your territory now. The geometry was always the answer."
+category = &"structure"
+trigger_id = &"fairy_ring"

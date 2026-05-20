@@ -45,6 +45,9 @@ signal tile_tapped(coord: Vector2i)
 signal tile_colonized(coord: Vector2i, owner_id: StringName)
 signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
 
+# Structures
+signal structure_promoted(structure_id: StringName, anchor: Vector2i)
+
 # Organisms
 signal organism_spawned(organism_id: int, species_id: StringName, coord: Vector2i)
 signal organism_died(organism_id: int, cause: StringName)
@@ -455,7 +458,10 @@ Increment `SAVE_VERSION` and add a `migrate()` case any time the JSON schema cha
 | v11 | era/ecosystem state added (`current_era_id`, `current_ecosystem_id`, `ecosystem_completions`, `eras_unlocked`) |
 | v12 | species-first migration (`species_unlocked`, `species_played`, `starting_species_id`, per-tile `occupants`) |
 | v13 | `meta.lineages_played` added; backfilled from `meta.species_played` |
+| v14 | `meta.post_extinction`, `meta.first_run_in_era_completed`, `meta.first_era_seen` added |
+| v15 | `run.tile_ages`, `run.species_tile_counts`, `meta.lifetime_counters` added |
+| v16 | `run.fog_revealed`, `run.obstacles`, `run.active_structures`, `meta.structures_discovered` added |
 
 ---
 
-**Last updated**: Phase 11 goals + abilities scaffolding. Update this doc whenever a contract changes; do not update it speculatively.
+**Last updated**: Phase 15b fog/obstacles/structures. Update this doc whenever a contract changes; do not update it speculatively.

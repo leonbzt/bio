@@ -8,6 +8,12 @@ const COST_GROWTH_FACTOR: float = 1.05
 func evaluate(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	if species == null:
 		return _invalid()
+	var fog: Node = _get_fog_system()
+	if fog != null and fog.has_method("is_revealed") and not fog.is_revealed(coord):
+		return _invalid()
+	var obstacles: Node = _get_obstacle_system()
+	if obstacles != null and obstacles.has_method("is_obstacle") and obstacles.is_obstacle(coord):
+		return _invalid()
 	match species.placement_rule:
 		&"adjacent_empty":
 			return _rule_adjacent_empty(coord, species)
@@ -258,6 +264,20 @@ func neighbors(coord: Vector2i) -> Array[Vector2i]:
 
 func _get_territory() -> Node:
 	return get_tree().root.get_node_or_null("World/Systems/TerritorySystem")
+
+
+func _get_fog_system() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("World/Systems/FogSystem")
+
+
+func _get_obstacle_system() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("World/Systems/ObstacleSystem")
 
 
 func _get_corpses() -> Node:

@@ -18,10 +18,12 @@ const RESOURCE_NAMES: Dictionary = {
 
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
+const STRUCTURE_INDEX_PATH: String = "res://data/structures/_index.tres"
 
 @onready var _tick_indicator: ColorRect = $TickIndicator
 @onready var _abilities_bar: HBoxContainer = $AbilitiesBar
 @onready var _pause_button: Button = $PauseButton
+@onready var _recipes_button: Button = $RecipesButton
 @onready var _toast_panel: PanelContainer = $EventToast
 @onready var _toast_title: Label = $EventToast/ToastContent/ToastTitle
 @onready var _toast_body: Label = $EventToast/ToastContent/ToastBody
@@ -40,6 +42,7 @@ var _labels: Dictionary[StringName, Label] = {}
 var _is_replaying: bool = false
 var _events_by_id: Dictionary[StringName, EventData] = {}
 var _species_by_id: Dictionary[StringName, SpeciesData] = {}
+var _structures_by_id: Dictionary[StringName, StructureData] = {}
 var _toast_event_id: StringName = StringName()
 var _toast_tween: Tween = null
 var _buttons_by_id: Dictionary[StringName, Button] = {}
@@ -50,7 +53,9 @@ func _ready() -> void:
 	_sync_labels()
 	_build_event_index()
 	_build_species_index()
+	_build_structure_index()
 	_pause_button.pressed.connect(_on_pause_pressed)
+	_recipes_button.pressed.connect(_open_recipe_book)
 	EventBus.resource_changed.connect(_on_resource_changed)
 	EventBus.tick.connect(_on_tick)
 	EventBus.input_mode_changed.connect(_on_input_mode_changed)
@@ -62,6 +67,7 @@ func _ready() -> void:
 	EventBus.run_loaded.connect(_on_run_loaded_for_ui)
 	EventBus.era_transition_started.connect(_on_era_transition_started)
 	EventBus.evolution_node_unlocked.connect(func(_id): _refresh_abilities())
+	EventBus.structure_promoted.connect(_on_structure_promoted)
 	_refresh_identity_strip()
 	_refresh_abilities()
 
@@ -173,6 +179,16 @@ func _build_species_index() -> void:
 			_species_by_id[species.id] = species
 
 
+func _build_structure_index() -> void:
+	_structures_by_id.clear()
+	var index: StructureIndex = load(STRUCTURE_INDEX_PATH) as StructureIndex
+	if index == null:
+		return
+	for sd in index.structures:
+		if sd != null:
+			_structures_by_id[sd.id] = sd
+
+
 func _on_event_started(event_id: StringName, _payload: Dictionary) -> void:
 	_toast_event_id = event_id
 	var title: String = String(event_id)
@@ -215,6 +231,33 @@ func _hide_toast() -> void:
 	)
 
 
+func _open_recipe_book() -> void:
+	if has_node("RecipeBookInstance"):
+		return
+	var scene: PackedScene = load("res://scenes/ui/recipe_book.tscn") as PackedScene
+	if scene == null:
+		return
+	var instance: Node = scene.instantiate()
+	instance.name = "RecipeBookInstance"
+	add_child(instance)
+
+
+func _on_structure_promoted(structure_id: StringName, _anchor: Vector2i) -> void:
+	var sd: StructureData = _structures_by_id.get(structure_id, null)
+	var name: String = String(structure_id).replace("_", " ").capitalize()
+	if sd != null:
+		name = sd.display_name
+	var scene: PackedScene = load("res://scenes/ui/structure_banner.tscn") as PackedScene
+	if scene == null:
+		return
+	var instance: Node = scene.instantiate()
+	if instance.has_method("set_text"):
+		instance.set_text("Structure discovered: %s" % name)
+	add_child(instance)
+	if instance.has_method("play"):
+		instance.play()
+
+
 func _refresh_identity_strip() -> void:
 	var species_id: StringName = StringName(GameState.run_save.get("starting_species_id", ""))
 	var species_name: String = String(species_id).replace("_", " ").capitalize()
@@ -227,7 +270,7 @@ func _refresh_identity_strip() -> void:
 			var eco: EcosystemData = era_system.get_current_ecosystem()
 			if eco != null:
 				eco_name = eco.display_name
-	_identity_label.text = "%s — %s" % [species_name if species_name != "" else "No Run", eco_name]
+	_identity_label.text = "%s - %s" % [species_name if species_name != "" else "No Run", eco_name]
 
 
 func _on_era_transition_started(_from_era: StringName, to_era: StringName) -> void:

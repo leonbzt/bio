@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"fairy_ring"
+display_name = "Fairy Ring"
+description = "Mycelium grows outward from a central point in a perfect ring. The center stays mysteriously bare."
+pattern_type = &"ring_radius_N"
+pattern_params = {
+"radius": 1,
+"kingdom_id": "fungi"
+}
+bonus_handler = &"fairy_ring"
+halo_color = Color(0.5, 0.8, 0.95, 0.55)

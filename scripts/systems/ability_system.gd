@@ -50,7 +50,8 @@ func is_ability_available(id: StringName) -> bool:
 		return false
 	var ability: AbilityData = _abilities_by_id[id]
 	if ability.unlock_node_id != &"" and not MetaModifiers.is_unlocked(ability.unlock_node_id):
-		return false
+		if not _has_fairy_ring_override(ability):
+			return false
 	if ability.requires_event_active != &"":
 		if not _pressure.is_event_active(ability.requires_event_active):
 			return false
@@ -105,13 +106,21 @@ func get_toxin_bloom_cost() -> Dictionary:
 
 func _is_ability_usable(ability: AbilityData) -> bool:
 	if ability.unlock_node_id != &"" and not MetaModifiers.is_unlocked(ability.unlock_node_id):
-		return false
+		if not _has_fairy_ring_override(ability):
+			return false
 	if ability.requires_event_active != &"":
 		if not _pressure.is_event_active(ability.requires_event_active):
 			return false
 	if not ResourceLedger.can_afford(ability.cost):
 		return false
 	return true
+
+
+func _has_fairy_ring_override(ability: AbilityData) -> bool:
+	if ability.id != &"sporulate":
+		return false
+	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+	return bool(run.get("fairy_ring_active", false))
 
 
 func _on_tile_tapped(coord: Vector2i) -> void:

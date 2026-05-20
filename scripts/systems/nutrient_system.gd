@@ -89,7 +89,10 @@ func _on_tick(_delta_seconds: float) -> void:
 		if biome.sunlight_per_tick != 0.0:
 			ResourceLedger.add(ResourceLedger.SUNLIGHT, biome.sunlight_per_tick * sun_mult)
 		if biome.nutrient_per_tick != 0.0:
-			ResourceLedger.add(ResourceLedger.NUTRIENTS, biome.nutrient_per_tick * nut_mult)
+			var local_nut_mult := nut_mult
+			if bool(_territory.get_tile_data(coord, "structure_decay_pit_aura", false)):
+				local_nut_mult *= 1.30
+			ResourceLedger.add(ResourceLedger.NUTRIENTS, biome.nutrient_per_tick * local_nut_mult)
 		if biome.decay_per_tick != 0.0:
 			ResourceLedger.add(ResourceLedger.DECAY, biome.decay_per_tick)
 

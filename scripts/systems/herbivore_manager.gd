@@ -81,6 +81,14 @@ func _on_tick(_delta_seconds: float) -> void:
 		return
 	_logged_no_tiles = false
 
+	var target_coords: Array[Vector2i] = []
+	for coord in owned_coords:
+		if bool(_territory.get_tile_data(coord, "structure_old_growth", false)):
+			continue
+		target_coords.append(coord)
+	if target_coords.is_empty():
+		target_coords = owned_coords
+
 	var chew_ticks: int = _get_payload_int("chew_ticks", 4)
 	var speed_ticks: int = _get_payload_int("speed_ticks", 2)
 
@@ -99,7 +107,7 @@ func _on_tick(_delta_seconds: float) -> void:
 		state["chew_ticks"] = 0
 		if int(state["move_ticks"]) >= speed_ticks:
 			state["move_ticks"] = 0
-			var target := _nearest_owned(herbivore.coord, owned_coords)
+			var target := _nearest_owned(herbivore.coord, target_coords)
 			var next_coord := _step_toward(herbivore.coord, target)
 			herbivore.set_coord(next_coord, _coord_to_world(next_coord))
 

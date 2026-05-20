@@ -63,6 +63,7 @@ func _get_candidates() -> Array[SpeciesData]:
 	var result: Array[SpeciesData] = []
 	if ecosystem == null:
 		return result
+	# Fog does not apply here; the picker runs before the world exists.
 	var unlocked: Array = GameState.meta_save.get("species_unlocked", []) as Array
 	var filter: Array[StringName] = ecosystem.starting_species_filter
 	if filter.is_empty():

@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"creeping_vine"
+display_name = "Creeping Vine"
+description = "A plant that grows on its own shadow — corner to corner, never straight."
+kingdom_id = &"plantae"
+sprite = null
+base_traits = Array[Resource]([])
+colonize_cost = {
+"biomass": 4.0
+}
+tick_yield = {
+"biomass": 0.35
+}
+introduce_cost = {
+"biomass": 60.0
+}
+placement_rule = &"diagonal_only"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"plantae", &"climber"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 5
+unlock_prerequisites = Array[StringName]([&"pioneer_grass"])
+era_requires = &""
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.4, 0.6, 0.2, 1.0)
+tile_marker_shape = &"cross"
+latin_name = "Vitis serpentina (modeled, all eras)"
+lineage_id = &"climber"
+biome_affinity = {
+&"forest_edge": 1.3,
+&"swamp": 1.2,
+&"rich_soil": 1.0,
+&"grassland": 0.9,
+&"tundra": 0.5,
+&"mineral_vent": 0.4
+}

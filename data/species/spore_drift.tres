@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"spore_drift"
+display_name = "Spore Drift"
+description = "Spores that catch the wind. They land where the wind decides — far from where they began."
+kingdom_id = &"fungi"
+sprite = null
+base_traits = Array[Resource]([])
+colonize_cost = {
+"spores": 4.0
+}
+tick_yield = {
+"biomass": 0.25,
+"spores": 0.2
+}
+introduce_cost = {
+"spores": 70.0,
+"biomass": 30.0
+}
+placement_rule = &"gap_jumper"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"fungi", &"wind_dispersed"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 5
+unlock_prerequisites = Array[StringName]([&"mycelium_thread"])
+era_requires = &""
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.6, 0.45, 0.8, 1.0)
+tile_marker_shape = &"spore"
+latin_name = "Aspergillus aerios (modeled, all eras)"
+lineage_id = &"wind_disperser"
+biome_affinity = {
+&"forest_edge": 1.1,
+&"grassland": 1.2,
+&"swamp": 1.0,
+&"tundra": 0.7,
+&"rich_soil": 1.0,
+&"mineral_vent": 0.5
+}

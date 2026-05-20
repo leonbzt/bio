@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="SpeciesIndex" load_steps=14 format=3]
+[gd_resource type="Resource" script_class="SpeciesIndex" load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/species_index.gd" id="1"]
 [ext_resource type="Resource" path="res://data/species/pioneer_grass.tres" id="2"]
@@ -13,7 +13,10 @@
 [ext_resource type="Resource" path="res://data/species/cryo_lichen.tres" id="11"]
 [ext_resource type="Resource" path="res://data/species/tree_fern_stem.tres" id="12"]
 [ext_resource type="Resource" path="res://data/species/wood_rot_bracket.tres" id="13"]
+[ext_resource type="Resource" path="res://data/species/creeping_vine.tres" id="14"]
+[ext_resource type="Resource" path="res://data/species/spore_drift.tres" id="15"]
+[ext_resource type="Resource" path="res://data/species/scavenger_swarm.tres" id="16"]
 
 [resource]
 script = ExtResource("1")
-species = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13")])
+species = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16")])

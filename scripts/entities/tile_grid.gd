@@ -649,11 +649,13 @@ func _get_territory_for_age() -> Node:
 
 # Phase 15a: tile pulse on tick
 func _on_tick_pulse(_delta: float) -> void:
-	# Sample a fraction of owned tiles to pulse this tick.
-	for coord in _fill_nodes.keys():
-		if _pulse_rng.randf() > PULSE_CHANCE:
-			continue
-		_pulse_tile(coord)
+	# Perf: skip the per-tile iteration entirely when pulses are disabled.
+	# Was scanning every owned tile each tick just to randf() against 0.0.
+	if PULSE_CHANCE > 0.0:
+		for coord in _fill_nodes.keys():
+			if _pulse_rng.randf() > PULSE_CHANCE:
+				continue
+			_pulse_tile(coord)
 	# Periodically refresh fills so tiles crossing maturation stage boundaries
 	# update their visual without waiting for an unrelated repaint.
 	_ticks_since_age_refresh += 1

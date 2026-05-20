@@ -96,16 +96,17 @@ func _sync_labels() -> void:
 func _on_resource_changed(resource_id: StringName, new_amount: float) -> void:
 	if _labels.has(resource_id):
 		_labels[resource_id].text = _format_resource(resource_id, new_amount)
-	_refresh_abilities()
+	# Perf: ability button affordability is re-checked on every tick. Spamming
+	# refresh on every resource_changed (~15-25 per tick) just rebuilt buttons
+	# without the user seeing any change between ticks.
 
 
 func _on_tick(_delta_seconds: float) -> void:
 	if _is_replaying:
 		return
-	var tween := create_tween()
-	_tick_indicator.modulate.a = 1.0
-	tween.tween_property(_tick_indicator, "modulate:a", 0.3, 0.1)
-	tween.tween_property(_tick_indicator, "modulate:a", 1.0, 0.1)
+	# Perf: previously created a new Tween every tick to blink the indicator.
+	# The resource counters visibly ticking up are sufficient feedback that a
+	# tick fired — keep the ColorRect static and skip the allocation.
 	_refresh_abilities()
 
 
@@ -121,12 +122,32 @@ func _on_run_started(_kingdom_id: StringName) -> void:
 	_refresh_identity_strip()
 	_refresh_abilities()
 	_apply_kingdom_theme()
+	_maybe_show_onboarding()
 
 
 func _on_run_loaded_for_ui(_save_version: int) -> void:
 	_refresh_identity_strip()
 	_refresh_abilities()
 	_apply_kingdom_theme()
+	_maybe_show_onboarding()
+
+
+func _maybe_show_onboarding() -> void:
+	# First-run only — veterans (prestige_count > 0) skip automatically.
+	const ONBOARDING_SCENE_PATH: String = "res://scenes/ui/onboarding_overlay.tscn"
+	var script: GDScript = load("res://scripts/ui/onboarding_overlay.gd") as GDScript
+	if script == null:
+		return
+	if not script.should_show():
+		return
+	if has_node("OnboardingOverlay"):
+		return  # already showing
+	var packed: PackedScene = load(ONBOARDING_SCENE_PATH) as PackedScene
+	if packed == null:
+		return
+	var instance: Node = packed.instantiate()
+	instance.name = "OnboardingOverlay"
+	add_child(instance)
 
 
 func _apply_kingdom_theme() -> void:
@@ -259,18 +280,16 @@ func _on_structure_promoted(structure_id: StringName, _anchor: Vector2i) -> void
 
 
 func _refresh_identity_strip() -> void:
-	var species_id: StringName = StringName(GameState.run_save.get("starting_species_id", ""))
-	var species_name: String = String(species_id).replace("_", " ").capitalize()
-	if _species_by_id.has(species_id):
-		species_name = _species_by_id[species_id].display_name
-	var eco_name: String = ""
+	# Show only the ecosystem (map) name. Starting species lives in the
+	# species panel grid at the bottom — no need to duplicate it here.
+	var eco_name: String = "No Run"
 	if has_node("/root/EraSystem"):
 		var era_system: Node = get_node("/root/EraSystem")
 		if era_system.has_method("get_current_ecosystem"):
 			var eco: EcosystemData = era_system.get_current_ecosystem()
 			if eco != null:
 				eco_name = eco.display_name
-	_identity_label.text = "%s - %s" % [species_name if species_name != "" else "No Run", eco_name]
+	_identity_label.text = eco_name
 
 
 func _on_era_transition_started(_from_era: StringName, to_era: StringName) -> void:

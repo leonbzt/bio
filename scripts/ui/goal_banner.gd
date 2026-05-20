@@ -1,8 +1,8 @@
 extends PanelContainer
 
-@onready var _goal_text: Label = $HBox/GoalText
-@onready var _progress_label: Label = $HBox/ProgressLabel
-@onready var _progress_bar: ProgressBar = $ProgressBar
+@onready var _goal_text: Label = $VBox/GoalText
+@onready var _progress_label: Label = $VBox/ProgressLabel
+@onready var _progress_bar: ProgressBar = $VBox/ProgressBar
 
 const MET_TINT: Color = Color(0.9, 0.85, 0.3, 1.0)
 const NORMAL_TINT: Color = Color(0.3, 0.3, 0.35, 1.0)

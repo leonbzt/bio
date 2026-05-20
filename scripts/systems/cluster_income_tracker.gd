@@ -5,6 +5,7 @@ extends Node
 
 const FLOAT_INTERVAL_TICKS: int = 8       # one float per cluster every ~8s @ 1Hz tick
 const FLOAT_SCENE: PackedScene = preload("res://scenes/ui/cluster_float.tscn")
+const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 
 @onready var _territory: Node = get_node("../TerritorySystem")
 @onready var _tile_grid: Node = get_node("../../TileGrid")
@@ -15,10 +16,26 @@ var _accumulated: Dictionary[String, float] = {}
 var _last_emit_tick: Dictionary[String, int] = {}
 var _seen_clusters: Dictionary[String, bool] = {}  # Track first sighting for lifetime counter
 
+# Perf: cache biomass-per-tile lookup by species_id so the per-tick hot path
+# doesn't load the species index from disk and linear-scan every cluster.
+var _biomass_per_tile_by_species: Dictionary[StringName, float] = {}
+
 
 func _ready() -> void:
+	_cache_species_yields()
 	EventBus.tick.connect(_on_tick)
 	EventBus.run_loaded.connect(func(_v): _accumulated.clear())
+
+
+func _cache_species_yields() -> void:
+	_biomass_per_tile_by_species.clear()
+	var index: SpeciesIndex = load(SPECIES_INDEX_PATH) as SpeciesIndex
+	if index == null:
+		return
+	for sp in index.species:
+		if sp == null:
+			continue
+		_biomass_per_tile_by_species[sp.id] = float(sp.tick_yield.get("biomass", 0.0))
 
 
 func _on_tick(_delta: float) -> void:
@@ -76,14 +93,11 @@ func _cluster_key(cluster: Dictionary) -> String:
 
 func _compute_cluster_biomass_this_tick(species_id: StringName, coords: Array[Vector2i]) -> float:
 	# Cheap approximation: cluster size × base biomass yield × current biomass multiplier.
-	var index: SpeciesIndex = load("res://data/species/_index.tres") as SpeciesIndex
-	if index == null:
+	# Species lookup is precomputed in _cache_species_yields() — was a disk load
+	# + linear scan per cluster per tick before, which spiked late-game frames.
+	var biomass_per_tile: float = _biomass_per_tile_by_species.get(species_id, 0.0)
+	if biomass_per_tile == 0.0:
 		return 0.0
-	var biomass_per_tile: float = 0.0
-	for sp in index.species:
-		if sp.id == species_id:
-			biomass_per_tile = float(sp.tick_yield.get("biomass", 0.0))
-			break
 	return biomass_per_tile * float(coords.size()) * ResourceLedger.get_multiplier(&"biomass")
 
 

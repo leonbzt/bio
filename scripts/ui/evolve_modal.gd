@@ -17,7 +17,11 @@ func _ready() -> void:
 
 func setup(species: SpeciesData) -> void:
 	_species = species
-	_refresh()
+	# `setup` is called right after instantiate() — BEFORE _ready() runs, so the
+	# @onready Label refs are still null. _ready() will call _refresh() itself
+	# once the species is set, so we only refresh here if the tree is already up.
+	if is_node_ready():
+		_refresh()
 
 
 func _refresh() -> void:

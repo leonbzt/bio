@@ -1,7 +1,9 @@
-extends HBoxContainer
+extends VBoxContainer
 ##
 ## Compact biome legend — one chip per biome present on the current map.
 ## Each chip shows a color swatch + biome name; tap/hover for the impact summary.
+## Changed from HBox to VBox 2026-05-20 because the legend now sits in the
+## narrow left HUD column where vertical stacking fits the space.
 ##
 
 const BIOME_INDEX_PATH: String = "res://data/biomes/_index.tres"

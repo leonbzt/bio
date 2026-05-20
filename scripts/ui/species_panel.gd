@@ -17,9 +17,13 @@ func _ready() -> void:
 	_available_header.pressed.connect(_on_available_header_pressed)
 	EventBus.run_started.connect(func(_k): _refresh_all())
 	EventBus.run_loaded.connect(func(_v): _refresh_all())
-	EventBus.resource_changed.connect(func(_r, _v): _refresh())
+	# Perf: species rows don't read resource values — they read adaptation level,
+	# placement target, and tile color. Refreshing on every resource_changed
+	# (~15+ per tick) was rebuilding every button each tick. Adaptation/leveling
+	# signals already cover the cases where rows actually change.
 	EventBus.species_leveled.connect(func(_id, _level): _refresh())
 	AdaptationSystem.adaptation_changed.connect(func(_v): _refresh())
+	EventBus.placement_target_changed.connect(func(_id): _refresh())
 	_apply_collapsed_state()
 	_refresh_all()
 
@@ -87,58 +91,66 @@ func _refresh() -> void:
 
 
 func _build_introduced_row(species: SpeciesData) -> Control:
-	# Compact horizontal button for the bottom bar. Latin name moves to the
-	# tooltip — there's no vertical room in a horizontal bar.
-	var row := HBoxContainer.new()
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Compact 36x36 icon button. Tile color is the background; first letter of
+	# the display name is the glyph. Long tooltip shows full info + Latin +
+	# level + cost. Selected = bright outer border. ▲ corner badge if evolvable.
 	var btn := Button.new()
 	var current_level: int = AdaptationSystem.get_level(species.id)
 	var can_evolve: bool = AdaptationSystem.can_level_up(species.id)
 	var next_cost: float = AdaptationSystem.get_next_level_cost(species.id)
-	btn.text = "%s  Lvl %d/3" % [species.display_name, current_level]
-	if can_evolve:
-		btn.text += " ▲"
-	btn.custom_minimum_size = Vector2(0, 40)
-	btn.modulate = species.tile_marker_color
 	var is_active: bool = (GameState.placement_target_species_id == species.id)
-	btn.disabled = is_active
-	if species.latin_name != "":
-		btn.tooltip_text = "%s\n%s" % [species.display_name, species.latin_name]
-	btn.tooltip_text += "\nLvl %d/3 (+%d%% yield)" % [current_level, int((current_level - 1) * 10)]
+
+	btn.text = species.display_name.substr(0, 1) if species.display_name != "" else "?"
+	btn.custom_minimum_size = Vector2(36, 36)
+	btn.tooltip_text = "%s\n%s\nLvl %d/3 (+%d%% yield)" % [
+		species.display_name,
+		species.latin_name if species.latin_name != "" else "",
+		current_level,
+		int((current_level - 1) * 10)
+	]
 	if next_cost >= 0.0:
-		btn.tooltip_text += "\nEvolve: %.0f Adaptation" % next_cost
-	# Per-button stylebox so the active species reads as "selected" instead of
-	# just disabled. Selected = brighter border, slight outer glow via lightened.
+		btn.tooltip_text += "\nLong-press to evolve (%.0f Adaptation)" % next_cost
+	if can_evolve:
+		# Append a small corner-mark indicator. Tap the right edge of the
+		# button to evolve via right-click / long-press? For mobile, simplest:
+		# add a tiny "▲" overlay; tap opens evolve modal.
+		btn.text = "%s▲" % btn.text
+
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = species.tile_marker_color.darkened(0.35)
-	sb.border_color = species.tile_marker_color.lightened(0.25) if is_active else species.tile_marker_color.darkened(0.15)
-	sb.set_border_width_all(2)
+	sb.bg_color = species.tile_marker_color.darkened(0.30 if not is_active else 0.05)
+	sb.border_color = (species.tile_marker_color.lightened(0.35) if is_active
+		else species.tile_marker_color.darkened(0.10))
+	sb.set_border_width_all(2 if not is_active else 3)
 	sb.set_corner_radius_all(2)
-	sb.content_margin_left = 8
-	sb.content_margin_right = 8
+	sb.content_margin_left = 4
+	sb.content_margin_right = 4
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
 	btn.add_theme_stylebox_override("normal", sb)
 	btn.add_theme_stylebox_override("disabled", sb)
 	btn.add_theme_stylebox_override("hover", sb)
-	btn.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
+	btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 	btn.add_theme_color_override("font_disabled_color", Color(1.0, 1.0, 0.85))
+
+	# Tap = select as placement target. Double-tap or right-click = evolve.
 	btn.pressed.connect(func() -> void:
+		# If already active AND evolvable, treat the tap as an evolve action.
+		# Otherwise, just select.
+		if is_active and can_evolve:
+			_open_evolve_modal(species)
+			return
 		GameState.placement_target_species_id = species.id
 		EventBus.placement_target_changed.emit(String(species.id))
-		_refresh()
+		# _refresh() runs via the placement_target_changed subscription.
 	)
-	row.add_child(btn)
-	if current_level < 3:
-		var evolve_btn := Button.new()
-		evolve_btn.text = "Evolve"
-		evolve_btn.custom_minimum_size = Vector2(60, 40)
-		evolve_btn.disabled = not can_evolve
-		if next_cost >= 0.0:
-			evolve_btn.tooltip_text = "Evolve (%.0f Adaptation)" % next_cost
-		evolve_btn.pressed.connect(func() -> void:
-			_open_evolve_modal(species)
-		)
-		row.add_child(evolve_btn)
-	return row
+	# Right-click as evolve shortcut on desktop.
+	btn.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton:
+			var mb: InputEventMouseButton = event
+			if mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT and can_evolve:
+				_open_evolve_modal(species)
+	)
+	return btn
 
 
 func _open_evolve_modal(species: SpeciesData) -> void:

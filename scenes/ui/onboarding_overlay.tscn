@@ -1,0 +1,62 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/onboarding_overlay.gd" id="1"]
+[ext_resource type="Theme" path="res://assets/ui/theme.tres" id="2"]
+
+[node name="OnboardingOverlay" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource("2")
+script = ExtResource("1")
+mouse_filter = 2
+z_index = 100
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.55)
+mouse_filter = 1
+
+[node name="Bubble" type="PanelContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -160.0
+offset_top = -220.0
+offset_right = 160.0
+offset_bottom = -40.0
+custom_minimum_size = Vector2(320, 180)
+
+[node name="Margin" type="MarginContainer" parent="Bubble"]
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="Bubble/Margin"]
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Bubble/Margin/VBox"]
+text = "Welcome to Bio"
+horizontal_alignment = 1
+
+[node name="Body" type="Label" parent="Bubble/Margin/VBox"]
+text = "..."
+autowrap_mode = 2
+size_flags_vertical = 3
+
+[node name="StepLabel" type="Label" parent="Bubble/Margin/VBox"]
+text = "1 / 5"
+horizontal_alignment = 1
+modulate = Color(0.7, 0.7, 0.7, 1)
+
+[node name="Actions" type="HBoxContainer" parent="Bubble/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="SkipButton" type="Button" parent="Bubble/Margin/VBox/Actions"]
+text = "Skip"
+
+[node name="NextButton" type="Button" parent="Bubble/Margin/VBox/Actions"]
+text = "Next"

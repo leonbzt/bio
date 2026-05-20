@@ -16,54 +16,75 @@ theme = ExtResource("5")
 script = ExtResource("1")
 mouse_filter = 2
 
-[node name="GoalBanner" type="PanelContainer" parent="."]
-anchor_right = 1.0
-custom_minimum_size = Vector2(0, 36)
-offset_left = 8.0
-offset_top = 44.0
-offset_right = -8.0
-offset_bottom = 80.0
-script = ExtResource("2")
+[node name="PauseButton" type="Button" parent="."]
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 60.0
+offset_bottom = 36.0
+text = "Menu"
 
-[node name="HBox" type="HBoxContainer" parent="GoalBanner"]
-anchor_right = 1.0
-anchor_bottom = 1.0
-
-[node name="GoalText" type="Label" parent="GoalBanner/HBox"]
-text = "Reach 30 tiles colonized"
-
-[node name="Spacer" type="Control" parent="GoalBanner/HBox"]
-size_flags_horizontal = 3
-
-[node name="ProgressLabel" type="Label" parent="GoalBanner/HBox"]
-text = "0 / 30"
-
-[node name="ProgressBar" type="ProgressBar" parent="GoalBanner"]
+[node name="IdentityStrip" type="PanelContainer" parent="."]
 anchor_left = 0.0
 anchor_right = 1.0
-anchor_top = 1.0
+offset_left = 64.0
+offset_top = 4.0
+offset_right = -120.0
+offset_bottom = 36.0
+
+[node name="IdentityLabel" type="Label" parent="IdentityStrip"]
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -4.0
-offset_bottom = 0.0
+text = "Ecosystem"
+horizontal_alignment = 1
+
+[node name="RecipesButton" type="Button" parent="."]
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -116.0
+offset_top = 4.0
+offset_right = -44.0
+offset_bottom = 36.0
+text = "Recipes"
+
+[node name="TickIndicator" type="ColorRect" parent="."]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -32.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = 32.0
+color = Color(0.9, 0.9, 0.9, 1)
 
 [node name="Bar" type="PanelContainer" parent="."]
-anchor_right = 1.0
-custom_minimum_size = Vector2(0, 64)
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 4.0
+offset_top = 40.0
+offset_right = 96.0
+offset_bottom = 40.0
 mouse_filter = 2
 
 [node name="Margin" type="MarginContainer" parent="Bar"]
-anchor_right = 1.0
-anchor_bottom = 1.0
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_bottom = 4
 
-[node name="ResourcesRow" type="HBoxContainer" parent="Bar/Margin"]
-alignment = 1
+[node name="ResourcesRow" type="VBoxContainer" parent="Bar/Margin"]
 size_flags_horizontal = 3
+theme_override_constants/separation = 2
 
-[node name="Resources" type="GridContainer" parent="Bar/Margin/ResourcesRow"]
-columns = 4
+[node name="Resources" type="VBoxContainer" parent="Bar/Margin/ResourcesRow"]
 size_flags_horizontal = 3
-
-[node name="AdaptationChip" parent="Bar/Margin/ResourcesRow" instance=ExtResource("9")]
+theme_override_constants/separation = 1
 
 [node name="BiomassLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
 text = "Biomass: 0"
@@ -89,7 +110,7 @@ active_kingdoms = [&"animals"]
 [node name="LifeforceLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
 script = ExtResource("4")
 resource_id = &"lifeforce"
-tooltip_when_inactive = "Predators draw lifeforce from prey. Unlock the animal kingdom."
+tooltip_when_inactive = "Predators draw lifeforce from prey."
 active_niches = [&"lichen_common", &"common_predator"]
 
 [node name="BloodCohesionLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
@@ -110,59 +131,36 @@ resource_id = &"mycelial_stability"
 tooltip_when_inactive = "Unlock Lichen Heritage to fortify mycelium."
 active_niches = [&"lichen_common"]
 
-[node name="TickIndicator" type="ColorRect" parent="."]
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -32.0
-offset_top = 8.0
-offset_right = -8.0
-offset_bottom = 32.0
-color = Color(0.9, 0.9, 0.9, 1)
+[node name="Spacer1" type="HSeparator" parent="Bar/Margin/ResourcesRow"]
 
-[node name="PauseButton" type="Button" parent="."]
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 8.0
-offset_top = 8.0
-offset_right = 64.0
-offset_bottom = 40.0
-text = "Menu"
+[node name="AdaptationChip" parent="Bar/Margin/ResourcesRow" instance=ExtResource("9")]
 
-[node name="RecipesButton" type="Button" parent="."]
-anchor_left = 1.0
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = -112.0
-offset_top = 8.0
-offset_right = -40.0
-offset_bottom = 40.0
-text = "Recipes"
+[node name="Spacer2" type="HSeparator" parent="Bar/Margin/ResourcesRow"]
 
-[node name="IdentityStrip" type="PanelContainer" parent="."]
-anchor_left = 0.0
-anchor_right = 1.0
-offset_left = 72.0
-offset_top = 8.0
-offset_right = -128.0
-offset_bottom = 36.0
-
-[node name="IdentityLabel" type="Label" parent="IdentityStrip"]
-anchor_right = 1.0
-anchor_bottom = 1.0
-text = "Species — Ecosystem"
-
-[node name="BiomeLegend" type="HBoxContainer" parent="."]
-anchor_left = 0.0
-anchor_right = 1.0
-offset_left = 8.0
-offset_top = 84.0
-offset_right = -8.0
-offset_bottom = 102.0
+[node name="BiomeLegend" type="VBoxContainer" parent="Bar/Margin/ResourcesRow"]
+size_flags_horizontal = 3
 script = ExtResource("7")
 mouse_filter = 2
+
+[node name="Spacer3" type="HSeparator" parent="Bar/Margin/ResourcesRow"]
+
+[node name="GoalBanner" type="PanelContainer" parent="Bar/Margin/ResourcesRow"]
+custom_minimum_size = Vector2(0, 36)
+script = ExtResource("2")
+
+[node name="VBox" type="VBoxContainer" parent="Bar/Margin/ResourcesRow/GoalBanner"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="GoalText" type="Label" parent="Bar/Margin/ResourcesRow/GoalBanner/VBox"]
+text = "Reach 30 tiles"
+autowrap_mode = 2
+
+[node name="ProgressLabel" type="Label" parent="Bar/Margin/ResourcesRow/GoalBanner/VBox"]
+text = "0 / 30"
+
+[node name="ProgressBar" type="ProgressBar" parent="Bar/Margin/ResourcesRow/GoalBanner/VBox"]
+custom_minimum_size = Vector2(0, 4)
 
 [node name="AbilitiesBar" type="HBoxContainer" parent="."]
 anchor_left = 1.0
@@ -182,9 +180,9 @@ visible = false
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -140.0
-offset_top = 8.0
+offset_top = 40.0
 offset_right = 140.0
-offset_bottom = 64.0
+offset_bottom = 96.0
 custom_minimum_size = Vector2(280, 56)
 
 [node name="ToastContent" type="VBoxContainer" parent="EventToast"]

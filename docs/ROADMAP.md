@@ -202,6 +202,29 @@ Era progression gains mechanical + visual weight. Translates paused-Phase-13 con
 
 ---
 
+## Alpha-ready polish *(not numbered, shipped 2026-05-20)*
+
+Pre-alpha sprint between Phase 15 and the next numbered phase. Not a formal phase — just the layout + onboarding fixes required to ship a playable build to Reddit / itch.io.
+
+- HUD reflow: resources moved to a vertical column on the left (was crammed top horizontal). Identity strip shows only the ecosystem name (starting species was redundant — it lives in the species panel). Menu / Recipes / TickIndicator at top, no overlap. Adaptation chip + biome legend + goal banner stacked in the left column below resources.
+- Species panel compacted: was wide horizontal buttons; now 36×36 icon buttons (first letter of name on tile_marker_color). Tap to select, tap-active-again or right-click to evolve. Active species has bright wider border. Latin name + level + evolve cost moved to tooltip.
+- First-run onboarding overlay: 5 tap-to-advance tooltips on first-ever run, persisted via `meta.onboarding_step`. Veterans (prestige_count > 0) skip automatically.
+- `evolve_modal.gd` null-reference bug fixed (setup() guarded by is_node_ready()).
+
+## Phase 16 — Content + UI overhaul *(planned, post-alpha)*
+
+Reserved for **after alpha feedback**. Direction chosen based on what playtesters say:
+
+**Path A — Content**: Carboniferous era (~15 new species across Cordaite/Lepidodendron/Eogyrinus/Strangler-Vine lineages), new era-gated evolution-tree branch, additional structures, expanded discovery entries (target 70+).
+
+**Path B — UI overhaul**: deeper styling pass using the JSX identity tokens — dither textures behind panels, pixel micro-backgrounds, sprite art per species (replacing flat-color atlas tiles), bespoke evolution-tree node visuals.
+
+**Path C — Hybrid**: smaller slice of both — one new era + the species sprite art pass + audio. Best compromise if feedback is "needs polish AND more to do."
+
+Decision deferred until alpha telemetry / Reddit feedback arrives.
+
+---
+
 ## Parked design ideas 🅿
 
 Ideas the user wants captured but hasn't committed to a phase. Move to a tier/phase when scope and motivation align.

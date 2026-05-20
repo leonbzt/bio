@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_node_cryotolerance"
+title = "Antifreeze in the Sap"
+body = "The chemistry that lets a cell not freeze is older than cells that can think about it.
+You learn to wear the cold the way other lineages wear the sun. It is the same act."
+category = &"node"
+trigger_id = &"cryotolerance"

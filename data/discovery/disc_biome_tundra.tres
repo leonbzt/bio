@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_biome_tundra"
+title = "The Long Sleep of Roots"
+body = "Even where the sun reaches, the soil refuses it. Nothing here decays — death is just storage with no key.
+What you build here, the cold will keep. For as long as you mean to wait."
+category = &"biome"
+trigger_id = &"tundra"

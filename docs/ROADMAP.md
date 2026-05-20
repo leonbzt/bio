@@ -174,7 +174,7 @@ Layered tier rollout, Tier 1 starter (~15 species). Hybrid era gating (most carr
 
 **Exit**: each new species playable in its eligible ecosystems; biome affinity visibly shifts yields; lineage milestone fires after cultivating across 2 eras.
 
-### Phase 14b — Era teeth: biomes + events + mass extinction + era nodes + visuals *(briefs written 2026-05-18)*
+### Phase 14b — Era teeth: biomes + events + mass extinction + era nodes + visuals ✅ *(completed 2026-05-18)*
 
 Era progression gains mechanical + visual weight. Translates paused-Phase-13 content into species-first language.
 

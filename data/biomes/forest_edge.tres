@@ -9,3 +9,4 @@ display_name = "Forest Edge"
 sunlight_per_tick = 0.7
 nutrient_per_tick = 0.7
 decay_per_tick = 0.1
+chemosynthesis_per_tick = 0.0

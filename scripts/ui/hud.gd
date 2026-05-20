@@ -33,6 +33,8 @@ const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
 @onready var _spores_label: Label = $Bar/Margin/ResourcesRow/Resources/SporesLabel
 @onready var _ability_system: Node = get_node("../../Systems/AbilitySystem")
 @onready var _pause_menu: Control = get_node("../PauseMenu")
+@onready var _bar_panel: PanelContainer = $Bar
+@onready var _identity_strip: PanelContainer = $IdentityStrip
 
 var _labels: Dictionary[StringName, Label] = {}
 var _is_replaying: bool = false
@@ -72,6 +74,12 @@ func _bind_labels() -> void:
 		ResourceLedger.DECAY: _decay_label,
 		ResourceLedger.SPORES: _spores_label
 	}
+	# Apply per-resource colors from the identity palette so each metric has
+	# its own visual voice in the HUD.
+	for resource_id in _labels.keys():
+		_labels[resource_id].add_theme_color_override(
+			"font_color", KingdomTheme.resource_color(resource_id)
+		)
 
 
 func _sync_labels() -> void:
@@ -106,11 +114,25 @@ func _on_replay_finished() -> void:
 func _on_run_started(_kingdom_id: StringName) -> void:
 	_refresh_identity_strip()
 	_refresh_abilities()
+	_apply_kingdom_theme()
 
 
 func _on_run_loaded_for_ui(_save_version: int) -> void:
 	_refresh_identity_strip()
 	_refresh_abilities()
+	_apply_kingdom_theme()
+
+
+func _apply_kingdom_theme() -> void:
+	# Tint the HUD chrome (resource bar + identity strip) in the current
+	# kingdom's surface color. Subtle but consistent visual identity.
+	var k: StringName = KingdomTheme.current_kingdom_id()
+	if k == &"":
+		return
+	if _bar_panel != null:
+		_bar_panel.add_theme_stylebox_override("panel", KingdomTheme.panel_stylebox(k))
+	if _identity_strip != null:
+		_identity_strip.add_theme_stylebox_override("panel", KingdomTheme.panel_stylebox(k))
 
 
 func _format_resource(resource_id: StringName, amount: float) -> String:

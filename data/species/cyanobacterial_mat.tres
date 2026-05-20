@@ -31,6 +31,9 @@ tile_marker_shape = &"square"
 latin_name = "Oscillatoria princeps (Proterozoic-Cambrian)"
 lineage_id = &"pioneer_stem"
 biome_affinity = {
+&"tundra": 1.2,
+&"mineral_vent": 1.0,
+&"swamp": 0.6,
 &"rich_soil": 1.1,
 &"forest_edge": 0.9,
 &"grassland": 1.0

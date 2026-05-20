@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="EventIndex" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="EventIndex" load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/event_index.gd" id="1"]
 [ext_resource type="Resource" path="res://data/events/herbivore_wave.tres" id="2"]
@@ -6,7 +6,11 @@
 [ext_resource type="Resource" path="res://data/events/cool_spell.tres" id="4"]
 [ext_resource type="Resource" path="res://data/events/spore_infection.tres" id="5"]
 [ext_resource type="Resource" path="res://data/events/mass_extinction.tres" id="6"]
+[ext_resource type="Resource" path="res://data/events/cold_snap.tres" id="7"]
+[ext_resource type="Resource" path="res://data/events/sulfur_bloom.tres" id="8"]
+[ext_resource type="Resource" path="res://data/events/wildfire.tres" id="9"]
+[ext_resource type="Resource" path="res://data/events/swamp_fever.tres" id="10"]
 
 [resource]
 script = ExtResource("1")
-events = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
+events = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10")])

@@ -9,6 +9,8 @@ display_name = "Drought"
 description = "Sunlight bakes the topsoil; nutrient generation halves."
 trigger_weight = 0.5
 duration_ticks = 90
+scope = &"world"
+scope_target = &""
 payload = {
 "nutrient_multiplier": 0.5
 }

@@ -18,3 +18,5 @@ extends Resource
 @export var wing: StringName = &""
 @export var tier: int = 1
 @export var requires_kingdom_played: Array[StringName] = []
+# Phase 14b era gate. Empty = always purchasable.
+@export var requires_era: StringName = &""

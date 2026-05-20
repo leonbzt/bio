@@ -1,10 +1,13 @@
-[gd_resource type="Resource" script_class="BiomeIndex" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="BiomeIndex" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/biome_index.gd" id="1"]
 [ext_resource type="Resource" path="res://data/biomes/grassland.tres" id="2"]
 [ext_resource type="Resource" path="res://data/biomes/forest_edge.tres" id="3"]
 [ext_resource type="Resource" path="res://data/biomes/rich_soil.tres" id="4"]
+[ext_resource type="Resource" path="res://data/biomes/tundra.tres" id="5"]
+[ext_resource type="Resource" path="res://data/biomes/mineral_vent.tres" id="6"]
+[ext_resource type="Resource" path="res://data/biomes/swamp.tres" id="7"]
 
 [resource]
 script = ExtResource("1")
-biomes = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4")])
+biomes = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])

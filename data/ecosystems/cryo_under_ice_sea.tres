@@ -9,8 +9,8 @@ display_name = "Under-ice Sea"
 description = "Liquid water under a frozen lid. Spores drift in currents the surface will never know."
 era_id = &"cryogenian"
 biome_recipe = {
-&"grassland": 0.4,
-&"rich_soil": 0.6
+&"tundra": 0.7,
+&"rich_soil": 0.3
 }
 biome_cluster_size = 4.0
 completion_criterion = &"events_survived"

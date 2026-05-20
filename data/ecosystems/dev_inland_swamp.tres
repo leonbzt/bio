@@ -9,9 +9,9 @@ display_name = "Inland Swamp"
 description = "Wet. Decomposing. Crowded. The kind of place where two kingdoms learn to share a body."
 era_id = &"devonian"
 biome_recipe = {
-&"forest_edge": 0.3,
-&"grassland": 0.2,
-&"rich_soil": 0.5
+&"swamp": 0.7,
+&"forest_edge": 0.2,
+&"rich_soil": 0.1
 }
 biome_cluster_size = 2.5
 completion_criterion = &"events_survived"

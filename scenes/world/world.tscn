@@ -17,8 +17,12 @@
 [ext_resource type="Script" path="res://scripts/systems/corpse_system.gd" id="17"]
 [ext_resource type="Script" path="res://scripts/systems/spore_infection_handler.gd" id="19"]
 [ext_resource type="Script" path="res://scripts/systems/ambient_modifier_system.gd" id="20"]
+[ext_resource type="Script" path="res://scripts/ui/era_background_tint.gd" id="21"]
 
 [node name="World" type="Node2D"]
+
+[node name="EraBackgroundTint" type="ColorRect" parent="."]
+script = ExtResource("21")
 
 [node name="CameraRig" parent="." instance=ExtResource("1")]
 position = Vector2(256, 384)

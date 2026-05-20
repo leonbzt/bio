@@ -5,8 +5,10 @@ const TRIGGER_CHECK_INTERVAL_TICKS: int = 30
 const TRIGGER_PROBABILITY: float = 0.4
 const HERBIVORE_PRESSURE_THRESHOLD: float = 0.6
 const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
+const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 
 var _events_by_id: Dictionary[StringName, EventData] = {}
+var _species_by_id: Dictionary[StringName, SpeciesData] = {}
 var _active: Array[Dictionary] = []
 var _ticks_until_check: int = TRIGGER_CHECK_INTERVAL_TICKS
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -17,6 +19,7 @@ var _is_replaying: bool = false
 
 func _ready() -> void:
 	_load_events()
+	_load_species_index()
 	_rng.seed = int(GameState.run_seed) ^ int(Time.get_unix_time_from_system())
 	EventBus.tick.connect(_on_tick)
 	EventBus.run_loaded.connect(_on_run_loaded)
@@ -36,6 +39,18 @@ func _load_events() -> void:
 		if event_data == null:
 			continue
 		_events_by_id[event_data.id] = event_data
+
+
+func _load_species_index() -> void:
+	_species_by_id.clear()
+	var species_index: SpeciesIndex = load(SPECIES_INDEX_PATH) as SpeciesIndex
+	if species_index == null:
+		push_warning("EcologicalPressure: missing species index at %s" % SPECIES_INDEX_PATH)
+		return
+	for species in species_index.species:
+		if species == null:
+			continue
+		_species_by_id[species.id] = species
 
 
 func _on_run_loaded(_save_version: int) -> void:
@@ -99,15 +114,25 @@ func _maybe_trigger() -> void:
 	if _rng.randf() >= TRIGGER_PROBABILITY:
 		return
 
-	var total_weight: float = 0.0
+	var eligible: Array[EventData] = []
 	for event_data in _events_by_id.values():
+		if event_data.trigger_weight <= 0.0:
+			continue
+		if not _event_matches_scope(event_data):
+			continue
+		eligible.append(event_data)
+	if eligible.is_empty():
+		return
+
+	var total_weight: float = 0.0
+	for event_data in eligible:
 		total_weight += maxf(0.0, event_data.trigger_weight)
 	if total_weight <= 0.0:
 		return
 
 	var roll: float = _rng.randf_range(0.0, total_weight)
 	var picked: EventData = null
-	for event_data in _events_by_id.values():
+	for event_data in eligible:
 		roll -= maxf(0.0, event_data.trigger_weight)
 		if roll <= 0.0:
 			picked = event_data
@@ -115,14 +140,13 @@ func _maybe_trigger() -> void:
 	if picked == null:
 		return
 
-	var kingdom_required: String = String(picked.payload.get("kingdom_required", ""))
-	if kingdom_required != "" and String(GameState.current_kingdom_id) != kingdom_required:
-		return
-
 	if picked.id == &"herbivore_wave" and owned_count < 6:
 		return
 
 	var payload: Dictionary = picked.payload.duplicate(true)
+	payload["scope"] = String(picked.scope)
+	if picked.scope_target != &"":
+		payload["scope_target"] = String(picked.scope_target)
 	_active.append({
 		"id": picked.id,
 		"ticks_remaining": picked.duration_ticks,
@@ -130,6 +154,33 @@ func _maybe_trigger() -> void:
 	})
 	_sync_run_save()
 	EventBus.event_started.emit(picked.id, payload)
+
+
+func _event_matches_scope(event_data: EventData) -> bool:
+	var scope: StringName = event_data.scope
+	if scope == &"" or scope == &"world":
+		return true
+	var target: StringName = event_data.scope_target
+	if target == &"":
+		push_warning("EcologicalPressure: event %s has scope %s but no scope_target" % [event_data.id, scope])
+		return false
+	if scope == &"kingdom":
+		return StringName(GameState.current_kingdom_id) == target
+	if scope == &"species_tag":
+		var unlocked: Array = GameState.run_save.get("unlocked_species_in_run", []) as Array
+		for sp_id in unlocked:
+			var sp: SpeciesData = _species_by_id.get(StringName(sp_id), null)
+			if sp != null and sp.tags.has(target):
+				return true
+		return false
+	if scope == &"era":
+		var era_id: StringName = StringName(GameState.meta_save.get("current_era_id", ""))
+		return era_id == target
+	if scope == &"ecosystem":
+		var eco_id: StringName = StringName(GameState.meta_save.get("current_ecosystem_id", ""))
+		return eco_id == target
+	push_warning("EcologicalPressure: unknown scope %s on event %s" % [scope, event_data.id])
+	return false
 
 
 func _get_min_tiles_before_events() -> int:

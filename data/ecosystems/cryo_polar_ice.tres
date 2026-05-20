@@ -9,9 +9,9 @@ display_name = "Polar Ice"
 description = "Frozen flats. What grows here, grows slowly."
 era_id = &"cryogenian"
 biome_recipe = {
-&"forest_edge": 0.5,
-&"grassland": 0.2,
-&"rich_soil": 0.3
+&"tundra": 0.7,
+&"rich_soil": 0.2,
+&"forest_edge": 0.1
 }
 biome_cluster_size = 2.0
 completion_criterion = &"tiles_colonized"

@@ -9,3 +9,4 @@ display_name = "Rich Soil"
 sunlight_per_tick = 0.4
 nutrient_per_tick = 1.2
 decay_per_tick = 0.3
+chemosynthesis_per_tick = 0.0

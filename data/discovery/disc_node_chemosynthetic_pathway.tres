@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_node_chemosynthetic_pathway"
+title = "Eat the Rock"
+body = "Before chlorophyll, there was sulfur and iron, and the first hunger was for these.
+You remember it now. You were never really dependent on the sun. The sun was a convenience."
+category = &"node"
+trigger_id = &"chemosynthetic_pathway"

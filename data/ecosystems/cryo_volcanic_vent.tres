@@ -9,9 +9,9 @@ display_name = "Volcanic Vent"
 description = "Heat from below. The world's pulse, somewhere down there. Fungi crowd where the warmth seeps up."
 era_id = &"cryogenian"
 biome_recipe = {
-&"forest_edge": 0.4,
-&"grassland": 0.2,
-&"rich_soil": 0.4
+&"mineral_vent": 0.7,
+&"tundra": 0.2,
+&"rich_soil": 0.1
 }
 biome_cluster_size = 3.0
 completion_criterion = &"biomass_earned"

@@ -9,6 +9,8 @@ display_name = "Herbivore Wave"
 description = "A herd has wandered into your territory."
 trigger_weight = 1.0
 duration_ticks = 60
+scope = &"species_tag"
+scope_target = &"plantae"
 payload = {
 "spawn_count": 3,
 "chew_ticks": 4,

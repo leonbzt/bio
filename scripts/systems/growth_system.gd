@@ -71,34 +71,42 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 			continue
 		var total: float = 0.0
 		var sun_mult: float = 1.0
+		var biomass_mult: float = 1.0
 		if _ambient.has_method("get_multiplier"):
 			sun_mult = float(_ambient.get_multiplier(&"sunlight_multiplier"))
+			biomass_mult = float(_ambient.get_multiplier(&"biomass_multiplier"))
 		for coord in coords:
 			var per_tile: float = base_yield * base_mult
 			var affinity_mult: float = 1.0
 			var affinity_biome_id: StringName = &""
 			if resource_key == &"biomass":
+				var biome: BiomeData = _nutrients.get_biome_at(coord)
+				if biome == null:
+					continue
 				if kingdom_id == &"fungi":
 					per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
+					if biome.chemosynthesis_per_tick > 0.0:
+						per_tile *= (1.0 + biome.chemosynthesis_per_tick)
+						if MetaModifiers.is_unlocked(&"chemosynthetic_pathway"):
+							per_tile *= 1.5
 					if _is_tile_mycorrhizal_bonded(coord):
 						per_tile *= 1.20
-					var biome_for_affinity: BiomeData = _nutrients.get_biome_at(coord)
-					if biome_for_affinity != null:
-						affinity_mult = float(species.biome_affinity.get(biome_for_affinity.id, 1.0))
-						affinity_biome_id = biome_for_affinity.id
-						per_tile *= affinity_mult
+					affinity_mult = float(species.biome_affinity.get(biome.id, 1.0))
+					affinity_biome_id = biome.id
+					per_tile *= affinity_mult
 				else:
-					var biome: BiomeData = _nutrients.get_biome_at(coord)
-					if biome == null:
-						continue
 					var local_sun_mult := sun_mult
 					if _is_tile_warmed(coord) and _ambient.has_method("get_event_multiplier"):
 						var cool_mult: float = float(_ambient.get_event_multiplier(&"cool_spell", &"sunlight_multiplier"))
 						if cool_mult > 0.0:
 							local_sun_mult = sun_mult / cool_mult
 					per_tile *= biome.sunlight_per_tick * local_sun_mult
+					if biome.chemosynthesis_per_tick > 0.0:
+						per_tile += base_yield * base_mult * biome.chemosynthesis_per_tick * 0.5
 					per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
 					per_tile *= meta_mult
+					if MetaModifiers.is_unlocked(&"vascular_network") and _count_adjacent_owned_by_kingdom(coord, &"plantae") >= 4:
+						per_tile *= 1.25
 					if kingdom_id == &"plantae" and MetaModifiers.is_unlocked(&"soil_memory"):
 						per_tile *= 1.15
 					if _is_tile_mycorrhizal_bonded(coord):
@@ -106,6 +114,9 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 					affinity_mult = float(species.biome_affinity.get(biome.id, 1.0))
 					affinity_biome_id = biome.id
 					per_tile *= affinity_mult
+				per_tile *= biomass_mult
+				if MetaModifiers.is_unlocked(&"extinction_survivor"):
+					per_tile *= 1.10
 			elif resource_key == &"decay":
 				per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
 				if _is_tile_mycorrhizal_bonded(coord):
@@ -244,3 +255,12 @@ func _get_symbiosis_bonus() -> float:
 
 func _is_tile_mycorrhizal_bonded(coord: Vector2i) -> bool:
 	return bool(_territory.get_tile_data(coord, "mycorrhizal_bond", false))
+
+
+func _count_adjacent_owned_by_kingdom(coord: Vector2i, kingdom_id: StringName) -> int:
+	var count: int = 0
+	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var occ: Dictionary = _territory.get_occupants(coord + offset)
+		if occ.has(kingdom_id):
+			count += 1
+	return count

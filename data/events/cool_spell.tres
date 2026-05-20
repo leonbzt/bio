@@ -9,6 +9,8 @@ display_name = "Cool Spell"
 description = "Cloud cover dims sunlight."
 trigger_weight = 0.5
 duration_ticks = 60
+scope = &"world"
+scope_target = &""
 payload = {
 "sunlight_multiplier": 0.5
 }

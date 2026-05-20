@@ -24,6 +24,7 @@ func _enter_tree() -> void:
 	EventBus.event_resolved.connect(_on_event_resolved)
 	EventBus.prestige_triggered.connect(_on_prestige_triggered)
 	EventBus.run_started.connect(_on_run_started)
+	EventBus.run_loaded.connect(_on_run_loaded)
 	EventBus.era_changed.connect(_on_era_changed)
 	EventBus.ecosystem_completed.connect(_on_ecosystem_completed)
 	EventBus.era_transition_started.connect(_on_era_transition_started)
@@ -201,6 +202,11 @@ func _on_run_started(kingdom_id: StringName) -> void:
 	var starter: StringName = String(GameState.run_save.get("starting_species_id", ""))
 	if starter != "":
 		_on_species_introduced(StringName(starter))
+	_check_biomes_in_play()
+
+
+func _on_run_loaded(_save_version: int) -> void:
+	_check_biomes_in_play()
 
 
 func _on_prestige_triggered(_summary: Dictionary) -> void:
@@ -237,6 +243,18 @@ func _on_era_transition_started(_from: StringName, _to: StringName) -> void:
 	var era_entry := find_entry_for_trigger(&"era", _to)
 	if era_entry != &"":
 		unlock(era_entry)
+
+
+func _check_biomes_in_play() -> void:
+	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+	var biome_map: Dictionary = run.get("biome_map", {}) as Dictionary
+	var seen: Dictionary = {}
+	for biome_id in biome_map.values():
+		seen[StringName(biome_id)] = true
+	for biome_id in seen.keys():
+		var entry: StringName = find_entry_for_trigger(&"biome", StringName(biome_id))
+		if entry != &"":
+			unlock(entry)
 
 
 func _lookup_node(node_id: StringName) -> EvolutionNodeData:

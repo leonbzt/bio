@@ -36,7 +36,10 @@ tile_marker_shape = &"root"
 latin_name = "Glomus intraradices (Ordovician-now)"
 lineage_id = &"mycorrhizal"
 biome_affinity = {
+&"swamp": 1.4,
 &"forest_edge": 1.2,
 &"rich_soil": 1.1,
+&"tundra": 0.7,
+&"mineral_vent": 0.6,
 &"grassland": 1.0
 }

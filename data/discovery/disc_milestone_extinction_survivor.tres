@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_milestone_extinction_survivor"
+title = "What the Survivors Brought Forward"
+body = "The lineages that crossed the threshold are not the lineages that walked toward it. Catastrophe rewrites the page; survivors edit the rewrite.
+You carry forward what the dying could not. You are the part of them that learned."
+category = &"milestone"
+trigger_id = &"extinction_survivor"

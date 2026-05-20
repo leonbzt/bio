@@ -8,6 +8,8 @@ extends Control
 @onready var _starter_label: Label = $Content/SummarySection/StarterLabel
 @onready var _confirm_button: Button = $Content/SummarySection/ConfirmPrestigeButton
 @onready var _balance_label: Label = $Content/TreeSection/BalanceLabel
+@onready var _wing_tabs: HBoxContainer = $Content/TreeSection/WingTabs
+@onready var _tree_scroll: ScrollContainer = $Content/TreeSection/TreeScroll
 @onready var _tree_canvas: Control = $Content/TreeSection/TreeScroll/TreeCanvas
 @onready var _close_button: Button = $Content/TreeSection/CloseButton
 
@@ -33,11 +35,13 @@ func _on_confirm_prestige() -> void:
 	var earned: float = float(GameState.run_save.get("statistics", {}).get("total_biomass_earned", 0.0))
 	var diversity: int = int((GameState.run_save.get("unlocked_species_in_run", []) as Array).size())
 	var starter: String = String(GameState.run_save.get("starting_species_id", ""))
-	var reward: int = PrestigeSystem.calculate_prestige_reward(earned, diversity)
+	var extinction_bonus: int = _pending_extinction_bonus()
+	var reward: int = PrestigeSystem.calculate_prestige_reward(earned, diversity) + extinction_bonus
 	if _prestige_system.has_method("trigger_prestige"):
 		_prestige_system.trigger_prestige()
 	_last_summary = {
 		"evolution_points_earned": reward,
+		"extinction_bonus": extinction_bonus,
 		"total_biomass_earned": earned,
 		"species_cultivated": diversity,
 		"starting_species_id": starter
@@ -49,7 +53,9 @@ func _on_confirm_prestige() -> void:
 func _refresh_summary() -> void:
 	if _prestige_system == null:
 		return
-	var reward: int = _prestige_system.get_pending_reward()
+	var base_reward: int = _prestige_system.get_pending_reward()
+	var extinction_bonus: int = _pending_extinction_bonus()
+	var reward: int = base_reward + extinction_bonus
 	var earned: float = float(GameState.run_save.get("statistics", {}).get("total_biomass_earned", 0.0))
 	var diversity: int = int((GameState.run_save.get("unlocked_species_in_run", []) as Array).size())
 	var starter: String = String(GameState.run_save.get("starting_species_id", "")).replace("_", " ").capitalize()
@@ -59,6 +65,8 @@ func _refresh_summary() -> void:
 	elif diversity == 2:
 		diversity_mult = 1.1
 	_reward_label.text = "You earned %d EP." % reward
+	if extinction_bonus > 0:
+		_reward_label.text += "\n+25 EP Extinction Survivor bonus (you cultivated the first generation after the great dying)"
 	_biomass_label.text = "Total biomass: %s" % FormatUtils.abbreviate(earned)
 	_diversity_label.text = "Species cultivated: %d (×%.1f diversity bonus)" % [diversity, diversity_mult]
 	_starter_label.text = "Beginning: %s" % starter
@@ -72,8 +80,38 @@ func _refresh_tree() -> void:
 		_tree_canvas.set_meta("_setup_done", true)
 		_tree_canvas.setup(_prestige_system)
 		_tree_canvas.node_purchase_requested.connect(_on_node_purchase_requested)
+		_build_wing_tabs()
 	else:
 		_tree_canvas.refresh()
+
+
+func _build_wing_tabs() -> void:
+	for child in _wing_tabs.get_children():
+		child.queue_free()
+	if not _tree_canvas.has_method("get_wings"):
+		return
+	for wing in _tree_canvas.get_wings():
+		var btn := Button.new()
+		btn.text = String(wing).capitalize()
+		btn.custom_minimum_size = Vector2(50, 24)
+		btn.add_theme_font_size_override("font_size", 10)
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = _tree_canvas.get_wing_color(wing).darkened(0.3)
+		sb.border_color = _tree_canvas.get_wing_color(wing)
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(2)
+		sb.content_margin_left = 4
+		sb.content_margin_right = 4
+		btn.add_theme_stylebox_override("normal", sb)
+		btn.add_theme_stylebox_override("hover", sb)
+		btn.add_theme_stylebox_override("pressed", sb)
+		btn.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
+		var captured_wing: StringName = wing
+		btn.pressed.connect(func() -> void:
+			var x: int = _tree_canvas.get_wing_x(captured_wing)
+			_tree_scroll.scroll_horizontal = x
+		)
+		_wing_tabs.add_child(btn)
 
 
 func _on_node_purchase_requested(node_id: StringName) -> void:
@@ -99,3 +137,17 @@ func _get_prestige_system() -> Node:
 	if has_node("/root/PrestigeSystem"):
 		return get_node("/root/PrestigeSystem")
 	return null
+
+
+func _pending_extinction_bonus() -> int:
+	var pe: Dictionary = GameState.meta_save.get("post_extinction", {}) as Dictionary
+	if pe.is_empty():
+		return 0
+	var to_era: String = String(pe.get("to_era_id", ""))
+	var current_era: String = String(GameState.meta_save.get("current_era_id", ""))
+	if to_era != current_era:
+		return 0
+	var completed: Array = GameState.meta_save.get("first_run_in_era_completed", []) as Array
+	if completed.has(to_era):
+		return 0
+	return 25

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EvolutionNodeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/evolution_node_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"mass_fruiting"
+display_name = "Mass Fruiting"
+description = "Unlocks the Sporulate tap-action: burst spores from a fungal cluster, granting +10 spores per adjacent owned tile."
+prerequisites = [&"spore_distribution"]
+meta_cost = {
+"evolution_points": 7
+}
+grants_traits = []
+grants_kingdoms = []
+grants_species = []
+wing = &"fungi"
+tier = 3
+requires_kingdom_played = [&"fungi"]
+requires_era = &"devonian"

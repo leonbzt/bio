@@ -34,5 +34,7 @@ biome_affinity = {
 &"forest_edge": 1.2,
 &"rich_soil": 1.1,
 &"grassland": 1.0,
-&"swamp": 0.8
+&"swamp": 0.8,
+&"tundra": 0.5,
+&"mineral_vent": 0.4
 }

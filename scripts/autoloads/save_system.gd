@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 13
+const SAVE_VERSION: int = 14
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -15,6 +15,15 @@ const _KINGDOM_DEFAULT_STARTERS: Dictionary[StringName, StringName] = {
 	&"fungi": &"mycelium_thread",
 	&"animals": &"common_grazer"
 }
+
+# Phase 14a stopgap — auto-unlocked species (no proper unlock-tree UI yet).
+const _PHASE_14A_AUTO_UNLOCK: Array[String] = [
+	"cyanobacterial_mat",
+	"vent_archaeon",
+	"cryo_lichen",
+	"tree_fern_stem",
+	"wood_rot_bracket"
+]
 
 const _NICHE_TO_STARTER_SPECIES: Dictionary[StringName, StringName] = {
 	&"photosynthesizer": &"pioneer_grass",
@@ -272,6 +281,8 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 		_migrate_v11_to_v12(old)
 	if from_version < 13:
 		_migrate_v12_to_v13(old)
+	if from_version < 14:
+		_migrate_v13_to_v14(old)
 	return old
 
 
@@ -291,6 +302,9 @@ func _build_default_save() -> Dictionary:
 			"current_ecosystem_id": "cryo_polar_ice",
 			"ecosystem_completions": {},
 			"eras_unlocked": ["cryogenian"],
+			"post_extinction": {},
+			"first_run_in_era_completed": [],
+			"first_era_seen": "cryogenian",
 			"statistics": {
 				"prestige_count": 0,
 				"evolution_points_balance": 0,
@@ -413,8 +427,25 @@ func _repair_species_unlocked(meta: Dictionary) -> void:
 	if not species_unlocked.has("pioneer_grass"):
 		species_unlocked.append("pioneer_grass")
 		dirty = true
+	# Phase 14a stopgap: auto-unlock the new species so they're testable in
+	# the picker. Proper unlock-tree integration (grants_species nodes for
+	# vent_archaeon / cryo_lichen / tree_fern_stem / wood_rot_bracket) lands
+	# in a future polish pass.
+	for sp_id in _PHASE_14A_AUTO_UNLOCK:
+		if not species_unlocked.has(sp_id):
+			species_unlocked.append(sp_id)
+			dirty = true
 	if not meta.has("lineages_played"):
 		meta["lineages_played"] = []
+		dirty = true
+	if not meta.has("post_extinction"):
+		meta["post_extinction"] = {}
+		dirty = true
+	if not meta.has("first_run_in_era_completed"):
+		meta["first_run_in_era_completed"] = []
+		dirty = true
+	if not meta.has("first_era_seen"):
+		meta["first_era_seen"] = String(meta.get("current_era_id", ""))
 		dirty = true
 	if dirty:
 		meta["species_unlocked"] = species_unlocked
@@ -522,6 +553,28 @@ func _migrate_v12_to_v13(save: Dictionary) -> void:
 			lineages.append(String(lineage))
 	meta["lineages_played"] = lineages
 	save["meta"] = meta
+
+
+func _migrate_v13_to_v14(save: Dictionary) -> void:
+	var meta: Dictionary = save.get("meta", {}) as Dictionary
+	if not meta.has("post_extinction"):
+		meta["post_extinction"] = {}
+	if not meta.has("first_run_in_era_completed"):
+		meta["first_run_in_era_completed"] = []
+	if not meta.has("first_era_seen"):
+		meta["first_era_seen"] = String(meta.get("current_era_id", ""))
+	save["meta"] = meta
+
+	var run: Dictionary = save.get("run", {}) as Dictionary
+	var active: Array = run.get("active_events", []) as Array
+	for entry in active:
+		if entry is Dictionary:
+			var payload: Dictionary = entry.get("payload", {}) as Dictionary
+			if not payload.has("scope"):
+				payload["scope"] = "world"
+			entry["payload"] = payload
+	run["active_events"] = active
+	save["run"] = run
 
 
 func _pick_species_for_kingdom(starter_species: StringName, kingdom_id: StringName, niche_id: String) -> StringName:

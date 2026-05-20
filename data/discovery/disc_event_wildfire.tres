@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_event_wildfire"
+title = "The Forest Eats Itself"
+body = "Smoke buries the sun for a while. After the burn, the soil is richer than it was before — fire is also a kind of gift, if you survive the giving.
+You always survive the giving. Otherwise you would not be here to remember it."
+category = &"event"
+trigger_id = &"wildfire"

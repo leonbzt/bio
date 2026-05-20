@@ -41,14 +41,25 @@ func _on_run_loaded(_save_version: int) -> void:
 		run = {}
 		GameState.run_save = run
 	var map_raw: Variant = run.get("biome_map", {})
+	var current_eco_id: String = String(GameState.meta_save.get("current_ecosystem_id", ""))
+	var map_eco_id: String = String(run.get("biome_map_ecosystem_id", ""))
 	var biome_map: Dictionary
-	if map_raw is Dictionary and map_raw.size() > 0:
-		biome_map = map_raw as Dictionary
-	else:
+	var should_regenerate: bool = false
+	if not (map_raw is Dictionary) or (map_raw as Dictionary).is_empty():
+		should_regenerate = true
+	elif current_eco_id != "" and map_eco_id != current_eco_id:
+		# Saved biome_map was generated for a different ecosystem (e.g., a
+		# Cryogenian run cached vent biomes, now Devonian inland_swamp run
+		# wants swamp biomes). Regenerate so the recipe takes effect.
+		should_regenerate = true
+	if should_regenerate:
 		biome_map = _generate_biome_map()
 		run["biome_map"] = biome_map
+		run["biome_map_ecosystem_id"] = current_eco_id
 		GameState.run_save = run
 		SaveSystem.save_now()
+	else:
+		biome_map = map_raw as Dictionary
 
 	_biome_by_coord.clear()
 	for key in biome_map.keys():

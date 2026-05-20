@@ -28,6 +28,7 @@ DiscoveryLog="*uid://dyo5ieebjjabt"
 RunGoalSystem="*uid://b4l5r2ae3kfpa"
 EraSystem="*res://scripts/autoloads/era_system.gd"
 ColonizationRulesRegistry="*uid://q2r2gbhtvobq"
+KingdomTheme="*res://scripts/autoloads/kingdom_theme.gd"
 
 [display]
 

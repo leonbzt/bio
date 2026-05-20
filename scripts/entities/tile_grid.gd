@@ -5,36 +5,85 @@ const GRID_HEIGHT: int = 48
 const TILE_SIZE: int = 16
 const SOURCE_ID: int = 0
 const ATLAS_BASE: Vector2i = Vector2i(0, 0)
+const ATLAS_BIOME_TUNDRA: Vector2i = Vector2i(1, 0)
+const ATLAS_BIOME_MINERAL_VENT: Vector2i = Vector2i(2, 0)
+const ATLAS_BIOME_SWAMP: Vector2i = Vector2i(3, 0)
+const ATLAS_BIOME_GRASSLAND: Vector2i = Vector2i(4, 0)
+const ATLAS_BIOME_RICH_SOIL: Vector2i = Vector2i(5, 0)
+const ATLAS_BIOME_FOREST_EDGE: Vector2i = Vector2i(6, 0)
 
 const LAYER_BASE: int = 0
 
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 
+const BIOME_ATLAS_BY_ID: Dictionary[StringName, Vector2i] = {
+	&"grassland": ATLAS_BIOME_GRASSLAND,
+	&"rich_soil": ATLAS_BIOME_RICH_SOIL,
+	&"forest_edge": ATLAS_BIOME_FOREST_EDGE,
+	&"tundra": ATLAS_BIOME_TUNDRA,
+	&"mineral_vent": ATLAS_BIOME_MINERAL_VENT,
+	&"swamp": ATLAS_BIOME_SWAMP
+}
+
 # Symbiosis tile color (Locked palette 2026-05-18) — plantae+fungi co-occupied
 # tiles get a warm-gold fill so symbiosis reads instantly. Per-species hint
 # is preserved at 30% via lerp.
 const SYMBIOSIS_GOLD: Color = Color(0.85, 0.72, 0.28, 1.0)
-const FILL_INSET: float = 1.0   # leaves a 1px grid line on each side
+# Biome shows as a visible frame around species fills. 3px on each side =
+# 6px / 16px = 37% of tile area, enough to read biome identity at a glance.
+const FILL_INSET: float = 3.0
+# Animal marker — small diamond at tile center, on top of any species fill.
+const ANIMAL_MARKER_RADIUS: float = 3.0
+# Cluster outline — drawn per-kingdom on the perimeter of contiguous
+# same-species tiles. Plant outermost, fungi inset; animals use the diamond.
+const EDGE_WIDTH: float = 1.0
+const EDGE_INSET_PLANTAE: float = 1.5
+const EDGE_INSET_FUNGI: float = 3.5
+class _EdgesOverlay extends Node2D:
+	var tile_grid
+
+	func _draw() -> void:
+		if tile_grid == null:
+			return
+		for coord_variant in tile_grid._tile_occupants.keys():
+			var coord: Vector2i = coord_variant
+			var occ: Dictionary = tile_grid._tile_occupants[coord]
+			if occ.is_empty():
+				continue
+			tile_grid._draw_edges_for_tile(self, coord, occ)
 
 @export var tile_texture: Texture2D = preload("res://assets/art/tiles/placeholder_tile.png")
 
 var _tile_occupants: Dictionary[Vector2i, Dictionary] = {}
 var _species_by_id: Dictionary[StringName, SpeciesData] = {}
 var _fill_nodes: Dictionary[Vector2i, ColorRect] = {}
-var _border_nodes: Dictionary[Vector2i, Line2D] = {}
+var _border_nodes: Dictionary[Vector2i, Polygon2D] = {}
 var _overlay_layer: Node2D
+var _edges_overlay: _EdgesOverlay   # single child; _draw() renders all cluster edges
 
 
 func _ready() -> void:
 	_build_species_index()
-	if tile_set == null:
-		tile_set = _build_tileset()
+	tile_set = _build_tileset()
 	while get_layers_count() < 1:
 		add_layer(get_layers_count())
 	_overlay_layer = Node2D.new()
 	_overlay_layer.name = "OccupantOverlay"
 	add_child(_overlay_layer)
-	_populate()
+	# Single _draw() overlay draws ALL cluster edges in one pass — keeps
+	# Node count flat regardless of how many tiles are colonized.
+	_edges_overlay = _EdgesOverlay.new()
+	_edges_overlay.name = "EdgesOverlay"
+	_edges_overlay.tile_grid = self
+	_edges_overlay.z_index = 2
+	_overlay_layer.add_child(_edges_overlay)
+	EventBus.era_changed.connect(_on_era_changed)
+	EventBus.run_loaded.connect(_on_run_loaded)
+	# Deferred: on scene change (picker → world), TileGrid._ready runs before
+	# NutrientSystem._ready. Calling _populate synchronously paints ATLAS_BASE
+	# for every cell because NutrientSystem hasn't populated biome_map yet.
+	# Deferring lets all sibling _ready hooks run first.
+	call_deferred("_populate")
 
 
 func _build_species_index() -> void:
@@ -55,6 +104,12 @@ func _build_tileset() -> TileSet:
 	atlas.texture_region_size = Vector2i(TILE_SIZE, TILE_SIZE)
 	set.add_source(atlas, SOURCE_ID)
 	atlas.create_tile(ATLAS_BASE)
+	atlas.create_tile(ATLAS_BIOME_TUNDRA)
+	atlas.create_tile(ATLAS_BIOME_MINERAL_VENT)
+	atlas.create_tile(ATLAS_BIOME_SWAMP)
+	atlas.create_tile(ATLAS_BIOME_GRASSLAND)
+	atlas.create_tile(ATLAS_BIOME_RICH_SOIL)
+	atlas.create_tile(ATLAS_BIOME_FOREST_EDGE)
 	return set
 
 
@@ -63,21 +118,92 @@ func _build_atlas_texture() -> Texture2D:
 	if base_image.is_empty():
 		return tile_texture
 	base_image.convert(Image.FORMAT_RGBA8)
-	return ImageTexture.create_from_image(base_image)
+	var atlas_width: int = max(base_image.get_width(), TILE_SIZE) + TILE_SIZE * 6
+	var atlas_height: int = max(base_image.get_height(), TILE_SIZE)
+	var atlas_image := Image.create(atlas_width, atlas_height, false, Image.FORMAT_RGBA8)
+	atlas_image.fill(Color(0, 0, 0, 0))
+	atlas_image.blit_rect(base_image, Rect2i(Vector2i.ZERO, base_image.get_size()), Vector2i.ZERO)
+
+	var era_tint: Color = _get_era_tint()
+	for y in range(mini(TILE_SIZE, atlas_image.get_height())):
+		for x in range(mini(TILE_SIZE, atlas_image.get_width())):
+			var px: Color = atlas_image.get_pixel(x, y)
+			atlas_image.set_pixel(x, y, px.lerp(era_tint, 0.12))
+
+	# Tundra: more saturated cool blue-white so it reads distinctly vs the
+	# placeholder gray base.
+	_draw_biome_tile(
+		atlas_image,
+		Vector2i(TILE_SIZE, 0),
+		Color8(0xa5, 0xc8, 0xee),
+		Color8(0x6f, 0x95, 0xc5),
+		era_tint,
+		0.10,
+		false
+	)
+	# Mineral vent: dark with orange flecks — distinct already.
+	_draw_biome_tile(
+		atlas_image,
+		Vector2i(TILE_SIZE * 2, 0),
+		Color8(0x3a, 0x3a, 0x40),
+		Color8(0x26, 0x26, 0x2b),
+		era_tint,
+		0.08,
+		true
+	)
+	# Swamp: richer warm green-brown so it reads distinctly from rich_soil
+	# and forest_edge placeholder gray.
+	_draw_biome_tile(
+		atlas_image,
+		Vector2i(TILE_SIZE * 3, 0),
+		Color8(0x5a, 0x70, 0x2a),
+		Color8(0x37, 0x4a, 0x18),
+		era_tint,
+		0.10,
+		false
+	)
+	# Grassland: vivid yellow-green meadow.
+	_draw_biome_tile(
+		atlas_image,
+		Vector2i(TILE_SIZE * 4, 0),
+		Color8(0x78, 0x95, 0x4a),
+		Color8(0x52, 0x6e, 0x2e),
+		era_tint,
+		0.10,
+		false
+	)
+	# Rich soil: warm umber-brown, distinct from any green.
+	_draw_biome_tile(
+		atlas_image,
+		Vector2i(TILE_SIZE * 5, 0),
+		Color8(0x6a, 0x55, 0x38),
+		Color8(0x45, 0x35, 0x20),
+		era_tint,
+		0.10,
+		false
+	)
+	# Forest edge: darker forest green with cool undertone.
+	_draw_biome_tile(
+		atlas_image,
+		Vector2i(TILE_SIZE * 6, 0),
+		Color8(0x4a, 0x6a, 0x35),
+		Color8(0x2a, 0x42, 0x1e),
+		era_tint,
+		0.10,
+		false
+	)
+	return ImageTexture.create_from_image(atlas_image)
 
 
 func _populate() -> void:
-	clear()
-	for y in range(GRID_HEIGHT):
-		for x in range(GRID_WIDTH):
-			set_cell(LAYER_BASE, Vector2i(x, y), SOURCE_ID, ATLAS_BASE)
+	_populate_base_from_biomes()
 
 
 func set_occupant(coord: Vector2i, kingdom_id: StringName, species_id: StringName) -> void:
 	var occ: Dictionary = _tile_occupants.get(coord, {})
 	occ[kingdom_id] = species_id
 	_tile_occupants[coord] = occ
-	_repaint_tile(coord)
+	_repaint_tile_with_neighbors(coord)
 
 
 func clear_occupant(coord: Vector2i, kingdom_id: StringName) -> void:
@@ -89,11 +215,16 @@ func clear_occupant(coord: Vector2i, kingdom_id: StringName) -> void:
 		_tile_occupants.erase(coord)
 	else:
 		_tile_occupants[coord] = occ
-	_repaint_tile(coord)
+	_repaint_tile_with_neighbors(coord)
 
 
 func clear_all_occupants(coord: Vector2i) -> void:
 	_tile_occupants.erase(coord)
+	_repaint_tile_with_neighbors(coord)
+
+
+func _repaint_tile_with_neighbors(coord: Vector2i) -> void:
+	# Neighbor edge changes are picked up by the shared edge overlay redraw.
 	_repaint_tile(coord)
 
 
@@ -101,6 +232,7 @@ func _repaint_tile(coord: Vector2i) -> void:
 	var occ: Dictionary = _tile_occupants.get(coord, {})
 	_paint_fill(coord, occ)
 	_paint_border(coord, occ)
+	_paint_cluster_edges(coord, occ)
 
 
 func _paint_fill(coord: Vector2i, occ: Dictionary) -> void:
@@ -134,29 +266,30 @@ func _paint_fill(coord: Vector2i, occ: Dictionary) -> void:
 
 
 func _paint_border(coord: Vector2i, occ: Dictionary) -> void:
+	# Animal is drawn as a small diamond at tile center, on top of any
+	# species fill. Biome stays visible as the frame around the species fill.
 	var animal_id: StringName = occ.get(&"animals", &"")
 	if animal_id == &"":
 		if _border_nodes.has(coord):
 			_border_nodes[coord].queue_free()
 			_border_nodes.erase(coord)
 		return
-	var border: Line2D = _border_nodes.get(coord, null)
-	if border == null:
-		border = Line2D.new()
-		border.width = 2.0
-		border.closed = true
-		border.default_color = Color.WHITE
-		var inset: float = FILL_INSET
-		var inner: float = TILE_SIZE - inset
-		border.add_point(Vector2(inset, inset))
-		border.add_point(Vector2(inner, inset))
-		border.add_point(Vector2(inner, inner))
-		border.add_point(Vector2(inset, inner))
-		border.position = map_to_local(coord) - Vector2(TILE_SIZE * 0.5, TILE_SIZE * 0.5)
-		border.z_index = 2
-		_overlay_layer.add_child(border)
-		_border_nodes[coord] = border
-	border.default_color = _species_color(animal_id)
+	var marker: Polygon2D = _border_nodes.get(coord, null) as Polygon2D
+	if marker == null:
+		marker = Polygon2D.new()
+		var cx: float = TILE_SIZE * 0.5
+		var cy: float = TILE_SIZE * 0.5
+		marker.polygon = PackedVector2Array([
+			Vector2(cx, cy - ANIMAL_MARKER_RADIUS),
+			Vector2(cx + ANIMAL_MARKER_RADIUS, cy),
+			Vector2(cx, cy + ANIMAL_MARKER_RADIUS),
+			Vector2(cx - ANIMAL_MARKER_RADIUS, cy)
+		])
+		marker.position = map_to_local(coord) - Vector2(TILE_SIZE * 0.5, TILE_SIZE * 0.5)
+		marker.z_index = 2
+		_overlay_layer.add_child(marker)
+		_border_nodes[coord] = marker
+	marker.color = _species_color(animal_id)
 
 
 func _species_color(species_id: StringName) -> Color:
@@ -166,6 +299,73 @@ func _species_color(species_id: StringName) -> Color:
 	if species == null:
 		return Color(1, 1, 1, 1)
 	return species.tile_marker_color
+
+
+func _paint_cluster_edges(_coord: Vector2i, _occ: Dictionary) -> void:
+	# Shared overlay redraws all cluster edges in one pass.
+	_queue_edges_redraw()
+
+
+func _draw_edges_for_tile(canvas: CanvasItem, coord: Vector2i, occ: Dictionary) -> void:
+	if occ.has(&"plantae"):
+		_draw_edges_for_kingdom(canvas, coord, &"plantae", occ[&"plantae"], EDGE_INSET_PLANTAE)
+	if occ.has(&"fungi"):
+		_draw_edges_for_kingdom(canvas, coord, &"fungi", occ[&"fungi"], EDGE_INSET_FUNGI)
+
+
+func _draw_edges_for_kingdom(
+	canvas: CanvasItem,
+	coord: Vector2i,
+	kingdom_id: StringName,
+	species_id: StringName,
+	inset: float
+) -> void:
+	var color: Color = _species_color(species_id)
+	var tile_origin: Vector2 = map_to_local(coord) - Vector2(TILE_SIZE * 0.5, TILE_SIZE * 0.5)
+	var p_min: float = inset
+	var p_max: float = TILE_SIZE - inset
+	# UP (top edge)
+	if not _neighbor_has_same_species(coord + Vector2i.UP, kingdom_id, species_id):
+		canvas.draw_line(
+			tile_origin + Vector2(p_min, p_min),
+			tile_origin + Vector2(p_max, p_min),
+			color,
+			EDGE_WIDTH
+		)
+	# DOWN (bottom edge)
+	if not _neighbor_has_same_species(coord + Vector2i.DOWN, kingdom_id, species_id):
+		canvas.draw_line(
+			tile_origin + Vector2(p_min, p_max),
+			tile_origin + Vector2(p_max, p_max),
+			color,
+			EDGE_WIDTH
+		)
+	# LEFT
+	if not _neighbor_has_same_species(coord + Vector2i.LEFT, kingdom_id, species_id):
+		canvas.draw_line(
+			tile_origin + Vector2(p_min, p_min),
+			tile_origin + Vector2(p_min, p_max),
+			color,
+			EDGE_WIDTH
+		)
+	# RIGHT
+	if not _neighbor_has_same_species(coord + Vector2i.RIGHT, kingdom_id, species_id):
+		canvas.draw_line(
+			tile_origin + Vector2(p_max, p_min),
+			tile_origin + Vector2(p_max, p_max),
+			color,
+			EDGE_WIDTH
+		)
+
+
+func _neighbor_has_same_species(coord: Vector2i, kingdom_id: StringName, species_id: StringName) -> bool:
+	var n_occ: Dictionary = _tile_occupants.get(coord, {})
+	return StringName(n_occ.get(kingdom_id, &"")) == species_id
+
+
+func _queue_edges_redraw() -> void:
+	if _edges_overlay != null:
+		_edges_overlay.queue_redraw()
 
 
 # DEPRECATED shim.
@@ -199,3 +399,87 @@ func clear_owned() -> void:
 	for coord in _border_nodes.keys():
 		_border_nodes[coord].queue_free()
 	_border_nodes.clear()
+	_queue_edges_redraw()
+
+
+func _on_era_changed(_era_id: StringName) -> void:
+	# Deferred: NutrientSystem may not have updated biome_map for the new
+	# ecosystem yet when era_changed fires; defer to next idle frame.
+	call_deferred("_rebuild_base_visuals")
+
+
+func _on_run_loaded(_save_version: int) -> void:
+	# Deferred: TileGrid is a sibling BEFORE Systems in world.tscn, so this
+	# handler runs synchronously before NutrientSystem._on_run_loaded
+	# generates the biome map. Defer past the current frame so the painted
+	# atlas reflects the regenerated biome map, not a stale/empty one.
+	call_deferred("_rebuild_base_visuals")
+
+
+func _rebuild_base_visuals() -> void:
+	tile_set = _build_tileset()
+	_populate_base_from_biomes()
+
+
+func _populate_base_from_biomes() -> void:
+	clear_layer(LAYER_BASE)
+	for y in range(GRID_HEIGHT):
+		for x in range(GRID_WIDTH):
+			var coord := Vector2i(x, y)
+			set_cell(LAYER_BASE, coord, SOURCE_ID, _atlas_for_coord(coord))
+
+
+func _atlas_for_coord(coord: Vector2i) -> Vector2i:
+	var nutrients: Node = _get_nutrient_system()
+	if nutrients == null or not nutrients.has_method("get_biome_at"):
+		return ATLAS_BASE
+	var biome: BiomeData = nutrients.get_biome_at(coord)
+	if biome == null:
+		return ATLAS_BASE
+	return BIOME_ATLAS_BY_ID.get(biome.id, ATLAS_BASE)
+
+
+func _get_nutrient_system() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("World/Systems/NutrientSystem")
+
+
+func _get_era_tint() -> Color:
+	var era_system: Node = _get_era_system()
+	if era_system == null or not era_system.has_method("get_current_era"):
+		return Color(1, 1, 1, 1)
+	var era: EraData = era_system.get_current_era()
+	if era == null:
+		return Color(1, 1, 1, 1)
+	return era.tint_color
+
+
+func _get_era_system() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("EraSystem")
+
+
+func _draw_biome_tile(
+	image: Image,
+	origin: Vector2i,
+	base_body: Color,
+	base_border: Color,
+	era_tint: Color,
+	era_blend: float,
+	with_flecks: bool
+) -> void:
+	var body: Color = base_body.lerp(era_tint, era_blend)
+	var border: Color = base_border.lerp(era_tint, era_blend)
+	var fleck_color: Color = Color8(0xe8, 0x7e, 0x3a).lerp(era_tint, era_blend * 0.5)
+	for y in range(TILE_SIZE):
+		for x in range(TILE_SIZE):
+			var target: Color = body
+			if x == 0 or y == 0 or x == TILE_SIZE - 1 or y == TILE_SIZE - 1:
+				target = border
+			elif with_flecks and ((x + y) % 5 == 0):
+				target = fleck_color
+			image.set_pixel(origin.x + x, origin.y + y, target)

@@ -11,3 +11,5 @@ extends Resource
 @export var sunlight_per_tick: float = 0.0
 @export var nutrient_per_tick: float = 0.0
 @export var decay_per_tick: float = 0.0
+# Phase 14b: biomes can supply biomass via chemosynthesis.
+@export var chemosynthesis_per_tick: float = 0.0

@@ -9,6 +9,8 @@ display_name = "Mass Extinction"
 description = "Most of what you built is gone. The world goes on without it. So do you, in some form."
 trigger_weight = 0.0
 duration_ticks = 1
+scope = &"world"
+scope_target = &""
 payload = {
 "scope": "world",
 "narrative_only": true

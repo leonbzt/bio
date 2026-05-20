@@ -9,3 +9,4 @@ display_name = "Grassland"
 sunlight_per_tick = 1.0
 nutrient_per_tick = 0.3
 decay_per_tick = 0.0
+chemosynthesis_per_tick = 0.0

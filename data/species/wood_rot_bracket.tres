@@ -35,6 +35,10 @@ tile_marker_shape = &"root"
 latin_name = "Prototaxites loganii (Silurian-Devonian, gigantic)"
 lineage_id = &"saprotroph"
 biome_affinity = {
+&"swamp": 1.4,
 &"forest_edge": 1.2,
-&"rich_soil": 1.1
+&"rich_soil": 1.1,
+&"grassland": 0.9,
+&"tundra": 0.4,
+&"mineral_vent": 0.6
 }

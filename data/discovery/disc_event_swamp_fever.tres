@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_event_swamp_fever"
+title = "The Water Turns"
+body = "The pools grow warm and dark. What lives in them lives in everything that drinks them, and what cannot adapt becomes substrate.
+The wetlands are not cruel. They are simply older than the species they correct."
+category = &"event"
+trigger_id = &"swamp_fever"

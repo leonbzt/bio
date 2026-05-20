@@ -33,6 +33,9 @@ tile_marker_shape = &"spore"
 latin_name = "Glomeromycota basalis (Ordovician-now)"
 lineage_id = &"mycorrhizal"
 biome_affinity = {
+&"mineral_vent": 1.2,
+&"tundra": 0.9,
+&"swamp": 1.1,
 &"rich_soil": 1.2,
 &"forest_edge": 1.0,
 &"grassland": 1.0

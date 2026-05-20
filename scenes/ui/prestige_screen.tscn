@@ -53,6 +53,9 @@ visible = false
 [node name="BalanceLabel" type="Label" parent="Content/TreeSection"]
 text = "Balance: 0 EP"
 
+[node name="WingTabs" type="HBoxContainer" parent="Content/TreeSection"]
+alignment = 1
+
 [node name="TreeScroll" type="ScrollContainer" parent="Content/TreeSection"]
 horizontal_scroll_mode = 2
 vertical_scroll_mode = 2

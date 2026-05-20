@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EvolutionNodeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/evolution_node_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"cryotolerance"
+display_name = "Cryotolerance"
+description = "Your lineage shrugs off the chill. Cold Snap and Cool Spell hit at 0.85× strength."
+prerequisites = [&"pioneer_resilience"]
+meta_cost = {
+"evolution_points": 4
+}
+grants_traits = []
+grants_kingdoms = []
+grants_species = []
+wing = &"defense"
+tier = 2
+requires_kingdom_played = []
+requires_era = &"cryogenian"

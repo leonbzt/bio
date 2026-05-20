@@ -33,6 +33,9 @@ tile_marker_shape = &"spore"
 latin_name = "Pyrolobus fumarii (extremophile, all eras)"
 lineage_id = &"extremophile"
 biome_affinity = {
+&"mineral_vent": 1.8,
+&"tundra": 0.4,
+&"swamp": 0.3,
 &"rich_soil": 0.5,
 &"forest_edge": 0.4,
 &"grassland": 0.3

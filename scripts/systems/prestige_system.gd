@@ -35,14 +35,16 @@ func get_pending_reward() -> int:
 
 
 func trigger_prestige() -> void:
+	var bonus_ep: int = _award_extinction_survivor_bonus_if_eligible()
 	var earned: float = float(GameState.run_save.get("statistics", {}).get("total_biomass_earned", 0.0))
 	var diversity: int = (GameState.run_save.get("unlocked_species_in_run", []) as Array).size()
-	var reward: int = calculate_prestige_reward(earned, diversity)
+	var reward: int = calculate_prestige_reward(earned, diversity) + bonus_ep
 	_record_kingdom_played()
 	_record_species_played()
 	_update_meta_stats(reward, earned)
 	var summary := {
 		"evolution_points_earned": reward,
+		"extinction_bonus": bonus_ep,
 		"total_biomass_earned": earned,
 		"species_cultivated": diversity,
 		"starting_species_id": GameState.run_save.get("starting_species_id", "")
@@ -61,6 +63,8 @@ func purchase_node(node_id: StringName) -> bool:
 	if not _prerequisites_met(node):
 		return false
 	if not _kingdoms_played_satisfied(node):
+		return false
+	if not is_node_purchasable(node):
 		return false
 	var cost: int = int(node.meta_cost.get("evolution_points", 0))
 	var balance: int = get_evolution_points_balance()
@@ -147,8 +151,34 @@ func get_unsatisfied_kingdoms(node_id: StringName) -> Array[StringName]:
 	return missing
 
 
+func is_node_purchasable(node: EvolutionNodeData) -> bool:
+	return _node_purchase_block_reason(node) == ""
+
+
+func get_node_purchase_block_reason(node_id: StringName) -> String:
+	var node: EvolutionNodeData = _find_node(node_id)
+	if node == null:
+		return ""
+	return _node_purchase_block_reason(node)
+
+
 func _find_node(id: StringName) -> EvolutionNodeData:
 	return _nodes_by_id.get(id, null)
+
+
+func _node_purchase_block_reason(node: EvolutionNodeData) -> String:
+	if node.id == &"mass_fruiting":
+		return "coming_phase_15"
+	if node.id == &"extinction_survivor":
+		var completed: Array = GameState.meta_save.get("first_run_in_era_completed", []) as Array
+		if completed.is_empty():
+			return "requires_first_transition"
+	if node.requires_era == &"":
+		return ""
+	var current_era: StringName = StringName(GameState.meta_save.get("current_era_id", ""))
+	if current_era != node.requires_era:
+		return "requires_era"
+	return ""
 
 
 func _prerequisites_met(node: EvolutionNodeData) -> bool:
@@ -266,3 +296,27 @@ func _reset_run_state() -> void:
 	GameState.placement_target_species_id = &""
 	ResourceLedger.reset_run()
 	EventBus.run_loaded.emit(SaveSystem.SAVE_VERSION)
+
+
+func _award_extinction_survivor_bonus_if_eligible() -> int:
+	var pe: Dictionary = GameState.meta_save.get("post_extinction", {}) as Dictionary
+	if pe.is_empty():
+		return 0
+	var to_era: String = String(pe.get("to_era_id", ""))
+	var current_era: String = String(GameState.meta_save.get("current_era_id", ""))
+	if to_era != current_era:
+		return 0
+	var completed: Array = GameState.meta_save.get("first_run_in_era_completed", []) as Array
+	if completed.has(to_era):
+		return 0
+	completed.append(to_era)
+	GameState.meta_save["first_run_in_era_completed"] = completed
+	GameState.meta_save["post_extinction"] = {}
+	# Direct unlock call: discovery_unlocked is an OUTPUT signal fired by
+	# DiscoveryLog.unlock() — emitting it here would bypass the registry
+	# and leave the entry locked.
+	if has_node("/root/DiscoveryLog"):
+		var dl: Node = get_node("/root/DiscoveryLog")
+		if dl.has_method("unlock"):
+			dl.unlock(&"disc_milestone_extinction_survivor")
+	return 25

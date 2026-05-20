@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"sulfur_bloom"
+display_name = "Sulfur Bloom"
+description = "Vents belch acid haze. Plantae wither; fungi thrive."
+trigger_weight = 0.6
+duration_ticks = 60
+scope = &"ecosystem"
+scope_target = &"cryo_volcanic_vent"
+payload = {
+"fungi_bonus": 1.5,
+"modifiers": {
+"biomass_multiplier": 0.8,
+"sunlight_multiplier": 0.6
+}
+}

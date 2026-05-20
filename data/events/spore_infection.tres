@@ -9,6 +9,8 @@ display_name = "Spore Bloom"
 description = "Conditions favor passive fungal spread."
 trigger_weight = 0.8
 duration_ticks = 60
+scope = &"species_tag"
+scope_target = &"fungi"
 payload = {
 "spread_every_ticks": 5,
 "kingdom_required": "fungi"

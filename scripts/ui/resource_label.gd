@@ -23,6 +23,9 @@ func _ready() -> void:
 	EventBus.resource_changed.connect(_on_resource_changed)
 	EventBus.run_started.connect(func(_k): _refresh())
 	EventBus.run_loaded.connect(func(_v): _refresh())
+	# Apply resource-specific color from the identity palette.
+	if resource_id != &"":
+		add_theme_color_override("font_color", KingdomTheme.resource_color(resource_id))
 	_refresh()
 
 
@@ -38,6 +41,9 @@ func _refresh() -> void:
 	var label_name: String = RESOURCE_NAMES.get(resource_id, String(resource_id))
 	text = "%s: %s" % [label_name, FormatUtils.abbreviate(amount)]
 	var active: bool = _is_active()
+	# Hide entirely when inactive AND zero — keeps the HUD uncluttered until
+	# the resource actually matters in this run.
+	visible = active or amount > 0.0
 	modulate = Color(1.0, 1.0, 1.0) if active else Color(0.65, 0.65, 0.65)
 	tooltip_text = "" if active else tooltip_when_inactive
 

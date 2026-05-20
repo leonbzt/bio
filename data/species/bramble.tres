@@ -33,7 +33,10 @@ tile_marker_shape = &"cross"
 latin_name = "Trimerophyton robustius (Early Devonian)"
 lineage_id = &"parasitic_climber"
 biome_affinity = {
+&"swamp": 1.4,
 &"forest_edge": 1.1,
 &"rich_soil": 1.0,
-&"grassland": 0.9
+&"grassland": 0.9,
+&"tundra": 0.4,
+&"mineral_vent": 0.3
 }

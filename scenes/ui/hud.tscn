@@ -5,6 +5,7 @@
 [ext_resource type="Script" path="res://scripts/ui/resource_label.gd" id="4"]
 [ext_resource type="Theme" path="res://assets/ui/theme.tres" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/ui/species_panel.tscn" id="6"]
+[ext_resource type="Script" path="res://scripts/ui/biome_legend.gd" id="7"]
 
 [node name="HUD" type="Control"]
 anchor_right = 1.0
@@ -138,15 +139,25 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 text = "Species — Ecosystem"
 
+[node name="BiomeLegend" type="HBoxContainer" parent="."]
+anchor_left = 0.0
+anchor_right = 1.0
+offset_left = 8.0
+offset_top = 84.0
+offset_right = -8.0
+offset_bottom = 102.0
+script = ExtResource("7")
+mouse_filter = 2
+
 [node name="AbilitiesBar" type="HBoxContainer" parent="."]
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -220.0
-offset_top = -56.0
+offset_top = -112.0
 offset_right = -16.0
-offset_bottom = -16.0
+offset_bottom = -72.0
 alignment = 2
 
 [node name="SpeciesPanel" parent="." instance=ExtResource("6")]

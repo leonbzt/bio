@@ -31,7 +31,10 @@ tile_marker_shape = &"border"
 latin_name = "Eusthenopteron foordi (Late Devonian)"
 lineage_id = &"tetrapod_browser"
 biome_affinity = {
+&"swamp": 1.3,
 &"rich_soil": 1.2,
 &"forest_edge": 1.1,
-&"grassland": 1.0
+&"grassland": 1.0,
+&"tundra": 0.5,
+&"mineral_vent": 0.3
 }

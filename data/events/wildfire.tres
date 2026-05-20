@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"wildfire"
+display_name = "Wildfire"
+description = "Smoke darkens the sky. Old growth burns; new growth follows."
+trigger_weight = 0.5
+duration_ticks = 75
+scope = &"era"
+scope_target = &"devonian"
+payload = {
+"modifiers": {
+"biomass_multiplier": 0.6,
+"sunlight_multiplier": 0.7
+},
+"post_event_biomass_multiplier": 1.3,
+"post_event_bonus_ticks": 60
+}

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="BiomeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/biome_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"mineral_vent"
+display_name = "Mineral Vent"
+sunlight_per_tick = 0.0
+nutrient_per_tick = 0.4
+decay_per_tick = 0.1
+chemosynthesis_per_tick = 0.6

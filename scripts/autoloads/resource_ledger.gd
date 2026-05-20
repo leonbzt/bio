@@ -32,6 +32,11 @@ const _KNOWN_IDS: Array[StringName] = [
 
 var _amounts: Dictionary[StringName, float] = {}
 
+# Phase 15a: Per-resource multiplier registry.
+# Each resource has a Dictionary of {source_key: float_value}.
+# Effective multiplier = product of all source values; missing keys default to 1.0.
+var _multiplier_sources: Dictionary[StringName, Dictionary] = {}
+
 
 func _ready() -> void:
 	_sync_from_run_save()
@@ -101,6 +106,46 @@ func reset_run() -> void:
 		_amounts[resource_id] = 0.0
 		_set_run_resource(resource_id, 0.0)
 		EventBus.resource_changed.emit(resource_id, 0.0)
+	
+	# Phase 15a: clear per-run multiplier sources.
+	# Sources keyed with prefix "run:" are wiped; "meta:" sources persist.
+	for resource_id in _multiplier_sources.keys():
+		var d: Dictionary = _multiplier_sources[resource_id]
+		for k in d.keys():
+			if String(k).begins_with("run:"):
+				d.erase(k)
+
+
+func set_multiplier_source(resource_id: StringName, source_key: StringName, value: float) -> void:
+	if not _multiplier_sources.has(resource_id):
+		_multiplier_sources[resource_id] = {}
+	_multiplier_sources[resource_id][source_key] = value
+	EventBus.resource_multiplier_changed.emit(resource_id, get_multiplier(resource_id))
+
+
+func clear_multiplier_source(resource_id: StringName, source_key: StringName) -> void:
+	if not _multiplier_sources.has(resource_id):
+		return
+	var d: Dictionary = _multiplier_sources[resource_id]
+	d.erase(source_key)
+	EventBus.resource_multiplier_changed.emit(resource_id, get_multiplier(resource_id))
+
+
+func get_multiplier(resource_id: StringName) -> float:
+	if not _multiplier_sources.has(resource_id):
+		return 1.0
+	var product: float = 1.0
+	for v in _multiplier_sources[resource_id].values():
+		product *= float(v)
+	return product
+
+
+func get_multiplier_breakdown(resource_id: StringName) -> Array:
+	var out: Array = []
+	if _multiplier_sources.has(resource_id):
+		for k in _multiplier_sources[resource_id].keys():
+			out.append({"source": String(k), "value": float(_multiplier_sources[resource_id][k])})
+	return out
 
 
 func _sync_from_run_save() -> void:

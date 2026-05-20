@@ -225,6 +225,23 @@ See `docs/STRUCTURES.md` for the full design sketch — schema, examples, system
 
 Most likely revisit: **Phase 13–14** alongside layered-lifeform packs (Coral and Termite Mound are natural structure candidates), per-ecosystem completion gating (some ecosystems require a specific structure), and per-axis events (events can target structures as a unit).
 
+### Animals as placeable actors (parked 2026-05-20)
+
+Animals stop being treated as static tile occupants and become **placeable autonomous actors**. Once placed, they move tile-to-tile each tick under behavior rules:
+
+- **Herbivore**: walks toward and consumes adjacent plantae tiles (removes the tile's biomass / occupant). Idles when no plants nearby.
+- **Carnivore**: walks toward and consumes other animal actors (herbivores, smaller carnivores).
+- **Omnivore**: prefers one or the other based on a per-species `prey_preference: Dictionary[StringName, float]` weight — e.g., `{plantae: 0.7, animals: 0.3}` for mostly-herbivorous omnivores.
+
+This reshapes animals from "static tile" to "ecosystem actor". Implications:
+- Animal placement = spawning a unit at a tile, not occupying it permanently.
+- Tile occupancy model for animals diverges from plantae/fungi (which stay put).
+- Visualisation: animals move tile-by-tile (interpolated motion or snap).
+- Interactions: predator-prey dynamics, population pressure, carrying capacity emerge naturally.
+- Reusable for events (herbivore_wave becomes actor spawns, not stat blocks).
+
+Most likely revisit: **Phase 17+**, after the per-run progression loop (Adaptation, evolution, structures) feels solid. Currently overlaps with HerbivoreManager + AnimalAnchor placement; needs a unified `ActorSystem` to coordinate.
+
 ---
 
 ## TIER 3 — Aspirational 💭

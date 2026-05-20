@@ -60,6 +60,8 @@ func add_occupant(coord: Vector2i, kingdom_id: StringName, species_id: StringNam
 	occupants[kingdom_id] = species_id
 	entry["occupants"] = occupants
 	_tiles[coord] = entry
+	_set_tile_age(coord, _current_tick())  # Phase 15a: stamp tile age
+	_bump_species_count(species_id, 1)     # Phase 15a: increment species count
 	if _tile_grid.has_method("set_occupant"):
 		_tile_grid.set_occupant(coord, kingdom_id, species_id)
 	_sync_run_save()
@@ -81,9 +83,11 @@ func remove_occupant(coord: Vector2i, kingdom_id: StringName, cause: StringName)
 	var occupants: Dictionary = entry.get("occupants", {}) as Dictionary
 	if not occupants.has(kingdom_id):
 		return
+	var prev_species: StringName = StringName(occupants[kingdom_id])
 	occupants.erase(kingdom_id)
 	entry["occupants"] = occupants
 	_tiles[coord] = entry
+	_bump_species_count(prev_species, -1)  # Phase 15a: decrement species count
 	if _tile_grid.has_method("clear_occupant"):
 		_tile_grid.clear_occupant(coord, kingdom_id)
 	_gc_if_empty(coord)
@@ -279,3 +283,79 @@ func _sync_run_save() -> void:
 
 func _kingdom_starter(kingdom_id: StringName) -> StringName:
 	return _KINGDOM_DEFAULT_STARTERS.get(kingdom_id, &"")
+
+
+# Phase 15a: tile age and species count tracking
+func _set_tile_age(coord: Vector2i, tick: int) -> void:
+	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+	var ages: Dictionary = run.get("tile_ages", {}) as Dictionary
+	ages["%d,%d" % [coord.x, coord.y]] = tick
+	run["tile_ages"] = ages
+
+
+func get_tile_placed_tick(coord: Vector2i) -> int:
+	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+	var ages: Dictionary = run.get("tile_ages", {}) as Dictionary
+	return int(ages.get("%d,%d" % [coord.x, coord.y], _current_tick()))
+
+
+func _bump_species_count(species_id: StringName, delta: int) -> void:
+	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+	var counts: Dictionary = run.get("species_tile_counts", {}) as Dictionary
+	var sp_key: String = String(species_id)
+	counts[sp_key] = maxi(0, int(counts.get(sp_key, 0)) + delta)
+	run["species_tile_counts"] = counts
+
+
+func get_species_tile_count(species_id: StringName) -> int:
+	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+	var counts: Dictionary = run.get("species_tile_counts", {}) as Dictionary
+	return int(counts.get(String(species_id), 0))
+
+
+func _current_tick() -> int:
+	var stats: Dictionary = GameState.run_save.get("statistics", {}) as Dictionary
+	return int(stats.get("tick_count", 0))
+
+
+# Phase 15a: detect connected clusters of tiles
+# Returns Array of clusters; each cluster is {species_id, kingdom_id, coords: Array[Vector2i]}.
+# Connected via 4-neighbor adjacency, sharing the same species in the same kingdom slot.
+func get_clusters() -> Array:
+	var visited: Dictionary[String, bool] = {}
+	var clusters: Array = []
+	for coord in _tiles.keys():
+		var occ: Dictionary = _tiles[coord].get("occupants", {}) as Dictionary
+		for kingdom_id in occ.keys():
+			var species_id: StringName = StringName(occ[kingdom_id])
+			# Use composite key for visited tracking across kingdoms on same tile.
+			var visit_key: String = "%d,%d:%s" % [coord.x, coord.y, String(kingdom_id)]
+			if visited.has(visit_key):
+				continue
+			var cluster_coords: Array[Vector2i] = _flood_fill(coord, kingdom_id, species_id, visited, visit_key)
+			if not cluster_coords.is_empty():
+				clusters.append({
+					"species_id": species_id,
+					"kingdom_id": kingdom_id,
+					"coords": cluster_coords
+				})
+	return clusters
+
+
+func _flood_fill(start: Vector2i, kingdom_id: StringName, species_id: StringName,
+				 visited: Dictionary, _seed_key: String) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var stack: Array[Vector2i] = [start]
+	while not stack.is_empty():
+		var c: Vector2i = stack.pop_back()
+		var k: String = "%d,%d:%s" % [c.x, c.y, String(kingdom_id)]
+		if visited.has(k):
+			continue
+		visited[k] = true
+		var occ: Dictionary = _tiles.get(c, {}).get("occupants", {}) as Dictionary
+		if StringName(occ.get(kingdom_id, &"")) != species_id:
+			continue
+		out.append(c)
+		for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			stack.push_back(c + offset)
+	return out

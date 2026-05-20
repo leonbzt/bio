@@ -6,6 +6,7 @@
 [ext_resource type="Theme" path="res://assets/ui/theme.tres" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/ui/species_panel.tscn" id="6"]
 [ext_resource type="Script" path="res://scripts/ui/biome_legend.gd" id="7"]
+[ext_resource type="Script" path="res://scripts/ui/multiplier_chips.gd" id="8"]
 
 [node name="HUD" type="Control"]
 anchor_right = 1.0

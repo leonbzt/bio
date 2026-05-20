@@ -18,7 +18,14 @@ In code, the palette tokens are translated to GDScript in `scripts/autoloads/kin
 - Evolution tree spacing increased (COL_WIDTH 110→140, ROW_HEIGHT 96→120, node 100×76 → 124×92). Wing tabs at top scroll to each wing.
 - Evolution tree nodes use 2px chunky borders, sharp corners, per-state bg colors (purchasable affordable = bright, locked = darkened, owned = full saturation with ✓).
 - Biome legend chip row under goal banner — one chip per biome on the map, with impact pips.
-- Tile rendering: thin (1px) per-species cluster outlines (plantae outermost, fungi inset 3.5px); animal as inner diamond; biome shows as 3px frame around species fills.
+- Tile rendering: animal as inner diamond; biome shows as 3px frame around species fills. (Per-species cluster outlines disabled 2026-05-20 — looked wonky on irregular shapes; revisit with halo-per-cluster approach.)
+
+## Deferred surfaces
+
+These features were planned with HUD-visible surfaces but the surfaces were intentionally **not instantiated** because they would clutter the playfield. The underlying systems remain functional; new UI homes are TBD.
+
+- **Multiplier chips (deferred 2026-05-20)**: `scripts/ui/multiplier_chips.gd` exists and the `ResourceLedger.set_multiplier_source / get_multiplier / get_multiplier_breakdown` API is live. `GrowthSystem` still applies the multipliers to yields. **Future home**: a dedicated *Stats / Modifiers menu* (pause-menu entry or HUD icon-button), where the player can see active multipliers + breakdown without crowding the main HUD. The chip script can be reused there as-is.
+- **Prestige "power went from ×X to ×Y" framing**: still planned for the prestige screen (not the run HUD). Already on the parked-for-later list.
 
 ## Phase 2 — Pixel font + glyph icons (font ✅ 2026-05-20)
 

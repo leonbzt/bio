@@ -8,6 +8,10 @@ const _TICK_EFFECT_HANDLERS: Dictionary = {
 	&"mycorrhizal_bond_apply": "_effect_mycorrhizal_bond_apply"
 }
 
+# Phase 15a: tile maturation constants
+const SPROUTING_DURATION: int = 15
+const MATURE_DURATION: int = 45
+
 var _all_species: Dictionary[StringName, SpeciesData] = {}
 
 @onready var _territory: Node = get_node("../TerritorySystem")
@@ -77,6 +81,10 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 			biomass_mult = float(_ambient.get_multiplier(&"biomass_multiplier"))
 		for coord in coords:
 			var per_tile: float = base_yield * base_mult
+			# Phase 15a: tile maturation multiplier.
+			var age_ticks: int = _current_tick() - _territory.get_tile_placed_tick(coord)
+			var maturation_mult: float = _maturation_yield_multiplier(age_ticks)
+			per_tile *= maturation_mult
 			var affinity_mult: float = 1.0
 			var affinity_biome_id: StringName = &""
 			if resource_key == &"biomass":
@@ -123,12 +131,17 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 					per_tile *= 1.20
 			elif resource_key == &"spores":
 				per_tile *= (1.0 + float(trait_mods.get(&"spore_per_tile", 0.0)))
+			# Phase 15a: ancient fertilizer aura
+			if resource_key == &"biomass" and _has_ancient_neighbor_of_same_kingdom(coord, kingdom_id):
+				per_tile *= 1.05
 			if _is_tile_symbiotic(coord):
 				per_tile *= (1.0 + _get_symbiosis_bonus())
 			elif MetaModifiers.is_unlocked(&"wood_wide_web") and _is_adjacent_to_symbiotic(coord):
 				per_tile *= 1.15
 			if DEBUG_BIOME_AFFINITY and resource_key == &"biomass" and affinity_biome_id != &"" and affinity_mult != 1.0:
 				print("[GrowthSystem] %s on %s: affinity=%.2f per_tile=%.3f" % [species.id, affinity_biome_id, affinity_mult, per_tile])
+			# Phase 15a: apply per-resource multiplier from the registry.
+			per_tile *= ResourceLedger.get_multiplier(resource_key)
 			total += per_tile
 		if total > 0.0:
 			ResourceLedger.add(resource_key, total)
@@ -264,3 +277,30 @@ func _count_adjacent_owned_by_kingdom(coord: Vector2i, kingdom_id: StringName) -
 		if occ.has(kingdom_id):
 			count += 1
 	return count
+
+
+# Phase 15a: maturation yield multiplier
+func _maturation_yield_multiplier(age_ticks: int) -> float:
+	if age_ticks < SPROUTING_DURATION:
+		return 0.5
+	if age_ticks < SPROUTING_DURATION + MATURE_DURATION:
+		return 1.0
+	return 1.3
+
+
+# Phase 15a: check if neighbor has ancient tile of same kingdom
+func _has_ancient_neighbor_of_same_kingdom(coord: Vector2i, kingdom_id: StringName) -> bool:
+	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var neighbor: Vector2i = coord + offset
+		var occ: Dictionary = _territory.get_occupants(neighbor)
+		if not occ.has(kingdom_id):
+			continue
+		var neighbor_age: int = _current_tick() - _territory.get_tile_placed_tick(neighbor)
+		if neighbor_age >= SPROUTING_DURATION + MATURE_DURATION:
+			return true
+	return false
+
+
+func _current_tick() -> int:
+	var stats: Dictionary = GameState.run_save.get("statistics", {}) as Dictionary
+	return int(stats.get("tick_count", 0))

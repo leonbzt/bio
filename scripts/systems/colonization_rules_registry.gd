@@ -1,6 +1,8 @@
 extends Node
 
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
+# Phase 15a: cost scaling factor
+const COST_GROWTH_FACTOR: float = 1.05
 
 
 func evaluate(coord: Vector2i, species: SpeciesData) -> Dictionary:
@@ -39,7 +41,7 @@ func _rule_adjacent_empty(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
 	# Phase 14a: pioneer-tagged species can start and spread without adjacency.
 	if species.tags.has(&"pioneer"):
-		var pioneer_cost: Dictionary = species.colonize_cost.duplicate()
+		var pioneer_cost: Dictionary = _scaled_cost(species) if not owned.is_empty() else species.colonize_cost.duplicate()
 		if MetaModifiers.is_unlocked(&"thrifty_growth"):
 			for k in pioneer_cost.keys():
 				pioneer_cost[k] = maxf(0.0, float(pioneer_cost[k]) - 1.0)
@@ -71,7 +73,7 @@ func _rule_adjacent_empty(coord: Vector2i, species: SpeciesData) -> Dictionary:
 		if not has_neighbor:
 			return _invalid()
 
-	var cost: Dictionary = species.colonize_cost.duplicate()
+	var cost: Dictionary = _scaled_cost(species) if not owned.is_empty() else species.colonize_cost.duplicate()
 	if MetaModifiers.is_unlocked(&"thrifty_growth"):
 		for k in cost.keys():
 			cost[k] = maxf(0.0, float(cost[k]) - 1.0)
@@ -101,7 +103,7 @@ func _rule_fungi_substrate(coord: Vector2i, species: SpeciesData) -> Dictionary:
 
 	# Phase 14a: pioneer-tagged fungi can colonize bare tiles without substrate.
 	if species.tags.has(&"pioneer"):
-		var pioneer_cost: Dictionary = _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species)
+		var pioneer_cost: Dictionary = _scaled_cost_with_traits(species)
 		if owned.is_empty():
 			pioneer_cost = {}
 		return _single(coord, species, pioneer_cost, {})
@@ -110,22 +112,22 @@ func _rule_fungi_substrate(coord: Vector2i, species: SpeciesData) -> Dictionary:
 		return _single(coord, species, {}, {})
 
 	if territory.get_occupant(coord, &"plantae") != &"":
-		return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), {})
+		return _single(coord, species, _scaled_cost_with_traits(species), {})
 	if _is_corpse_at(coord):
-		return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), {})
+		return _single(coord, species, _scaled_cost_with_traits(species), {})
 
 	var owned_set: Dictionary = {}
 	for c in owned:
 		owned_set[c] = true
 	for offset in neighbors(coord):
 		if owned_set.has(offset):
-			return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), {})
+			return _single(coord, species, _scaled_cost_with_traits(species), {})
 
 	if MetaModifiers.is_unlocked(&"spore_distribution"):
 		var charges: int = _get_spore_distribution_charges()
 		if charges > 0 and _has_line_of_sight(coord, owned):
 			_set_spore_distribution_charges(charges - 1)
-			return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), {})
+			return _single(coord, species, _scaled_cost_with_traits(species), {})
 
 	return _invalid()
 
@@ -149,7 +151,7 @@ func _rule_parasitic_plantae(coord: Vector2i, species: SpeciesData) -> Dictionar
 			break
 	if not has_neighbor:
 		return _invalid()
-	var cost: Dictionary = species.colonize_cost.duplicate()
+	var cost: Dictionary = _scaled_cost(species)
 	if MetaModifiers.is_unlocked(&"thrifty_growth"):
 		for k in cost.keys():
 			cost[k] = maxf(0.0, float(cost[k]) - 1.0)
@@ -174,7 +176,7 @@ func _rule_mycorrhizal_fungi(coord: Vector2i, species: SpeciesData) -> Dictionar
 	var data := {}
 	if territory.get_occupant(coord, &"plantae") != &"":
 		data["mycorrhizal_bond"] = true
-	return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), data)
+	return _single(coord, species, _scaled_cost_with_traits(species), data)
 
 
 func _rule_animal_anchor(coord: Vector2i, species: SpeciesData) -> Dictionary:
@@ -195,7 +197,7 @@ func _rule_animal_anchor(coord: Vector2i, species: SpeciesData) -> Dictionary:
 			break
 	if not has_neighbor:
 		return _invalid()
-	return _single(coord, species, _apply_trait_cost_modifiers(species.colonize_cost.duplicate(), species), {})
+	return _single(coord, species, _scaled_cost_with_traits(species), {})
 
 
 func _rule_recipe(coord: Vector2i, species: SpeciesData) -> Dictionary:
@@ -310,3 +312,20 @@ func _species_lookup(species_id: StringName) -> SpeciesData:
 		if sp.id == species_id:
 			return sp
 	return null
+
+
+# Phase 15a: scale cost based on number of owned tiles of this species
+func _scaled_cost(species: SpeciesData) -> Dictionary:
+	var base: Dictionary = species.colonize_cost.duplicate()
+	var n: int = _get_territory().get_species_tile_count(species.id)
+	var mult: float = pow(COST_GROWTH_FACTOR, float(n))
+	var scaled: Dictionary = {}
+	for resource_id in base.keys():
+		scaled[resource_id] = float(base[resource_id]) * mult
+	return scaled
+
+
+# Phase 15a: apply trait modifiers then scale for owned count
+func _scaled_cost_with_traits(species: SpeciesData) -> Dictionary:
+	var cost: Dictionary = _scaled_cost(species)
+	return _apply_trait_cost_modifiers(cost, species)

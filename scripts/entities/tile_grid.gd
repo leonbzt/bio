@@ -39,18 +39,21 @@ const ANIMAL_MARKER_RADIUS: float = 3.0
 const EDGE_WIDTH: float = 1.0
 const EDGE_INSET_PLANTAE: float = 1.5
 const EDGE_INSET_FUNGI: float = 3.5
+# Phase 15a: tile pulse on production tick.
+# Tuned 2026-05-20 for visibility — was too subtle to feel.
+const PULSE_CHANCE: float = 0.18        # ~18% of owned tiles pulse per tick (more frequent)
+const PULSE_DURATION: float = 0.35      # longer hold, easier to track at a glance
+const PULSE_BRIGHTNESS_BUMP: float = 0.60   # bigger flash — pops against dark biomes
 class _EdgesOverlay extends Node2D:
 	var tile_grid
 
 	func _draw() -> void:
-		if tile_grid == null:
-			return
-		for coord_variant in tile_grid._tile_occupants.keys():
-			var coord: Vector2i = coord_variant
-			var occ: Dictionary = tile_grid._tile_occupants[coord]
-			if occ.is_empty():
-				continue
-			tile_grid._draw_edges_for_tile(self, coord, occ)
+		# Cluster edges disabled 2026-05-20 — visual was wonky on irregular
+		# shapes (L-clusters, holes, multi-kingdom overlap). Will revisit
+		# with a different approach (single soft halo per cluster vs per-tile
+		# edges) when the design is locked. Keep the overlay node so we
+		# can re-enable by removing this early return.
+		return
 
 @export var tile_texture: Texture2D = preload("res://assets/art/tiles/placeholder_tile.png")
 
@@ -60,6 +63,7 @@ var _fill_nodes: Dictionary[Vector2i, ColorRect] = {}
 var _border_nodes: Dictionary[Vector2i, Polygon2D] = {}
 var _overlay_layer: Node2D
 var _edges_overlay: _EdgesOverlay   # single child; _draw() renders all cluster edges
+var _pulse_rng: RandomNumberGenerator = RandomNumberGenerator.new()  # Phase 15a
 
 
 func _ready() -> void:
@@ -79,6 +83,8 @@ func _ready() -> void:
 	_overlay_layer.add_child(_edges_overlay)
 	EventBus.era_changed.connect(_on_era_changed)
 	EventBus.run_loaded.connect(_on_run_loaded)
+	EventBus.tick.connect(_on_tick_pulse)  # Phase 15a
+	_pulse_rng.randomize()  # Phase 15a
 	# Deferred: on scene change (picker → world), TileGrid._ready runs before
 	# NutrientSystem._ready. Calling _populate synchronously paints ATLAS_BASE
 	# for every cell because NutrientSystem hasn't populated biome_map yet.
@@ -253,6 +259,21 @@ func _paint_fill(coord: Vector2i, occ: Dictionary) -> void:
 		fill_color = _species_color(plant_id)
 	else:
 		fill_color = _species_color(fungi_id)
+	# Phase 15a: tile maturation visual. Tuned 2026-05-20 for clarity —
+	# previous settings were too subtle to read at a glance.
+	#   Sprouting: heavily desaturated + low alpha → "barely there"
+	#   Mature:    untouched base color
+	#   Ancient:   pronounced lightening + slight saturation boost → "lush"
+	var age_ticks: int = _get_tile_age_ticks(coord)
+	var stage: int = _maturation_stage(age_ticks)
+	if stage == 0:    # Sprouting — desaturate hard, dim alpha
+		fill_color = fill_color.lerp(Color(0.45, 0.45, 0.45, 1.0), 0.55)
+		fill_color.a = 0.55
+	elif stage == 2:    # Ancient — bright + slight color punch
+		fill_color = fill_color.lightened(0.25)
+		fill_color.a = 1.0
+	# Mature (stage 1) keeps the base color untouched.
+
 	var fill: ColorRect = _fill_nodes.get(coord, null)
 	if fill == null:
 		fill = ColorRect.new()
@@ -483,3 +504,68 @@ func _draw_biome_tile(
 			elif with_flecks and ((x + y) % 5 == 0):
 				target = fleck_color
 			image.set_pixel(origin.x + x, origin.y + y, target)
+
+
+# Phase 15a: maturation stage constants (mirror growth_system).
+const MATURATION_SPROUTING_TICKS: int = 15
+const MATURATION_MATURE_TICKS: int = 45     # mature lasts 45 ticks → ancient at 60+
+const AGE_REFRESH_INTERVAL: int = 5         # repaint fills every N ticks
+var _ticks_since_age_refresh: int = 0
+
+
+func _get_tile_age_ticks(coord: Vector2i) -> int:
+	var territory: Node = _get_territory_for_age()
+	if territory == null or not territory.has_method("get_tile_placed_tick"):
+		return 0
+	var placed: int = territory.get_tile_placed_tick(coord)
+	var stats: Dictionary = GameState.run_save.get("statistics", {}) as Dictionary
+	var current: int = int(stats.get("tick_count", 0))
+	return maxi(0, current - placed)
+
+
+func _maturation_stage(age_ticks: int) -> int:
+	# 0 = Sprouting (0-14), 1 = Mature (15-59), 2 = Ancient (60+).
+	if age_ticks < MATURATION_SPROUTING_TICKS:
+		return 0
+	if age_ticks < MATURATION_SPROUTING_TICKS + MATURATION_MATURE_TICKS:
+		return 1
+	return 2
+
+
+func _get_territory_for_age() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("World/Systems/TerritorySystem")
+
+
+# Phase 15a: tile pulse on tick
+func _on_tick_pulse(_delta: float) -> void:
+	# Sample a fraction of owned tiles to pulse this tick.
+	for coord in _fill_nodes.keys():
+		if _pulse_rng.randf() > PULSE_CHANCE:
+			continue
+		_pulse_tile(coord)
+	# Periodically refresh fills so tiles crossing maturation stage boundaries
+	# update their visual without waiting for an unrelated repaint.
+	_ticks_since_age_refresh += 1
+	if _ticks_since_age_refresh >= AGE_REFRESH_INTERVAL:
+		_ticks_since_age_refresh = 0
+		for coord in _tile_occupants.keys():
+			var occ: Dictionary = _tile_occupants[coord]
+			_paint_fill(coord, occ)
+
+
+func _pulse_tile(coord: Vector2i) -> void:
+	var fill: ColorRect = _fill_nodes.get(coord, null)
+	if fill == null:
+		return
+	var base_color: Color = fill.color
+	var bright_color: Color = base_color.lightened(PULSE_BRIGHTNESS_BUMP)
+	# Snap-bright, brief hold, ease-out fade. Feels like a heartbeat.
+	fill.color = bright_color
+	var tween := create_tween()
+	tween.tween_interval(0.08)                                 # hold at bright
+	tween.tween_property(fill, "color", base_color, PULSE_DURATION) \
+		.set_trans(Tween.TRANS_QUAD) \
+		.set_ease(Tween.EASE_OUT)

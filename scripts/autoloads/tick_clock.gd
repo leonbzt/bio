@@ -17,8 +17,19 @@ func _process(delta: float) -> void:
 	var tick_interval := 1.0 / tick_hz
 	_accumulator += delta
 	while _accumulator >= tick_interval:
+		_increment_tick_count()
 		EventBus.tick.emit(tick_interval)
 		_accumulator -= tick_interval
+
+
+# Phase 15a: increment per-run tick counter so tile age, cluster timing, and
+# anything else that needs "ticks since run started" has a working clock.
+func _increment_tick_count() -> void:
+	if not (GameState.run_save is Dictionary):
+		return
+	var stats: Dictionary = GameState.run_save.get("statistics", {}) as Dictionary
+	stats["tick_count"] = int(stats.get("tick_count", 0)) + 1
+	GameState.run_save["statistics"] = stats
 
 
 func pause() -> void:
@@ -43,4 +54,5 @@ func force_tick(n: int = 1) -> void:
 		return
 	var tick_interval := 1.0 / tick_hz
 	for _i in range(n):
+		_increment_tick_count()
 		EventBus.tick.emit(tick_interval)

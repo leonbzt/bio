@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 14
+const SAVE_VERSION: int = 15
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -283,6 +283,8 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 		_migrate_v12_to_v13(old)
 	if from_version < 14:
 		_migrate_v13_to_v14(old)
+	if from_version < 15:
+		_migrate_v14_to_v15(old)
 	return old
 
 
@@ -449,6 +451,13 @@ func _repair_species_unlocked(meta: Dictionary) -> void:
 		dirty = true
 	if dirty:
 		meta["species_unlocked"] = species_unlocked
+	
+	# Phase 15a: defensive backfill for tile ages and species tile counts
+	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+	if not run.has("tile_ages"):
+		run["tile_ages"] = {}
+	if not run.has("species_tile_counts"):
+		run["species_tile_counts"] = {}
 
 
 func _migrate_v11_to_v12(save: Dictionary) -> void:
@@ -575,6 +584,33 @@ func _migrate_v13_to_v14(save: Dictionary) -> void:
 			entry["payload"] = payload
 	run["active_events"] = active
 	save["run"] = run
+
+
+func _migrate_v14_to_v15(save: Dictionary) -> void:
+	var run: Dictionary = save.get("run", {}) as Dictionary
+	if not run.has("tile_ages"):
+		run["tile_ages"] = {}
+	if not run.has("species_tile_counts"):
+		# Recompute from current tiles[].occupants — keeps existing runs accurate.
+		var counts: Dictionary = {}
+		var tiles: Array = run.get("tiles", []) as Array
+		for entry in tiles:
+			if not (entry is Dictionary):
+				continue
+			var occupants: Dictionary = entry.get("occupants", {}) as Dictionary
+			for kingdom_id in occupants.keys():
+				var sp_id: String = String(occupants[kingdom_id])
+				counts[sp_id] = int(counts.get(sp_id, 0)) + 1
+		run["species_tile_counts"] = counts
+	save["run"] = run
+
+	var meta: Dictionary = save.get("meta", {}) as Dictionary
+	if not meta.has("lifetime_counters"):
+		meta["lifetime_counters"] = {
+			"tiles_placed_lifetime": 0,
+			"clusters_formed_lifetime": 0
+		}
+	save["meta"] = meta
 
 
 func _pick_species_for_kingdom(starter_species: StringName, kingdom_id: StringName, niche_id: String) -> StringName:

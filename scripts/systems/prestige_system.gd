@@ -262,6 +262,8 @@ func _reset_run_state() -> void:
 		"unlocked_species_in_run": [],
 		"run_seed": 0,
 		"tick_count": 0,
+		"adaptation": 0.0,
+		"species_levels": {},
 		"resources": {
 			"biomass": 0.0,
 			"nutrients": 0.0,

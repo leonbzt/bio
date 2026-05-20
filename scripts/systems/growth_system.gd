@@ -144,6 +144,8 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 				per_tile *= 1.15
 			if DEBUG_BIOME_AFFINITY and resource_key == &"biomass" and affinity_biome_id != &"" and affinity_mult != 1.0:
 				print("[GrowthSystem] %s on %s: affinity=%.2f per_tile=%.3f" % [species.id, affinity_biome_id, affinity_mult, per_tile])
+			# Phase 15c: per-run species evolution level multiplier.
+			per_tile *= AdaptationSystem.species_level_multiplier(species.id)
 			# Phase 15a: apply per-resource multiplier from the registry.
 			per_tile *= ResourceLedger.get_multiplier(resource_key)
 			total += per_tile

@@ -56,6 +56,7 @@ signal organism_died(organism_id: int, cause: StringName)
 signal trait_unlocked(trait_id: StringName)
 signal evolution_node_unlocked(node_id: StringName)
 signal discovery_unlocked(entry_id: StringName)
+signal species_leveled(species_id: StringName, new_level: int)
 
 # Ecological pressure
 signal event_started(event_id: StringName, payload: Dictionary)
@@ -461,7 +462,8 @@ Increment `SAVE_VERSION` and add a `migrate()` case any time the JSON schema cha
 | v14 | `meta.post_extinction`, `meta.first_run_in_era_completed`, `meta.first_era_seen` added |
 | v15 | `run.tile_ages`, `run.species_tile_counts`, `meta.lifetime_counters` added |
 | v16 | `run.fog_revealed`, `run.obstacles`, `run.active_structures`, `meta.structures_discovered` added |
+| v17 | `run.adaptation`, `run.species_levels` added |
 
 ---
 
-**Last updated**: Phase 15b fog/obstacles/structures. Update this doc whenever a contract changes; do not update it speculatively.
+**Last updated**: Phase 15c adaptation + run evolution. Update this doc whenever a contract changes; do not update it speculatively.

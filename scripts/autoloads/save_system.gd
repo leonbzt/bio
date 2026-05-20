@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 16
+const SAVE_VERSION: int = 17
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -22,7 +22,10 @@ const _PHASE_14A_AUTO_UNLOCK: Array[String] = [
 	"vent_archaeon",
 	"cryo_lichen",
 	"tree_fern_stem",
-	"wood_rot_bracket"
+	"wood_rot_bracket",
+	"creeping_vine",
+	"spore_drift",
+	"scavenger_swarm"
 ]
 
 const _NICHE_TO_STARTER_SPECIES: Dictionary[StringName, StringName] = {
@@ -287,6 +290,8 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 		_migrate_v14_to_v15(old)
 	if from_version < 16:
 		_migrate_v15_to_v16(old)
+	if from_version < 17:
+		_migrate_v16_to_v17(old)
 	return old
 
 
@@ -323,6 +328,8 @@ func _build_default_save() -> Dictionary:
 			"unlocked_species_in_run": [],
 			"run_seed": 0,
 			"tick_count": 0,
+			"adaptation": 0.0,
+			"species_levels": {},
 			"resources": {
 				"biomass": 0.0,
 				"nutrients": 0.0,
@@ -464,6 +471,10 @@ func _repair_species_unlocked(meta: Dictionary) -> void:
 		run["tile_ages"] = {}
 	if not run.has("species_tile_counts"):
 		run["species_tile_counts"] = {}
+	if not run.has("adaptation"):
+		run["adaptation"] = 0.0
+	if not run.has("species_levels"):
+		run["species_levels"] = {}
 
 
 func _migrate_v11_to_v12(save: Dictionary) -> void:
@@ -653,6 +664,15 @@ func _migrate_v15_to_v16(save: Dictionary) -> void:
 	if not meta.has("structures_discovered"):
 		meta["structures_discovered"] = []
 	save["meta"] = meta
+
+
+func _migrate_v16_to_v17(save: Dictionary) -> void:
+	var run: Dictionary = save.get("run", {}) as Dictionary
+	if not run.has("adaptation"):
+		run["adaptation"] = 0.0
+	if not run.has("species_levels"):
+		run["species_levels"] = {}
+	save["run"] = run
 
 
 # Helper to flood reveal around a coord (radius in each direction).

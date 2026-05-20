@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/species_panel.tscn" id="6"]
 [ext_resource type="Script" path="res://scripts/ui/biome_legend.gd" id="7"]
 [ext_resource type="Script" path="res://scripts/ui/multiplier_chips.gd" id="8"]
+[ext_resource type="PackedScene" path="res://scenes/ui/adaptation_chip.tscn" id="9"]
 
 [node name="HUD" type="Control"]
 anchor_right = 1.0
@@ -61,6 +62,8 @@ size_flags_horizontal = 3
 [node name="Resources" type="GridContainer" parent="Bar/Margin/ResourcesRow"]
 columns = 4
 size_flags_horizontal = 3
+
+[node name="AdaptationChip" parent="Bar/Margin/ResourcesRow" instance=ExtResource("9")]
 
 [node name="BiomassLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
 text = "Biomass: 0"

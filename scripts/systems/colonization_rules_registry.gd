@@ -3,6 +3,7 @@ extends Node
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 # Phase 15a: cost scaling factor
 const COST_GROWTH_FACTOR: float = 1.05
+const GAP_JUMPER_MAX_RANGE: int = 4
 
 
 func evaluate(coord: Vector2i, species: SpeciesData) -> Dictionary:
@@ -25,6 +26,12 @@ func evaluate(coord: Vector2i, species: SpeciesData) -> Dictionary:
 			return _rule_mycorrhizal_fungi(coord, species)
 		&"animal_anchor":
 			return _rule_animal_anchor(coord, species)
+		&"diagonal_only":
+			return _rule_diagonal_only(coord, species)
+		&"gap_jumper":
+			return _rule_gap_jumper(coord, species)
+		&"corpse_only":
+			return _rule_corpse_only(coord, species)
 		&"recipe":
 			return _rule_recipe(coord, species)
 		_:
@@ -204,6 +211,83 @@ func _rule_animal_anchor(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	if not has_neighbor:
 		return _invalid()
 	return _single(coord, species, _scaled_cost_with_traits(species), {})
+
+
+func _rule_diagonal_only(coord: Vector2i, species: SpeciesData) -> Dictionary:
+	var territory: Node = _get_territory()
+	if territory == null:
+		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
+	if territory.get_occupant(coord, kingdom_id) != &"":
+		return _invalid()
+	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
+	if owned.is_empty():
+		return _single(coord, species, {}, {})
+	var has_diag: bool = false
+	for d in [
+		Vector2i(coord.x - 1, coord.y - 1),
+		Vector2i(coord.x + 1, coord.y - 1),
+		Vector2i(coord.x - 1, coord.y + 1),
+		Vector2i(coord.x + 1, coord.y + 1)
+	]:
+		if territory.get_occupant(d, kingdom_id) != &"":
+			has_diag = true
+			break
+	if not has_diag:
+		return _invalid()
+	var cost: Dictionary = _scaled_cost(species)
+	if MetaModifiers.is_unlocked(&"thrifty_growth"):
+		for k in cost.keys():
+			cost[k] = maxf(0.0, float(cost[k]) - 1.0)
+	return _single(coord, species, cost, {})
+
+
+func _rule_gap_jumper(coord: Vector2i, species: SpeciesData) -> Dictionary:
+	var territory: Node = _get_territory()
+	if territory == null:
+		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
+	if territory.get_occupant(coord, kingdom_id) != &"":
+		return _invalid()
+	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
+	if owned.is_empty():
+		return _single(coord, species, {}, {})
+	var obstacles: Node = _get_obstacle_system()
+	var found: bool = false
+	for dir in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		for dist in range(1, GAP_JUMPER_MAX_RANGE + 1):
+			var n: Vector2i = coord + dir * dist
+			if territory.get_occupant(n, kingdom_id) != &"":
+				var blocked: bool = false
+				for inter_dist in range(1, dist):
+					var inter: Vector2i = coord + dir * inter_dist
+					if obstacles != null and obstacles.has_method("is_obstacle") and obstacles.is_obstacle(inter):
+						blocked = true
+						break
+				if not blocked:
+					found = true
+					break
+			if found:
+				break
+		if found:
+			break
+	if not found:
+		return _invalid()
+	var cost: Dictionary = _scaled_cost(species)
+	return _single(coord, species, cost, {})
+
+
+func _rule_corpse_only(coord: Vector2i, species: SpeciesData) -> Dictionary:
+	var territory: Node = _get_territory()
+	if territory == null:
+		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
+	if territory.get_occupant(coord, kingdom_id) != &"":
+		return _invalid()
+	if not _is_corpse_at(coord):
+		return _invalid()
+	var cost: Dictionary = _scaled_cost(species)
+	return _single(coord, species, cost, {})
 
 
 func _rule_recipe(coord: Vector2i, species: SpeciesData) -> Dictionary:

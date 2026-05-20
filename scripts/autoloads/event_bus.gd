@@ -30,6 +30,7 @@ signal organism_died(organism_id: int, cause: StringName)
 signal trait_unlocked(trait_id: StringName)
 signal evolution_node_unlocked(node_id: StringName)
 signal discovery_unlocked(entry_id: StringName)
+signal species_leveled(species_id: StringName, new_level: int)
 
 # Ecological pressure
 signal event_started(event_id: StringName, payload: Dictionary)

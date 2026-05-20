@@ -18,6 +18,8 @@ func _ready() -> void:
 	EventBus.run_started.connect(func(_k): _refresh_all())
 	EventBus.run_loaded.connect(func(_v): _refresh_all())
 	EventBus.resource_changed.connect(func(_r, _v): _refresh())
+	EventBus.species_leveled.connect(func(_id, _level): _refresh())
+	AdaptationSystem.adaptation_changed.connect(func(_v): _refresh())
 	_apply_collapsed_state()
 	_refresh_all()
 
@@ -87,14 +89,24 @@ func _refresh() -> void:
 func _build_introduced_row(species: SpeciesData) -> Control:
 	# Compact horizontal button for the bottom bar. Latin name moves to the
 	# tooltip — there's no vertical room in a horizontal bar.
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var btn := Button.new()
-	btn.text = species.display_name
+	var current_level: int = AdaptationSystem.get_level(species.id)
+	var can_evolve: bool = AdaptationSystem.can_level_up(species.id)
+	var next_cost: float = AdaptationSystem.get_next_level_cost(species.id)
+	btn.text = "%s  Lvl %d/3" % [species.display_name, current_level]
+	if can_evolve:
+		btn.text += " ▲"
 	btn.custom_minimum_size = Vector2(0, 40)
 	btn.modulate = species.tile_marker_color
 	var is_active: bool = (GameState.placement_target_species_id == species.id)
 	btn.disabled = is_active
 	if species.latin_name != "":
 		btn.tooltip_text = "%s\n%s" % [species.display_name, species.latin_name]
+	btn.tooltip_text += "\nLvl %d/3 (+%d%% yield)" % [current_level, int((current_level - 1) * 10)]
+	if next_cost >= 0.0:
+		btn.tooltip_text += "\nEvolve: %.0f Adaptation" % next_cost
 	# Per-button stylebox so the active species reads as "selected" instead of
 	# just disabled. Selected = brighter border, slight outer glow via lightened.
 	var sb := StyleBoxFlat.new()
@@ -114,7 +126,33 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 		EventBus.placement_target_changed.emit(String(species.id))
 		_refresh()
 	)
-	return btn
+	row.add_child(btn)
+	if current_level < 3:
+		var evolve_btn := Button.new()
+		evolve_btn.text = "Evolve"
+		evolve_btn.custom_minimum_size = Vector2(60, 40)
+		evolve_btn.disabled = not can_evolve
+		if next_cost >= 0.0:
+			evolve_btn.tooltip_text = "Evolve (%.0f Adaptation)" % next_cost
+		evolve_btn.pressed.connect(func() -> void:
+			_open_evolve_modal(species)
+		)
+		row.add_child(evolve_btn)
+	return row
+
+
+func _open_evolve_modal(species: SpeciesData) -> void:
+	var scene: PackedScene = load("res://scenes/ui/evolve_modal.tscn") as PackedScene
+	if scene == null:
+		return
+	var modal: Node = scene.instantiate()
+	if modal.has_method("setup"):
+		modal.setup(species)
+	var parent: Node = get_parent()
+	if parent != null:
+		parent.add_child(modal)
+	else:
+		add_child(modal)
 
 
 func _build_available_row(species: SpeciesData) -> Control:

@@ -242,6 +242,19 @@ This reshapes animals from "static tile" to "ecosystem actor". Implications:
 
 Most likely revisit: **Phase 17+**, after the per-run progression loop (Adaptation, evolution, structures) feels solid. Currently overlaps with HerbivoreManager + AnimalAnchor placement; needs a unified `ActorSystem` to coordinate.
 
+### Slime-mold cluster pulse (parked 2026-05-20)
+
+Per-tile tick pulse was disabled — too visually noisy. Reimagine the same intent with a **flowing cluster pulse**:
+
+- Every ~5-10s a wave of brightness emanates from a cluster's *centroid* and flows outward along the connected tiles, fading as it spreads.
+- Models real slime-mold + mycelial-network behavior: nutrients pulse outward from the center; you can see the network is alive and connected.
+- One wave per cluster, staggered across the map. Plantae clusters get a different wave color than fungi; symbiosis clusters get gold.
+- Cost: one tween per cluster per pulse-cycle, not per-tile per-tick. Cheap.
+
+Implementation sketch: when a cluster is detected (already done by `ClusterIncomeTracker`), compute graph distance from centroid to each cluster tile. Stagger each tile's brightness peak by `distance × 80ms`. Tween brightness back over ~600ms.
+
+Most likely revisit: **Phase 16+** as part of the "polish + feel" pass, after Phase 15c locks the run-progression loop. Pairs well with structure halos — both communicate "connected biology, not just dots."
+
 ---
 
 ## TIER 3 — Aspirational 💭

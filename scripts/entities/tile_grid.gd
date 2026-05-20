@@ -41,10 +41,13 @@ const EDGE_WIDTH: float = 1.0
 const EDGE_INSET_PLANTAE: float = 1.5
 const EDGE_INSET_FUNGI: float = 3.5
 # Phase 15a: tile pulse on production tick.
-# Tuned 2026-05-20 for visibility — was too subtle to feel.
-const PULSE_CHANCE: float = 0.18        # ~18% of owned tiles pulse per tick (more frequent)
-const PULSE_DURATION: float = 0.35      # longer hold, easier to track at a glance
-const PULSE_BRIGHTNESS_BUMP: float = 0.60   # bigger flash — pops against dark biomes
+# DISABLED 2026-05-20 — too visually noisy. Cluster floats convey
+# "life happening" without per-tile flickering. Revisit later as a
+# "slime-mold pulse" that flows outward from cluster centroid (see
+# ROADMAP parked-design entry) instead of per-tile sampling.
+const PULSE_CHANCE: float = 0.0         # was 0.18; 0 = disabled entirely
+const PULSE_DURATION: float = 0.35
+const PULSE_BRIGHTNESS_BUMP: float = 0.60
 const FOG_COLOR: Color = Color(0.04, 0.04, 0.06, 1.0)
 const FOG_EDGE_COLOR: Color = Color(0.08, 0.08, 0.10, 1.0)
 class _EdgesOverlay extends Node2D:

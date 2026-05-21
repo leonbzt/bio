@@ -19,3 +19,9 @@ var placement_target_species_id: StringName = &""
 
 var run_save: Dictionary = {}
 var meta_save: Dictionary = {}
+
+# Transient flag: when an in-game prestige routes back through the main menu,
+# this asks the menu to skip straight to the ecosystem picker (world_map).
+# Set by prestige_screen._close() after a confirmed prestige; consumed and
+# cleared by main_menu._ready().
+var auto_open_world_map: bool = false

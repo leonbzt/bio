@@ -68,6 +68,13 @@ func _notification(what: int) -> void:
 
 
 func save_now() -> void:
+	# Perf (Tier 2): TerritorySystem batches its run_save sync; flush
+	# any pending tile mutations into run_save before we serialize.
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null:
+		var territory := tree.root.get_node_or_null("World/Systems/TerritorySystem")
+		if territory != null and territory.has_method("flush_to_save_immediate"):
+			territory.flush_to_save_immediate()
 	var save_dict := _build_save_dict()
 	var json: String = JSON.stringify(save_dict, "\t")
 
@@ -309,7 +316,7 @@ func _build_default_save() -> Dictionary:
 			"lineages_played": [],
 			"structures_discovered": [],
 			"current_era_id": "cryogenian",
-			"current_ecosystem_id": "cryo_polar_ice",
+			"current_ecosystem_id": "cryo_volcanic_vent",
 			"ecosystem_completions": {},
 			"eras_unlocked": ["cryogenian"],
 			"post_extinction": {},

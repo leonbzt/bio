@@ -16,6 +16,25 @@ const RESOURCE_NAMES: Dictionary = {
 	ResourceLedger.SPORES: "Spores"
 }
 
+# Commissioned 16×16 resource icons. The HUD prefers these over the ASCII
+# glyph fallback when present. Drop a PNG into the path to enable.
+const RESOURCE_ICON_PATHS: Dictionary = {
+	ResourceLedger.BIOMASS:   "res://assets/art/resources/biomass.png",
+	ResourceLedger.NUTRIENTS: "res://assets/art/resources/nutrients.png",
+	ResourceLedger.SUNLIGHT:  "res://assets/art/resources/sunlight.png",
+	ResourceLedger.DECAY:     "res://assets/art/resources/decay.png",
+	ResourceLedger.SPORES:    "res://assets/art/resources/spores.png"
+}
+
+# ASCII glyph fallback if a PNG is missing for a resource.
+const RESOURCE_GLYPHS: Dictionary = {
+	ResourceLedger.BIOMASS: "*",
+	ResourceLedger.NUTRIENTS: "#",
+	ResourceLedger.SUNLIGHT: "+",
+	ResourceLedger.DECAY: "o",
+	ResourceLedger.SPORES: "."
+}
+
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 const EVENT_INDEX_PATH: String = "res://data/events/_index.tres"
 const STRUCTURE_INDEX_PATH: String = "res://data/structures/_index.tres"
@@ -84,6 +103,9 @@ func _ensure_fullscreen_layout() -> void:
 	offset_bottom = 0.0
 
 
+var _icon_loaded: Dictionary[StringName, bool] = {}
+
+
 func _bind_labels() -> void:
 	_labels = {
 		ResourceLedger.BIOMASS: _biomass_label,
@@ -92,12 +114,46 @@ func _bind_labels() -> void:
 		ResourceLedger.DECAY: _decay_label,
 		ResourceLedger.SPORES: _spores_label
 	}
-	# Apply per-resource colors from the identity palette so each metric has
-	# its own visual voice in the HUD.
 	for resource_id in _labels.keys():
-		_labels[resource_id].add_theme_color_override(
-			"font_color", KingdomTheme.resource_color(resource_id)
-		)
+		var label: Label = _labels[resource_id]
+		label.add_theme_color_override("font_color", KingdomTheme.resource_color(resource_id))
+		label.tooltip_text = String(RESOURCE_NAMES.get(resource_id, ""))
+		label.mouse_filter = Control.MOUSE_FILTER_PASS
+		_install_resource_icon(resource_id, label)
+
+
+# Wrap the Label in an HBoxContainer with an icon prefix when the PNG exists.
+# Drop-in pattern — no scene edits needed. If the PNG is missing the label
+# falls back to its ASCII glyph (handled in _format_resource).
+func _install_resource_icon(resource_id: StringName, label: Label) -> void:
+	var path: String = String(RESOURCE_ICON_PATHS.get(resource_id, ""))
+	if path == "" or not ResourceLoader.exists(path):
+		_icon_loaded[resource_id] = false
+		return
+	var tex := load(path) as Texture2D
+	if tex == null:
+		_icon_loaded[resource_id] = false
+		return
+	var parent: Node = label.get_parent()
+	if parent == null:
+		_icon_loaded[resource_id] = false
+		return
+	var idx: int = label.get_index()
+	# Reparent the label into a fresh HBox that also holds the icon.
+	var row := HBoxContainer.new()
+	row.name = label.name + "Row"
+	row.add_theme_constant_override("separation", 4)
+	parent.add_child(row)
+	parent.move_child(row, idx)
+	var icon := TextureRect.new()
+	icon.texture = tex
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	icon.custom_minimum_size = Vector2(16, 16)
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # pixel-art crisp
+	row.add_child(icon)
+	parent.remove_child(label)
+	row.add_child(label)
+	_icon_loaded[resource_id] = true
 
 
 func _sync_labels() -> void:
@@ -175,8 +231,14 @@ func _apply_kingdom_theme() -> void:
 
 
 func _format_resource(resource_id: StringName, amount: float) -> String:
-	var name: String = RESOURCE_NAMES.get(resource_id, String(resource_id))
-	return "%s: %s" % [name, FormatUtils.abbreviate(amount)]
+	# If a commissioned 16×16 icon was wired into the chip row, the label
+	# is just the number — icon carries identity. Otherwise fall back to
+	# the ASCII glyph prefix.
+	var amount_text: String = FormatUtils.abbreviate(amount)
+	if _icon_loaded.get(resource_id, false):
+		return amount_text
+	var glyph: String = String(RESOURCE_GLYPHS.get(resource_id, "?"))
+	return "%s %s" % [glyph, amount_text]
 
 
 func _on_input_mode_changed(_mode: StringName) -> void:

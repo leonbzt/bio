@@ -29,9 +29,9 @@
 script = ExtResource("21")
 
 [node name="CameraRig" parent="." instance=ExtResource("1")]
-position = Vector2(256, 384)
+position = Vector2(1536, 2304)
 world_min = Vector2(0, 0)
-world_max = Vector2(512, 768)
+world_max = Vector2(3072, 4608)
 
 [node name="TileGrid" parent="." instance=ExtResource("2")]
 

@@ -13,6 +13,7 @@ const SPROUTING_DURATION: int = 15
 const MATURE_DURATION: int = 45
 
 var _all_species: Dictionary[StringName, SpeciesData] = {}
+var _cached_tick: int = 0
 
 @onready var _territory: Node = get_node("../TerritorySystem")
 @onready var _nutrients: Node = get_node("../NutrientSystem")
@@ -43,6 +44,9 @@ func _on_tick(_delta_seconds: float) -> void:
 	var unlocked: Array = GameState.run_save.get("unlocked_species_in_run", []) as Array
 	if unlocked.is_empty():
 		return
+	# Perf (Tier 2): pin the current tick once per tick instead of re-reading
+	# GameState.run_save["statistics"] inside every per-tile maturation check.
+	_cached_tick = _read_current_tick()
 	for species_id_str in unlocked:
 		var species: SpeciesData = _all_species.get(StringName(species_id_str), null)
 		if species == null:
@@ -82,7 +86,7 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 		for coord in coords:
 			var per_tile: float = base_yield * base_mult
 			# Phase 15a: tile maturation multiplier.
-			var age_ticks: int = _current_tick() - _territory.get_tile_placed_tick(coord)
+			var age_ticks: int = _cached_tick - _territory.get_tile_placed_tick(coord)
 			var maturation_mult: float = _maturation_yield_multiplier(age_ticks)
 			per_tile *= maturation_mult
 			var affinity_mult: float = 1.0
@@ -174,7 +178,7 @@ func _effect_parasite_steal(species: SpeciesData, coords: Array[Vector2i]) -> vo
 		var neighbor_count: int = 0
 		for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 			var neighbor: Vector2i = coord + offset
-			var occ: Dictionary = _territory.get_occupants(neighbor)
+			var occ: Dictionary = _territory.peek_occupants(neighbor)
 			for kingdom_id in targets:
 				if occ.has(kingdom_id):
 					neighbor_count += 1
@@ -191,7 +195,7 @@ func _effect_corpse_decay(_species: SpeciesData, _coords: Array[Vector2i]) -> vo
 
 func _effect_mycorrhizal_bond_apply(_species: SpeciesData, coords: Array[Vector2i]) -> void:
 	for coord in coords:
-		var occ: Dictionary = _territory.get_occupants(coord)
+		var occ: Dictionary = _territory.peek_occupants(coord)
 		if occ.has(&"plantae") and not bool(_territory.get_tile_data(coord, "mycorrhizal_bond", false)):
 			_territory.set_tile_data(coord, "mycorrhizal_bond", true)
 
@@ -209,7 +213,7 @@ func _on_ability_used(id: StringName, payload: Dictionary) -> void:
 
 
 func _is_tile_symbiotic(coord: Vector2i) -> bool:
-	var occ: Dictionary = _territory.get_occupants(coord)
+	var occ: Dictionary = _territory.peek_occupants(coord)
 	return occ.has(&"plantae") and occ.has(&"fungi")
 
 
@@ -230,7 +234,7 @@ func _is_endophytic_partner(coord: Vector2i, kingdom_id: StringName) -> bool:
 
 func _is_adjacent_to_fungi(coord: Vector2i) -> bool:
 	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		var occ: Dictionary = _territory.get_occupants(coord + offset)
+		var occ: Dictionary = _territory.peek_occupants(coord + offset)
 		if occ.has(&"fungi"):
 			return true
 	return false
@@ -238,7 +242,7 @@ func _is_adjacent_to_fungi(coord: Vector2i) -> bool:
 
 func _is_adjacent_to_plantae(coord: Vector2i) -> bool:
 	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		var occ: Dictionary = _territory.get_occupants(coord + offset)
+		var occ: Dictionary = _territory.peek_occupants(coord + offset)
 		if occ.has(&"plantae"):
 			return true
 	return false
@@ -279,7 +283,7 @@ func _is_tile_mycorrhizal_bonded(coord: Vector2i) -> bool:
 func _count_adjacent_owned_by_kingdom(coord: Vector2i, kingdom_id: StringName) -> int:
 	var count: int = 0
 	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		var occ: Dictionary = _territory.get_occupants(coord + offset)
+		var occ: Dictionary = _territory.peek_occupants(coord + offset)
 		if occ.has(kingdom_id):
 			count += 1
 	return count
@@ -298,15 +302,15 @@ func _maturation_yield_multiplier(age_ticks: int) -> float:
 func _has_ancient_neighbor_of_same_kingdom(coord: Vector2i, kingdom_id: StringName) -> bool:
 	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 		var neighbor: Vector2i = coord + offset
-		var occ: Dictionary = _territory.get_occupants(neighbor)
+		var occ: Dictionary = _territory.peek_occupants(neighbor)
 		if not occ.has(kingdom_id):
 			continue
-		var neighbor_age: int = _current_tick() - _territory.get_tile_placed_tick(neighbor)
+		var neighbor_age: int = _cached_tick - _territory.get_tile_placed_tick(neighbor)
 		if neighbor_age >= SPROUTING_DURATION + MATURE_DURATION:
 			return true
 	return false
 
 
-func _current_tick() -> int:
+func _read_current_tick() -> int:
 	var stats: Dictionary = GameState.run_save.get("statistics", {}) as Dictionary
 	return int(stats.get("tick_count", 0))

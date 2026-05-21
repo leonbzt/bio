@@ -158,7 +158,7 @@ func _rule_parasitic_plantae(coord: Vector2i, species: SpeciesData) -> Dictionar
 
 	var has_neighbor: bool = false
 	for n in neighbors(coord):
-		var occ: Dictionary = territory.get_occupants(n)
+		var occ: Dictionary = territory.peek_occupants(n)
 		if not occ.is_empty():
 			has_neighbor = true
 			break
@@ -204,7 +204,7 @@ func _rule_animal_anchor(coord: Vector2i, species: SpeciesData) -> Dictionary:
 		return _single(coord, species, {}, {})
 	var has_neighbor: bool = false
 	for n in neighbors(coord):
-		var occ: Dictionary = territory.get_occupants(n)
+		var occ: Dictionary = territory.peek_occupants(n)
 		if not occ.is_empty():
 			has_neighbor = true
 			break

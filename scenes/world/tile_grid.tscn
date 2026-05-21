@@ -2,5 +2,5 @@
 
 [ext_resource type="Script" path="res://scripts/entities/tile_grid.gd" id="1"]
 
-[node name="TileGrid" type="TileMap"]
+[node name="TileGrid" type="Node2D"]
 script = ExtResource("1")

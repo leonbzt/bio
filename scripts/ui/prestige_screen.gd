@@ -15,6 +15,7 @@ extends Control
 
 var _prestige_system: Node = null
 var _last_summary: Dictionary = {}
+var _prestige_committed: bool = false
 
 
 func _ready() -> void:
@@ -46,6 +47,7 @@ func _on_confirm_prestige() -> void:
 		"species_cultivated": diversity,
 		"starting_species_id": starter
 	}
+	_prestige_committed = true
 	_refresh_tree()
 	_show_tree()
 
@@ -127,6 +129,13 @@ func _show_tree() -> void:
 
 func _close() -> void:
 	TickClock.resume()
+	if _prestige_committed:
+		# In-game prestige just wiped the run; the player needs to choose
+		# their next ecosystem + starter before there's anything to return to.
+		# Hop through the main menu, which auto-opens the world map on _ready.
+		GameState.auto_open_world_map = true
+		get_tree().change_scene_to_file("res://scenes/main/main_menu.tscn")
+		return
 	queue_free()
 
 

@@ -7,6 +7,10 @@ var _structures: Array[StructureData] = []
 var _structures_by_id: Dictionary[StringName, StructureData] = {}
 var _active: Array[Dictionary] = []
 var _last_scan_tick: int = 0
+# Perf (Tier 2): coalesce multiple tile changes within a SCAN_INTERVAL_TICKS
+# window into a single _scan. Previously every tile_colonized / tile_lost
+# triggered an immediate full grid scan on top of the periodic _on_tick scan.
+var _scan_dirty: bool = false
 
 @onready var _territory: Node = get_node("../TerritorySystem")
 @onready var _tile_grid: Node = get_node("../../TileGrid")
@@ -16,8 +20,8 @@ func _ready() -> void:
 	_load_structures()
 	EventBus.tick.connect(_on_tick)
 	EventBus.run_loaded.connect(_on_run_loaded)
-	EventBus.tile_colonized.connect(func(_c, _o): _maybe_scan_on_change())
-	EventBus.tile_lost.connect(func(_c, _o): _maybe_scan_on_change())
+	EventBus.tile_colonized.connect(func(_c, _o): _scan_dirty = true)
+	EventBus.tile_lost.connect(func(_c, _o): _scan_dirty = true)
 
 
 func _load_structures() -> void:
@@ -43,23 +47,45 @@ func _on_tick(_delta: float) -> void:
 	if _last_scan_tick < SCAN_INTERVAL_TICKS:
 		return
 	_last_scan_tick = 0
-	_scan()
-
-
-func _maybe_scan_on_change() -> void:
+	if not _scan_dirty:
+		# No tile changes since last scan — structure set can't have changed.
+		return
 	_scan()
 
 
 func _scan() -> void:
-	var newly_active: Array[Dictionary] = []
+	_scan_dirty = false
+	# Perf (Tier 2): skip pattern matching for any structure whose required
+	# kingdom has zero tiles. Cuts the per-scan cost in half early/mid run.
+	# Authoring order in `_structures` (= order in structures/_index.tres) IS
+	# the precedence rule for one-structure-per-tile claim: the first match
+	# in iteration order wins; later candidates touching a claimed tile skip.
+	var candidates: Array[Dictionary] = []
 	for sd in _structures:
+		var required_kingdom: StringName = StringName(sd.pattern_params.get("kingdom_id", ""))
+		if required_kingdom != &"" and _territory.get_kingdom_occupied_coords(required_kingdom).is_empty():
+			continue
 		var matches: Array = _find_pattern_matches(sd)
 		for m in matches:
-			newly_active.append({
+			candidates.append({
 				"id": sd.id,
 				"anchor": m["anchor"],
 				"tiles": m["tiles"]
 			})
+	# Greedy claim pass — one structure per tile.
+	var claimed_tiles: Dictionary = {}
+	var newly_active: Array[Dictionary] = []
+	for entry in candidates:
+		var conflict: bool = false
+		for c in entry["tiles"]:
+			if claimed_tiles.has(c):
+				conflict = true
+				break
+		if conflict:
+			continue
+		for c in entry["tiles"]:
+			claimed_tiles[c] = true
+		newly_active.append(entry)
 
 	var old_keys: Dictionary = {}
 	for entry in _active:

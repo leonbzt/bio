@@ -210,6 +210,12 @@ Pre-alpha sprint between Phase 15 and the next numbered phase. Not a formal phas
 - Species panel compacted: was wide horizontal buttons; now 36×36 icon buttons (first letter of name on tile_marker_color). Tap to select, tap-active-again or right-click to evolve. Active species has bright wider border. Latin name + level + evolve cost moved to tooltip.
 - First-run onboarding overlay: 5 tap-to-advance tooltips on first-ever run, persisted via `meta.onboarding_step`. Veterans (prestige_count > 0) skip automatically.
 - `evolve_modal.gd` null-reference bug fixed (setup() guarded by is_node_ready()).
+- Perf tier 1 (commit e9f0d9a): dropped spurious resource_changed subscribers, cached species_index lookups, removed per-tick tween allocations, gated dead per-tile pulse loop.
+- Perf tier 2 (this commit): structural per-tick wins on a populated grid.
+  - TerritorySystem: incremental species→coords and kingdom→coords indices (was O(N) grid scan per call). `peek_occupants()` returns the live dict instead of duplicating. `_sync_run_save` becomes a dirty-flag + deferred flush (one rebuild per process frame max, plus immediate flush at `SaveSystem.save_now()`). `get_clusters()` cached; invalidated on `tile_colonized` / `tile_lost`.
+  - `growth_system._on_tick`: pin `tick_count` once per tick instead of re-reading per coord; read-only neighbor checks use `peek_occupants` (no dict duplication).
+  - `structure_registry`: per-placement scans coalesced into a dirty flag consumed by the 5-tick periodic scan. Patterns skip entirely when their required kingdom has zero tiles.
+  - `tile_grid` maturation refresh: only repaint tiles whose stage actually crossed a boundary this tick (was repainting every owned tile every 5 ticks).
 
 ## Phase 16 — Content + UI overhaul *(planned, post-alpha)*
 

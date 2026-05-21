@@ -42,6 +42,12 @@ func _ready() -> void:
 	_reset_button.pressed.connect(_on_reset_pressed)
 	_reset_dialog.confirmed.connect(_on_reset_confirmed)
 
+	if GameState.auto_open_world_map:
+		GameState.auto_open_world_map = false
+		# Deferred so the menu finishes _ready before adding the overlay,
+		# matching the manual Play-button path.
+		call_deferred("_open_kingdom_select")
+
 
 func _on_play_pressed() -> void:
 	if _has_active_run():

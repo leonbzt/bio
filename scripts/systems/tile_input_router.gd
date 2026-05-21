@@ -10,7 +10,7 @@ var _active_touches: Dictionary[int, Vector2] = {}
 var _mouse_down: bool = false
 var _species_by_id: Dictionary[StringName, SpeciesData] = {}
 
-@onready var _tile_grid: TileMap = get_node("../../TileGrid")
+@onready var _tile_grid: Node2D = get_node("../../TileGrid")
 @onready var _rules: Node = get_node("/root/ColonizationRulesRegistry")
 @onready var _territory: Node = get_node("../TerritorySystem")
 

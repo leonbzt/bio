@@ -119,6 +119,50 @@ func is_era_unlocked(era_id: StringName) -> bool:
 	return unlocked.has(String(era_id))
 
 
+# Ecosystems within an era unlock sequentially: the first is always available,
+# every subsequent one requires the previous (by era.ecosystems array order)
+# to be complete.
+func is_ecosystem_unlocked(ecosystem_id: StringName) -> bool:
+	var eco := get_ecosystem(ecosystem_id)
+	if eco == null:
+		return false
+	if not is_era_unlocked(eco.era_id):
+		return false
+	var era := get_era(eco.era_id)
+	if era == null:
+		return false
+	var prev: EcosystemData = null
+	for entry in era.ecosystems:
+		if entry == null:
+			continue
+		if entry.id == ecosystem_id:
+			break
+		prev = entry
+	if prev == null:
+		return true
+	return is_ecosystem_complete(prev.id)
+
+
+# Returns the ecosystem whose completion would unlock the given one, or null
+# if it is the era's first ecosystem (no prerequisite). Used by the world map
+# to render "Complete X to unlock" hints.
+func get_ecosystem_prerequisite(ecosystem_id: StringName) -> EcosystemData:
+	var eco := get_ecosystem(ecosystem_id)
+	if eco == null:
+		return null
+	var era := get_era(eco.era_id)
+	if era == null:
+		return null
+	var prev: EcosystemData = null
+	for entry in era.ecosystems:
+		if entry == null:
+			continue
+		if entry.id == ecosystem_id:
+			return prev
+		prev = entry
+	return null
+
+
 func get_ecosystems_in_era(era_id: StringName) -> Array[EcosystemData]:
 	var era := get_era(era_id)
 	if era == null:

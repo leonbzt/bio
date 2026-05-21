@@ -1,9 +1,18 @@
 extends Node2D
 
 @export var world_min: Vector2 = Vector2.ZERO
-@export var world_max: Vector2 = Vector2(512.0, 768.0)
+@export var world_max: Vector2 = Vector2(3072.0, 4608.0)
 
 @onready var _camera: Camera2D = $Camera2D
+
+
+func _ready() -> void:
+	# At TILE_SIZE=96 the full grid is 3072×4608. Phone viewport is 360×640.
+	# Default zoom 0.25 shows ~15×26 tiles. Pinch to 0.5 = 7×13, 1.0 = 3.75×6.7
+	# (per-tile detail mode where 32-px creature sprites read at full pixel
+	# fidelity). See docs/VISUAL_DIRECTION.md "Locked long-term canvas".
+	if _camera != null:
+		_camera.zoom = Vector2(0.25, 0.25)
 
 var _touches: Dictionary[int, Vector2] = {}
 var _last_pinch_distance: float = 0.0
@@ -66,7 +75,7 @@ func _zoom_at(screen_pos: Vector2, ratio: float) -> void:
 	if ratio == 1.0:
 		return
 	var old_zoom: float = _camera.zoom.x
-	var new_zoom: float = clamp(old_zoom * ratio, 0.5, 2.0)
+	var new_zoom: float = clamp(old_zoom * ratio, 0.20, 2.0)
 	if is_equal_approx(old_zoom, new_zoom):
 		return
 

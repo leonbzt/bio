@@ -81,11 +81,17 @@ func _refresh_ecosystem_grid() -> void:
 
 func _build_ecosystem_card(eco: EcosystemData) -> PanelContainer:
 	var era_system: Node = _get_era_system()
+	var done: bool = era_system != null and era_system.is_ecosystem_complete(eco.id)
+	var unlocked: bool = era_system == null or era_system.is_ecosystem_unlocked(eco.id)
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(0, 76)
 	var sb := StyleBoxFlat.new()
-	var done: bool = era_system != null and era_system.is_ecosystem_complete(eco.id)
-	sb.bg_color = Color(0.15, 0.20, 0.15) if done else Color(0.15, 0.15, 0.18)
+	if done:
+		sb.bg_color = Color(0.15, 0.20, 0.15)
+	elif not unlocked:
+		sb.bg_color = Color(0.10, 0.10, 0.12)
+	else:
+		sb.bg_color = Color(0.15, 0.15, 0.18)
 	sb.corner_radius_top_left = 4
 	sb.corner_radius_top_right = 4
 	sb.corner_radius_bottom_left = 4
@@ -99,19 +105,44 @@ func _build_ecosystem_card(eco: EcosystemData) -> PanelContainer:
 	var vbox := VBoxContainer.new()
 	card.add_child(vbox)
 	var title := Label.new()
-	# HTML5: ✓ is outside pixel-font glyph coverage — use ASCII tag.
-	title.text = ("[OK] " if done else "") + eco.display_name
-	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.6) if done else Color(0.95, 0.95, 0.95))
+	# HTML5: ✓ and 🔒 are outside pixel-font glyph coverage — ASCII tags.
+	var title_prefix: String = ""
+	if done:
+		title_prefix = "[OK] "
+	elif not unlocked:
+		title_prefix = "[X] "
+	title.text = title_prefix + eco.display_name
+	var title_color: Color
+	if done:
+		title_color = Color(0.95, 0.9, 0.6)
+	elif not unlocked:
+		title_color = Color(0.55, 0.55, 0.6)
+	else:
+		title_color = Color(0.95, 0.95, 0.95)
+	title.add_theme_color_override("font_color", title_color)
 	vbox.add_child(title)
 	var desc := Label.new()
-	desc.text = eco.description
+	if not unlocked:
+		var prereq: EcosystemData = era_system.get_ecosystem_prerequisite(eco.id) if era_system != null else null
+		if prereq != null:
+			desc.text = "Locked — complete %s first." % prereq.display_name
+		else:
+			desc.text = "Locked."
+	else:
+		desc.text = eco.description
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
+	desc.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6) if not unlocked else Color(0.75, 0.75, 0.75))
 	vbox.add_child(desc)
-	var goal := Label.new()
-	goal.text = _goal_string(eco)
-	goal.add_theme_color_override("font_color", Color(0.7, 0.85, 0.6))
-	vbox.add_child(goal)
+	if unlocked:
+		var goal := Label.new()
+		goal.text = _goal_string(eco)
+		goal.add_theme_color_override("font_color", Color(0.7, 0.85, 0.6))
+		vbox.add_child(goal)
+
+	if not unlocked:
+		card.modulate = Color(1, 1, 1, 0.6)
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return card
 
 	card.gui_input.connect(func(event: InputEvent) -> void:
 		var pressed: bool = false

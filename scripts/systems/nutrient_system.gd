@@ -57,7 +57,10 @@ func _on_run_loaded(_save_version: int) -> void:
 		run["biome_map"] = biome_map
 		run["biome_map_ecosystem_id"] = current_eco_id
 		GameState.run_save = run
-		SaveSystem.save_now()
+		# Perf: skip the synchronous save here. The biome map is deterministic
+		# from GameState.run_seed (already persisted by start_run), so a force
+		# quit between now and the next autosave just regenerates the same
+		# map on next load. Saving here was blocking world-scene load.
 	else:
 		biome_map = map_raw as Dictionary
 

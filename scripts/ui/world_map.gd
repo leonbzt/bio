@@ -52,7 +52,8 @@ func _refresh_era_tabs() -> void:
 			continue
 		var button := Button.new()
 		var unlocked: bool = era_system.is_era_unlocked(era.id)
-		button.text = ("🔒 %s" % era.display_name) if not unlocked else era.display_name
+		# HTML5: pixel fonts don't ship the 🔒 emoji glyph — use ASCII marker.
+		button.text = ("[X] %s" % era.display_name) if not unlocked else era.display_name
 		button.disabled = not unlocked
 		var captured_id: StringName = era.id
 		button.pressed.connect(func() -> void:
@@ -98,7 +99,8 @@ func _build_ecosystem_card(eco: EcosystemData) -> PanelContainer:
 	var vbox := VBoxContainer.new()
 	card.add_child(vbox)
 	var title := Label.new()
-	title.text = ("✓ " if done else "") + eco.display_name
+	# HTML5: ✓ is outside pixel-font glyph coverage — use ASCII tag.
+	title.text = ("[OK] " if done else "") + eco.display_name
 	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.6) if done else Color(0.95, 0.95, 0.95))
 	vbox.add_child(title)
 	var desc := Label.new()

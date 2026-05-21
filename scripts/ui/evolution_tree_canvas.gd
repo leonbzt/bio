@@ -167,26 +167,28 @@ func _restyle_button(button: Button, node: EvolutionNodeData) -> void:
 	if not owned and node.requires_era != &"":
 		label_name = "%s [%s]" % [label_name, _era_badge(node.requires_era)]
 	var font_color: Color = Color(0.95, 0.95, 0.95)
+	# HTML5: ✓ ★ 🔒 fall outside pixel-font glyph coverage and render as
+	# boxes-with-hex on web. Use ASCII tokens instead.
 	if owned:
-		button.text = "%s\n✓" % label_name
+		button.text = "%s\n[OK]" % label_name
 		button.disabled = true
 		sb.bg_color = wing_color
 		sb.border_color = wing_color.lightened(0.4)
 		font_color = Color(1.0, 1.0, 1.0)
 	elif prereqs_ok and kingdoms_ok and purchasable and affordable:
-		button.text = "%s\n★ %d" % [label_name, cost]
+		button.text = "%s\nEP %d" % [label_name, cost]
 		button.disabled = false
 		sb.bg_color = wing_color.darkened(0.1)
 		sb.border_color = wing_color.lightened(0.25)
 		font_color = Color(1.0, 1.0, 0.85)   # warm cream highlights affordable
 	elif prereqs_ok and kingdoms_ok and purchasable:
-		button.text = "%s\n★ %d" % [label_name, cost]
+		button.text = "%s\nEP %d" % [label_name, cost]
 		button.disabled = true
 		sb.bg_color = wing_color.darkened(0.4)
 		sb.border_color = wing_color.darkened(0.2)
 		font_color = Color(0.75, 0.75, 0.65)
 	else:
-		button.text = "%s\n🔒" % label_name
+		button.text = "%s\n[X]" % label_name
 		button.disabled = true
 		sb.bg_color = wing_color.darkened(0.6)
 		sb.border_color = wing_color.darkened(0.4)

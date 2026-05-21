@@ -125,17 +125,20 @@ func _biome_swatch_color(biome_id: StringName) -> Color:
 
 
 func _impact_string(biome: BiomeData) -> String:
+	# Pixel fonts (Tiny5 / Press Start 2P) ship only basic Latin + punctuation.
+	# HTML5 has no system-font fallback, so Unicode misc symbols (☀ ☁ ✦ ☣ ⚒)
+	# render as box-with-hex in the web build. Use bracketed single letters.
 	var bits: Array[String] = []
 	if biome.sunlight_per_tick >= 0.7:
-		bits.append("☀")
+		bits.append("[Sun+]")
 	elif biome.sunlight_per_tick > 0.0 and biome.sunlight_per_tick < 0.4:
-		bits.append("☁")
+		bits.append("[Sun-]")
 	if biome.nutrient_per_tick >= 0.35:
-		bits.append("✦")
+		bits.append("[Nut]")
 	if biome.decay_per_tick >= 0.35:
-		bits.append("☣")
+		bits.append("[Dec]")
 	if biome.chemosynthesis_per_tick >= 0.3:
-		bits.append("⚒")
+		bits.append("[Chm]")
 	if bits.is_empty():
 		return ""
 	return " ".join(bits)

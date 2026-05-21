@@ -49,6 +49,7 @@ var _buttons_by_id: Dictionary[StringName, Button] = {}
 
 
 func _ready() -> void:
+	_ensure_fullscreen_layout()
 	_bind_labels()
 	_sync_labels()
 	_build_event_index()
@@ -70,6 +71,17 @@ func _ready() -> void:
 	EventBus.structure_promoted.connect(_on_structure_promoted)
 	_refresh_identity_strip()
 	_refresh_abilities()
+
+
+func _ensure_fullscreen_layout() -> void:
+	# CanvasLayer-hosted Controls can report zero-size briefly on some web
+	# startup paths; force HUD to viewport bounds so bottom-anchored children
+	# (SpeciesPanel, abilities bar) stay docked.
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+	offset_left = 0.0
+	offset_top = 0.0
+	offset_right = 0.0
+	offset_bottom = 0.0
 
 
 func _bind_labels() -> void:

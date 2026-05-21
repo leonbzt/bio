@@ -1,6 +1,12 @@
 extends PanelContainer
 
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
+# Bottom-dock margins. Kept here so _apply_dock_layout can re-assert them
+# whenever the viewport resizes (HTML5 builds report a stale parent size at
+# _ready, which positioned the panel below the visible area).
+const DOCK_MARGIN_X: float = 4.0
+const DOCK_MARGIN_BOTTOM: float = 4.0
+const DOCK_COLLAPSED_HEIGHT: float = 56.0
 
 var _species_by_id: Dictionary[StringName, SpeciesData] = {}
 # Available section is collapsed by default — bottom bar stays minimal
@@ -24,8 +30,24 @@ func _ready() -> void:
 	EventBus.species_leveled.connect(func(_id, _level): _refresh())
 	AdaptationSystem.adaptation_changed.connect(func(_v): _refresh())
 	EventBus.placement_target_changed.connect(func(_id): _refresh())
+	# HTML5 fix: parent (HUD) sometimes reports a stale size during _ready,
+	# so anchor_bottom=1 lands at the wrong y. Re-assert dock layout deferred
+	# and on viewport resize. grow_vertical=0 (from the scene) handles the
+	# upward expansion when AvailableList is toggled visible.
+	_apply_dock_layout()
+	call_deferred("_apply_dock_layout")
+	get_viewport().size_changed.connect(_apply_dock_layout)
 	_apply_collapsed_state()
 	_refresh_all()
+
+
+func _apply_dock_layout() -> void:
+	set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	offset_left = DOCK_MARGIN_X
+	offset_right = -DOCK_MARGIN_X
+	offset_bottom = -DOCK_MARGIN_BOTTOM
+	offset_top = -(DOCK_COLLAPSED_HEIGHT + DOCK_MARGIN_BOTTOM)
+	grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 
 func _on_available_header_pressed() -> void:

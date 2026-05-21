@@ -6,11 +6,13 @@ extends Control
 ##
 
 const STEPS: Array[String] = [
-	"Tap any tile to colonize it. Start near the center of the map.",
-	"Resources accumulate on the left ← watch biomass tick up over time.",
-	"Pick a species from the buttons at the bottom to choose what to place.",
-	"Tap [Recipes] (top-right) to see structure patterns you can form.",
-	"When ready, tap [Menu] → Prestige to earn EP and start a new generation."
+	"Welcome. Tap any tile to colonize it with your starting species. Start near the center of the map.",
+	"Resources accumulate on the left — they fund everything you do. Biomass first, then unlocks for nutrients, sunlight, decay, and more.",
+	"Each biome favors different species. Place on a friendly biome for bigger yields — check the biome chips on the left to read the map.",
+	"Same-species tiles that touch form a cluster. Clusters drift a floating income label every few ticks. Bigger clusters = bigger floats.",
+	"Pick a species at the bottom of the screen. Tap an already-active species again (or long-press) to evolve it — costs Adaptation.",
+	"Tap [Guide] (top-right) for the Field Guide: every species, structure, and biome with their stats. Structures show as ??? until you discover them.",
+	"Hit the run goal shown on the left, then [Menu] → Prestige to convert your work into permanent Evolution Points. Each generation grows on the last."
 ]
 
 @onready var _backdrop: ColorRect = $Backdrop

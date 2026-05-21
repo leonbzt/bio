@@ -108,9 +108,9 @@ func _spawn_float(coords: Array[Vector2i], amount: float) -> void:
 	centroid /= float(coords.size())
 	var world_pos: Vector2 = _tile_grid.map_to_local(Vector2i(int(centroid.x), int(centroid.y)))
 	var label_node: Node = FLOAT_SCENE.instantiate()
-	# Identity-system glyph (●) prefixes the biomass amount — stronger
-	# resource cue + visually anchors the float without needing an icon.
-	label_node.text = "●+%s" % FormatUtils.abbreviate(amount)
+	# Biomass icon (assets/art/resources/biomass.png) is part of the scene now;
+	# the amount label sits next to it. Drop the leading ● glyph.
+	label_node.set_amount("+%s" % FormatUtils.abbreviate(amount))
 	label_node.position = world_pos
 	_tile_grid.add_child(label_node)
 

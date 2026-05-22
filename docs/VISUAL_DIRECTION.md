@@ -26,13 +26,12 @@ Both at once: paint final.png's silhouettes *on top of* map.png's substrate.
 
 ## Tile rendering spec
 
-- **Tile size: 32–48 px native** (up from 16). Grid is 32×48 cells; zoom + drag mean on-screen tile count doesn't matter, so bias toward more detail per tile. **32 px** is the safe floor; **48 px** lets species sprites carry real character. Don't author below 32.
-- **Per-tile composition layered bottom-up:**
-  1. Biome substrate (dithered texture, ~3 px frame visible around inner fill)
-  2. Species silhouette fill (kingdom-tinted, takes the inner ~26×26 of a 32-px tile)
-  3. Symbiosis override (warm-gold blend when plant + fungus share a tile)
-  4. Maturation modulation (sprout/mature/ancient affects sprite, not just color)
-  5. Animal marker (small inset diamond at center, on top of everything)
+**This section is superseded by the 2026-05-22 "Locked long-term canvas" below. Use that as the source of truth for tile size, species rendering, and layer order.** Summary of the current spec:
+
+- **48 px tile, 48 px cluster sprite** (filling the tile)
+- **Cluster-in-biome rendering** — biome substrate always visible, species appear as a few small organisms within
+- **Single species per tile**, symbiosis as adjacency interaction (corner dots + edge highlight)
+- **Ecological-stage clustering** — cluster density scales with same-kingdom neighbor count
 
 ---
 
@@ -109,58 +108,125 @@ Three stages with **distinct silhouettes**, not just color/alpha tweaks:
 
 ---
 
-## Locked long-term canvas (2026-05-21 — DO NOT REVISIT)
+## Locked long-term canvas (2026-05-22 — current lock)
 
-This is the architectural lock for every art asset Bio will ever ship. Every commission, every sprite, every UI element references these numbers. Bumping any of them requires re-commissioning previously-delivered art, so they get one shot at being right.
+Supersedes the 2026-05-21 lock (96 px tile + 32 px focal sprite + multi-occupant symbiosis). The prior lock is preserved as historical context below. Reason for change: strategy-game density goals, AI-gen budget, simpler symbiosis model, and biome-continuity all pointed toward smaller tiles with one species per tile rendered as a cluster of organisms in biome.
+
+### Visual model: cluster-in-biome with ecological stages
+
+Each species tile renders as **a few small organisms scattered within the biome** — not a single silhouette filling the tile, and not a small focal icon on top. The biome substrate is always visible *around and between* the organisms. The tile boundary is rendered as a subtle 1-2 px darker biome-shade line for grid clarity without hard edges.
+
+**"Growing together" emerges from clustering, not from auto-tile geometry.** As more same-kingdom tiles are placed adjacent, each tile's cluster density steps up — isolated tiles show a sparse pioneer cluster; tiles surrounded by same-kingdom neighbors show dense established groves. Players see their placement decisions develop the world visually.
 
 ### Canvas constants
 
 | Layer | Native size | Notes |
 |---|---|---|
-| **Tile** | **96 × 96 px** | Grid is 32×48 cells, total world 3072 × 4608 px |
-| **Creature sprite** (kingdom icon now, per-species later) | **32 × 32 px** | 33% of tile linear. Same slot — kingdom PNG retires when species art lands. |
-| **Animal marker** | 20 × 20 px | Overlays species, smaller because it's an inset indicator |
-| **Symbiosis ring** | radius 44 procedural | 4 px from tile edge, 3 px stroke |
-| **Structure composite** | 96 × tile-count | Fairy Ring 288², Old-Growth 288×384 (vertical overflow), Mycorrhizal Hub 480², Decay Pit 192² |
-| **Biome substrate** | 96 × 96 px per biome | Procedural now; commissioned PNGs later drop into same slot |
-| **Resource icon** | 16 × 16 (chip), 32 × 32 (tooltip) | HUD only, not tile-bound |
-| **Maturation accent** | procedural (1–2 px rim) | Code-drawn, no asset |
+| **Tile** | **48 × 48 px** | Grid is 32×48 cells, total world 1536 × 2304 px |
+| **Species cluster sprite** | **48 × 48 px** (= tile) | 4 density variants per kingdom: pioneer / establishing / established / mature. White-on-transparent, code-tinted by species color. Sprite contents are sparse organisms with biome showing through gaps. |
+| **Tile-edge tint** | 1-2 px on tile boundary | Procedural, slightly darker biome shade. Grid clarity without hard borders. |
+| **Animal marker** | 16 × 16 px procedural | Inset diamond at tile center for now. Per-species sprites deferred. |
+| **Symbiosis marker** | Corner dot + edge highlight | 4×4 px gold dot in tile corner facing each adjacent partner; tile-edge line tinted gold on the shared boundary. Procedural. |
+| **Hybrid-pair fusion sprite** (Lichen, Coral) | Special render for adjacency-pair tiles | Both tiles in a true-cohabitation pair render with a hybrid sprite variant. Triggered only for designated hybrid species pairs. |
+| **Structure composite** | 48 × tile-count | Fairy Ring 144² (3×3), Old-Growth 144×192 (3×3 with vertical overflow), Mycorrhizal Hub 240² (5-tile cross), Decay Pit 96² (2×2) |
+| **Biome substrate** | 48 × 48 px per biome | Procedural now; commissioned PNGs later drop into same slot |
+| **Resource icon** | 16 × 16 (chip), 32 × 32 (tooltip) | HUD only, unchanged |
+| **Maturation accent** | procedural (1 px rim, ancient stage) | Code-drawn, no asset |
 
-### Rendering pipeline
+### Single species per tile
 
-- **1:1 native pixel art.** Every art pixel = one world pixel at zoom 1.0. No anti-aliasing on imports, no sub-pixel rendering.
-- **Camera zoom range**: 0.20 (full-map overview) to 2.0 (zoomed-in detail). Default `_ready` zoom = 0.25 (shows ~15×26 tiles on a 360-wide phone).
-- **Integer-friendly zooms** look crispest: 0.25, 0.5, 1.0, 2.0. Camera supports continuous zoom but the player snaps to these naturally via pinch gestures.
-- **Phone viewport reference**: 360 × 640 portrait. At zoom 0.25: each tile renders 24 px wide on screen. At zoom 1.0: 96 px wide (per-tile detail mode).
+Each tile holds at most ONE species occupant. Symbiosis (mycorrhiza, pollination, lichen-style cohabitation) is a relationship between *adjacent* tiles, not stacking within one tile. This:
+- Makes spatial planning the core strategic loop ("which tile holds what, who's next to whom")
+- Prevents the "put everything everywhere" failure mode of multi-occupancy
+- Eliminates visual stacking ambiguity at small tile sizes
+- Maps better to real ecology (habitats are spatially differentiated)
+- Allows true-cohabitant species (Lichen, Coral) to render a fused hybrid sprite across the adjacency pair as a special case, preserving their thematic charm
+
+### Ecological-stage clustering
+
+Cluster density per tile scales with the count of same-kingdom 4-neighbors. The variant rendered on a given tile is determined by neighbor count at render time:
+
+| Same-kingdom 4-neighbors | Stage | Visual character |
+|---|---|---|
+| 0 (isolated) | Pioneer | 1-2 small organisms, lots of biome visible. "Just placed." |
+| 1-2 | Establishing | 3-4 organisms, moderate cover. "Taking hold." |
+| 3-4 (clustered) | Established | 5-6 organisms, dense cluster. "Settled colony." |
+| All 4 neighbors same | Mature | Larger-scale feature in tile (small grove pattern, herd, field). "Defining feature of the area." |
+
+Players see their placement decisions develop the world. No 16-variant auto-tile geometry required — only 4 density variants per kingdom.
 
 ### Layer order in a single tile (z, low to high)
 
-1. Biome substrate (1× full tile, Sprite2D)
-2. Kingdom icon / species sprite (32 × 32 at tile center, single-occupant)
-3. Symbiosis dual icons (two 32×32 at ±16 px diagonal from center) + gold ring (when 2+ kingdoms)
-4. Animal marker (20 × 20 centered, on top of any species)
-5. Maturation accent rim (procedural, ancient-stage only)
-6. Structure fusion overlay (multi-tile, replaces individual species when active)
-7. Fog overlay (full-tile dark mask, when unrevealed)
-8. Hover / tap highlight (future)
+1. Biome substrate (full tile, Sprite2D)
+2. Tile-edge tint (1-2 px boundary, procedural)
+3. Species cluster sprite (48 × 48, density variant chosen by neighbor count, tinted by species color)
+4. Adjacency-symbiosis edge highlight (procedural, gold tint on shared edges)
+5. Adjacency-symbiosis corner dots (procedural, 4 × 4 px per partnered direction)
+6. Hybrid-pair fusion sprite (overrides 3, only for designated hybrid species)
+7. Maturation accent rim (procedural, ancient stage only)
+8. Animal marker (16 × 16 centered, procedural)
+9. Structure fusion overlay (multi-tile, replaces cluster sprite within footprint)
+10. Fog overlay (full-tile dark mask, when unrevealed)
+11. Hover / tap highlight (future)
+
+### Camera + zoom
+
+- **Default zoom**: 1.0 (native 1:1, phone shows ~7.5 × 13 tiles — strategy overview is the default state)
+- **Snap zoom levels**: 0.5 (world map, ~15 × 26 tiles visible), 1.0 (play), 2.0 (inspect, 3.75 × 6.7 tiles)
+- **Pinch snaps** to these three levels; non-integer scales are blocked to prevent pixel shimmer
+- **World dimensions**: 1536 × 2304 px (32×48 grid at 48 px tile)
+
+### Asset commission spec at a glance
+
+| Asset class | Per-kingdom count | Native size |
+|---|---|---|
+| Cluster density variants | 4 (pioneer/establishing/established/mature) | 48 × 48 |
+| Biome substrate | 1 per biome (7 biomes total) | 48 × 48 |
+| Structure composite | 1 per structure (4 structures) | 48 × tile-count |
+| Hybrid-pair fusion | 1 per hybrid species (currently only Lichen) | 48 × 48 (renders on each paired tile) |
+
+For 2 alpha kingdoms (plantae, fungi) the species commission is **8 PNGs total** (4 density × 2 kingdoms) — dramatically lower than the prior 16-tile-auto-tile spec (32 PNGs) and lower still than the original 14 per-species spec.
 
 ### Why these numbers
 
-- **96 px tile**: at 32-px sprite → 33% icon-to-tile ratio. Sprite is focal, biome reads as substrate. Symbiosis dual fits diagonally with 16-px margin to tile edges. Animal marker has room on top. Future per-tile indicators (status badges, event glyphs) have headroom. Going larger (128, 192) makes the icon feel small (<25%); going smaller (64, 48) crowds the layers.
-- **32 px creature**: floor of pixel-art character. At 32×32 a mushroom has cap + stem + gill hint; a creature has visible body + leg suggestion; a plant has multiple distinguishable blades. Below 32 (e.g. 24) species start looking like "kingdom blobs." Above 32 (e.g. 48) diminishing returns — top-down detail saturates.
-- **Locked once**: every other "good enough" pair (48 / 14, 64 / 20, 64 / 24) would require either (a) re-commissioning every asset later when species art arrives at full size, or (b) accepting that species art is undersized for its tile.
+- **48 px tile**: AI-gen sweet spot. At 32 px the cluster organisms become hard to keep consistent across density variants; at 64 px world becomes large and on-screen tile count drops. 48 balances density of strategy view with detail clarity per tile.
+- **Cluster matching tile size (no inset)**: every authored pixel contributes. The "biome visible through" goal is met by the cluster being *sparse organisms*, not by leaving margin around a focal silhouette.
+- **4 density variants vs 16 auto-tile**: 4× fewer commissions, 4× faster iteration cycles, easier to keep silhouette consistent across the set. The "tiles growing together" feel emerges from clustering visually, not from edge-matching geometry.
+- **Single species per tile**: covered above — strategic depth + visual clarity + simpler engine.
 
-### When this would change
+### What's preserved and what's abandoned vs prior lock
 
-Only if Bio's core perspective changed (e.g. switching from top-down to isometric, or splitting tile rendering into multiple layers like ground+air). Both unlikely. Treat this lock as permanent.
+**Preserved**:
+- Top-down naturalist pixel-art tone (per `map.png` + `final.png` synthesis)
+- 32×48 grid (game logic unchanged)
+- Structure fusion overlay pattern (multi-tile composite rendering)
+- Per-species color tinting in code
+- Biome continuity as a visual goal
+
+**Abandoned (relative to 2026-05-21 lock)**:
+- 96 px tile size → 48 px
+- Sprite-floats-in-biome model → cluster-fills-tile
+- Multi-occupant symbiosis (dual icons + gold ring) → single species + adjacency markers
+- Auto-tile 16-variant approach (considered as α) → 4-variant ecological-stage clustering
+
+### β path (not planned — confirmed 2026-05-22)
+
+The cellular-automata growth overlay (β) is **not on the roadmap** and the engine will NOT preserve hooks or scaffolding for it. Cluster-in-biome is the committed direction. If, post-alpha, cluster-in-biome proves visually insufficient and β becomes worth revisiting, it will be designed fresh against the codebase as it stands — not bolted onto preserved hooks. Current code should be as simple as the cluster-in-biome spec allows.
+
+### When this lock would change
+
+- Switching to hex grid (multi-week engine refactor, deferred)
+- Switching to a fundamentally different style (field-guide schematic, vector flat) — current direction holds
+- Validated user-testing signal that 48 px is wrong (then evaluate 32 vs 64; not before)
 
 ---
 
-## Prior locked decisions (superseded by the canvas lock above)
+## Prior locked decisions (further superseded by the 2026-05-22 lock)
 
-1. **Structures: composite sprite first.** Author one multi-tile PNG per structure at structure-native size (96 × tile-count). On promotion, hide the underlying tile fills and stamp the composite. Procedural overlay is the long-term option once the system proves itself.
-2. **Maturation: single base sprite × programmatic growth modifier now; per-stage silhouettes long-term.** v1: each species ships ONE 32×32 base sprite, code applies rim accent for ancient. Later: each species gets 3 unique sprites for the 3 stages once the roster is stable.
-3. **Kingdom icons stand in for per-species sprites in the alpha.** 2 PNGs (plantae, fungi) cover the whole roster, tinted in code by `species.tile_marker_color`. Animals/hybrid keep procedural placeholders. Per-species commission is deferred (`docs/COMMISSION_SPECIES.md`) but uses the same 32×32 native size, so future drop-in is invisible.
+1. **2026-05-21 96 px canvas lock** — replaced by the 48 px cluster-in-biome lock above.
+2. **Structures: composite sprite first.** Direction holds, sizes change (48 px per tile, not 32 — see commission spec).
+3. **Maturation: single base × programmatic modifier.** Folded into the ecological-stage clustering — maturation now reads as cluster density + ancient accent rim.
+4. **Kingdom icons stand in for per-species sprites.** Replaced by cluster density variants. The per-species sprite slot may still arrive post-alpha but drops into the same 48 × 48 cluster slot.
 
 ---
 
@@ -385,7 +451,13 @@ viewer should be able to tell them apart with no text labels.
 
 ---
 
-## Phase D — HUD restyle (planned, 2026-05-21)
+## Phase D — HUD restyle (PENDING RE-SCOPE 2026-05-22)
+
+> **DO NOT EXECUTE D1-D7 AS WRITTEN.** The plan below was scoped against the pre-Hero-design HUD. `docs/GAMEPLAY_DESIGN.md` (2026-05-22) adds Hero portrait + stat radar, Pressure banner, action bar with up to 8 support species, mutation/event prompt modals, Tier List view, Tree of Life view, and Planet view. The existing resources strip + biome legend + goal banner + ability bar pattern is being substantially rebuilt, not restyled. Phase D must be re-scoped against the new HUD requirements before any D1-D7 work is done.
+>
+> **What still applies**: the visual language (dither backgrounds, glow accents, kingdom-tinted palette) carries forward to whatever the new HUD becomes. Steps D1 (dither micro-background helper) and D2 (glow-line accents) are reusable primitives. The biome legend chip restyle (D4) and the structure banner restyle (D5) are still in scope if those elements survive the redesign — but they are no longer the centerpiece of HUD polish.
+
+### Original D1-D7 plan (pre-2026-05-22, retained for reference)
 
 The HUD layout from `swamp_biome_gpt.png` is essentially the current layout — resources strip top, left column with biome legend + goal banner, kingdom-tab indicators on the right. Phase D is **restyling**, not rebuilding. The pilot (resource glyph chips + dropped name prefix) is already in `scripts/ui/hud.gd` as of 2026-05-21. The remaining steps:
 

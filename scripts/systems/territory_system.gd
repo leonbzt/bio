@@ -7,6 +7,13 @@ const _KINGDOM_DEFAULT_STARTERS: Dictionary[StringName, StringName] = {
 }
 
 # Per-tile state: {occupants: {kingdom_id: species_id}, data: Dictionary}
+# Single-species-per-tile invariant (locked 2026-05-22, save_version 18+):
+# the occupants dict has AT MOST ONE entry. The map-of-kingdom shape is
+# preserved for API compatibility with peek_occupants / get_occupant
+# callers (mostly per-kingdom-adjacency checks across the codebase), but
+# `add_occupant` rejects any placement on an already-occupied tile.
+# See docs/MIGRATION_PLAN.md VM-A2 and docs/VISUAL_DIRECTION.md
+# "Locked long-term canvas (2026-05-22)".
 var _tiles: Dictionary[Vector2i, Dictionary] = {}
 
 # Perf (Tier 2): inverted indices so get_*_occupied_coords is O(1) lookup,
@@ -88,7 +95,11 @@ func add_occupant(coord: Vector2i, kingdom_id: StringName, species_id: StringNam
 		return false
 	var entry: Dictionary = _ensure_entry(coord)
 	var occupants: Dictionary = entry.get("occupants", {}) as Dictionary
-	if occupants.has(kingdom_id):
+	# Single-species-per-tile invariant: reject if tile is already occupied
+	# by ANY species (not just same-kingdom). Caller must remove first to
+	# replace. Cohabitation (e.g. plantae + fungi on one tile) is no longer
+	# possible — symbiosis becomes an adjacency interaction in VM-B3.
+	if not occupants.is_empty():
 		return false
 	occupants[kingdom_id] = species_id
 	entry["occupants"] = occupants

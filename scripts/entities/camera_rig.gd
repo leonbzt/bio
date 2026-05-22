@@ -1,21 +1,34 @@
 extends Node2D
 
 @export var world_min: Vector2 = Vector2.ZERO
-@export var world_max: Vector2 = Vector2(3072.0, 4608.0)
+@export var world_max: Vector2 = Vector2(1536.0, 2304.0)
+
+# 2026-05-22 lock: snap-zoom levels. Pinch / scroll wheel only ever lands on
+# one of these values. Non-integer scales are blocked to prevent pixel-art
+# shimmer on the 48-px tile grid. See docs/VISUAL_DIRECTION.md
+# "Locked long-term canvas (2026-05-22)".
+const ALLOWED_ZOOMS: Array[float] = [0.5, 1.0, 2.0]
+const _DEFAULT_LEVEL: int = 1  # index into ALLOWED_ZOOMS → 1.0 (native 1:1)
+
+# Cumulative pinch ratio from the start of a 2-touch gesture (or from the last
+# zoom step within the same gesture) needed to trigger one step up/down.
+const _PINCH_STEP_RATIO_UP: float = 1.4
+const _PINCH_STEP_RATIO_DOWN: float = 0.71
 
 @onready var _camera: Camera2D = $Camera2D
 
+var _zoom_level: int = _DEFAULT_LEVEL
+var _touches: Dictionary[int, Vector2] = {}
+var _pinch_start_distance: float = 0.0
+
 
 func _ready() -> void:
-	# At TILE_SIZE=96 the full grid is 3072×4608. Phone viewport is 360×640.
-	# Default zoom 0.25 shows ~15×26 tiles. Pinch to 0.5 = 7×13, 1.0 = 3.75×6.7
-	# (per-tile detail mode where 32-px creature sprites read at full pixel
-	# fidelity). See docs/VISUAL_DIRECTION.md "Locked long-term canvas".
+	# At TILE_SIZE=48 the full grid is 1536×2304. Phone viewport is 360×640.
+	# Default zoom 1.0 (native 1:1) shows ~7.5×13 tiles on portrait phone —
+	# strategy overview is the default state. Pinch out to 0.5 for full-map
+	# (~15×26 tiles), pinch in to 2.0 for inspect (~3.75×6.7 tiles).
 	if _camera != null:
-		_camera.zoom = Vector2(0.25, 0.25)
-
-var _touches: Dictionary[int, Vector2] = {}
-var _last_pinch_distance: float = 0.0
+		_camera.zoom = Vector2(ALLOWED_ZOOMS[_zoom_level], ALLOWED_ZOOMS[_zoom_level])
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -33,11 +46,11 @@ func _handle_touch(event: InputEvent) -> void:
 		if event.pressed:
 			_touches[event.index] = event.position
 			if _touches.size() == 2:
-				_last_pinch_distance = _get_touch_distance()
+				_pinch_start_distance = _get_touch_distance()
 		else:
 			_touches.erase(event.index)
 			if _touches.size() < 2:
-				_last_pinch_distance = 0.0
+				_pinch_start_distance = 0.0
 		return
 
 	if event is InputEventScreenDrag:
@@ -45,20 +58,23 @@ func _handle_touch(event: InputEvent) -> void:
 		if _touches.size() == 1:
 			_pan_by(-event.relative / _camera.zoom.x)
 			return
-		if _touches.size() == 2:
+		if _touches.size() == 2 and _pinch_start_distance > 0.0:
 			var distance: float = _get_touch_distance()
-			if _last_pinch_distance > 0.0:
-				var ratio: float = distance / _last_pinch_distance
-				_zoom_at(_get_touch_center(), ratio)
-			_last_pinch_distance = distance
+			var total_ratio: float = distance / _pinch_start_distance
+			if total_ratio >= _PINCH_STEP_RATIO_UP:
+				_step_zoom(1, _get_touch_center())
+				_pinch_start_distance = distance
+			elif total_ratio <= _PINCH_STEP_RATIO_DOWN:
+				_step_zoom(-1, _get_touch_center())
+				_pinch_start_distance = distance
 
 
 func _handle_mouse(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			_zoom_at(event.position, 1.1)
+			_step_zoom(1, event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			_zoom_at(event.position, 0.9)
+			_step_zoom(-1, event.position)
 		return
 
 	if event is InputEventMouseMotion:
@@ -71,20 +87,19 @@ func _pan_by(delta: Vector2) -> void:
 	_clamp_position()
 
 
-func _zoom_at(screen_pos: Vector2, ratio: float) -> void:
-	if ratio == 1.0:
+func _step_zoom(delta: int, screen_pos: Vector2) -> void:
+	var new_level: int = clamp(_zoom_level + delta, 0, ALLOWED_ZOOMS.size() - 1)
+	if new_level == _zoom_level:
 		return
 	var old_zoom: float = _camera.zoom.x
-	var new_zoom: float = clamp(old_zoom * ratio, 0.20, 2.0)
-	if is_equal_approx(old_zoom, new_zoom):
-		return
-
+	var new_zoom: float = ALLOWED_ZOOMS[new_level]
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var world_before: Vector2 = global_position + (screen_pos - viewport_size * 0.5) / old_zoom
 	_camera.zoom = Vector2(new_zoom, new_zoom)
 	var world_after: Vector2 = global_position + (screen_pos - viewport_size * 0.5) / new_zoom
 	global_position += (world_before - world_after)
 	_clamp_position()
+	_zoom_level = new_level
 
 
 func _clamp_position() -> void:

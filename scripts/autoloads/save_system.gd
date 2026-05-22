@@ -5,7 +5,16 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 17
+const SAVE_VERSION: int = 18
+
+# Kingdom precedence for the v17 → v18 multi → single occupant flatten.
+# When a v17 tile had >1 kingdom slot, the migration keeps the species whose
+# kingdom appears earliest in this list and discards the rest.
+const _SINGLE_OCCUPANT_KINGDOM_PRECEDENCE: Array[StringName] = [
+	&"plantae",
+	&"fungi",
+	&"animals"
+]
 const SAVE_PATH: String = "user://save.json"
 const TEMP_PATH: String = "user://save.json.tmp"
 const BACKUP_PATH: String = "user://save.json.bak"
@@ -299,6 +308,8 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 		_migrate_v15_to_v16(old)
 	if from_version < 17:
 		_migrate_v16_to_v17(old)
+	if from_version < 18:
+		_migrate_v17_to_v18(old)
 	return old
 
 
@@ -680,6 +691,72 @@ func _migrate_v16_to_v17(save: Dictionary) -> void:
 	if not run.has("species_levels"):
 		run["species_levels"] = {}
 	save["run"] = run
+
+
+# v17 → v18: enforce single-species-per-tile invariant. Tiles in v17 could hold
+# up to 3 kingdom slots (plantae + fungi + animals); v18 keeps exactly one.
+# When a tile had >1 occupant, the dominant kingdom (per
+# _SINGLE_OCCUPANT_KINGDOM_PRECEDENCE) wins; others are discarded with a
+# warning. The `occupants` dict shape is preserved on disk but is enforced
+# to have at most one entry from this version forward. species_tile_counts is
+# recomputed to match. See docs/MIGRATION_PLAN.md VM-A2.
+func _migrate_v17_to_v18(save: Dictionary) -> void:
+	var run: Dictionary = save.get("run", {}) as Dictionary
+	var tiles_raw: Variant = run.get("tiles", [])
+	if not (tiles_raw is Array):
+		return
+	var migrated_tiles: Array = []
+	var discard_count: int = 0
+	for entry in tiles_raw:
+		if not (entry is Dictionary):
+			continue
+		var t: Dictionary = entry
+		var occupants_raw: Variant = t.get("occupants", {})
+		if not (occupants_raw is Dictionary):
+			migrated_tiles.append(t)
+			continue
+		var occupants: Dictionary = occupants_raw
+		if occupants.is_empty():
+			# Already conformant (empty tile is fine).
+			migrated_tiles.append(t)
+			continue
+		# Pick dominant by precedence.
+		var picked_kingdom: StringName = &""
+		var picked_species: StringName = &""
+		for k in _SINGLE_OCCUPANT_KINGDOM_PRECEDENCE:
+			if occupants.has(String(k)):
+				picked_kingdom = k
+				picked_species = StringName(occupants[String(k)])
+				break
+			if occupants.has(k):
+				picked_kingdom = k
+				picked_species = StringName(occupants[k])
+				break
+		if picked_kingdom == &"":
+			# No matching kingdom in precedence list — pick first arbitrary entry.
+			var any_keys: Array = occupants.keys()
+			if any_keys.is_empty():
+				migrated_tiles.append(t)
+				continue
+			picked_kingdom = StringName(any_keys[0])
+			picked_species = StringName(occupants[any_keys[0]])
+		discard_count += maxi(0, occupants.size() - 1)
+		t["occupants"] = {String(picked_kingdom): String(picked_species)}
+		migrated_tiles.append(t)
+	run["tiles"] = migrated_tiles
+	# Recompute species_tile_counts from the flattened tiles.
+	var counts: Dictionary = {}
+	for entry in migrated_tiles:
+		if not (entry is Dictionary):
+			continue
+		var occupants: Dictionary = entry.get("occupants", {}) as Dictionary
+		for kingdom_id in occupants.keys():
+			var sp_id: String = String(occupants[kingdom_id])
+			counts[sp_id] = int(counts.get(sp_id, 0)) + 1
+	run["species_tile_counts"] = counts
+	save["run"] = run
+	if discard_count > 0:
+		push_warning("SaveSystem: v17→v18 migration discarded %d co-occupant entries (single-species-per-tile invariant)" % discard_count)
 
 
 # Helper to flood reveal around a coord (radius in each direction).

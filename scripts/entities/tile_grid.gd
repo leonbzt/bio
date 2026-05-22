@@ -14,10 +14,14 @@ extends Node2D
 
 const GRID_WIDTH: int = 32
 const GRID_HEIGHT: int = 48
-const TILE_SIZE: int = 96   # Locked 2026-05-21 long-term — see VISUAL_DIRECTION.md.
-							# 32-px native creature sprite at 33% of tile;
-							# symbiosis dual at full size fits diagonally
-							# with 16-px margin all sides.
+const TILE_SIZE: int = 48   # Locked 2026-05-22 — see VISUAL_DIRECTION.md
+							# "Locked long-term canvas (2026-05-22)". Cluster
+							# sprite fills the tile (48×48 native), biome shows
+							# through transparent margins and between organisms.
+							# Cluster rendering itself lands in VM-B1; for now,
+							# the existing 32-px kingdom icons render oversized
+							# relative to the smaller tile (~67% coverage) —
+							# temporary visual state until VM-B1.
 
 # Kingdom icons (alpha) AND per-species sprites (post-alpha) both author at
 # 32×32 native. Same PNG slot — when species art lands, kingdom icon retires
@@ -36,7 +40,7 @@ const BIOME_IDS: Array[StringName] = [
 # Symbiosis ring color (Locked palette 2026-05-18) — gold rim around tiles
 # where multiple kingdoms share occupancy.
 const SYMBIOSIS_GOLD: Color = Color(0.85, 0.72, 0.28, 1.0)
-const SYMBIOSIS_RING_WIDTH: float = 3.0  # bumped from 2 at the new 96-px tile scale
+const SYMBIOSIS_RING_WIDTH: float = 3.0  # ring stroke width; carried through from prior lock
 
 # Phase 15a tile pulse — disabled, kept as concept for slime-mold-style flow.
 const PULSE_CHANCE: float = 0.0
@@ -434,7 +438,7 @@ func _make_biome_texture(
 	var speckle: Color = Color8(0xee, 0xf4, 0xff).lerp(era_tint, era_blend * 0.5)
 	var img := Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	# Border is proportional to tile size so it stays visible at every scale
-	# we might lock to. At 96 px tile, 3 px border = 6% on each edge.
+	# we might lock to. At TILE_SIZE 48 → border 2 px (~4%); at 96 → 3 px (~6%).
 	var border_w: int = maxi(2, int(TILE_SIZE / 32))
 	for y in range(TILE_SIZE):
 		for x in range(TILE_SIZE):
@@ -672,10 +676,11 @@ func _paint_composite(coord: Vector2i, occ: Dictionary) -> void:
 		fungi_icon.z_index = 1
 		composite.add_child(fungi_icon)
 		var ring := _SymbiosisRing.new()
-		# Ring sits just inside tile edge so it visually frames the whole
-		# symbiosis composite. At 96 px tile, radius 44 leaves 4 px to edge;
-		# icon corners may poke slightly past which reads as "two organisms
-		# inside a marked tile" — the intended affordance.
+		# Dead code path post-VMA2: cohabitation (has_plant AND has_fungi on
+		# one tile) is no longer possible — VM-A2 enforced single-species per
+		# tile. This branch never runs. Adjacency-symbiosis rendering lands
+		# in VM-B3 as a separate code path. Leaving the radius hardcoded at
+		# 44 (sized for the prior 96-px tile) since it won't draw anyway.
 		ring.radius = 44.0
 		ring.color = Color(SYMBIOSIS_GOLD.r, SYMBIOSIS_GOLD.g, SYMBIOSIS_GOLD.b, 0.85)
 		ring.width = SYMBIOSIS_RING_WIDTH

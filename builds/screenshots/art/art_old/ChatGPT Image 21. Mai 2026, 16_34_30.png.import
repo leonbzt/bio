@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://jhnvqgpx5ubb"
-path="res://.godot/imported/plantae.png-7e2010884c397e710e00e6cd716e8459.ctex"
+uid="uid://bfnh3beveqkxb"
+path="res://.godot/imported/ChatGPT Image 21. Mai 2026, 16_34_30.png-0c68d93fb997044bcecdca1035ae2f3d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/kingdoms/plantae.png"
-dest_files=["res://.godot/imported/plantae.png-7e2010884c397e710e00e6cd716e8459.ctex"]
+source_file="res://builds/screenshots/art/art_old/ChatGPT Image 21. Mai 2026, 16_34_30.png"
+dest_files=["res://.godot/imported/ChatGPT Image 21. Mai 2026, 16_34_30.png-0c68d93fb997044bcecdca1035ae2f3d.ctex"]
 
 [params]
 

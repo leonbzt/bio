@@ -14,17 +14,14 @@ extends Node2D
 
 const GRID_WIDTH: int = 32
 const GRID_HEIGHT: int = 48
-const TILE_SIZE: int = 96   # Locked 2026-05-21 long-term — see VISUAL_DIRECTION.md.
-							# 32-px native creature sprite at 33% of tile;
-							# symbiosis dual at full size fits diagonally
-							# with 16-px margin all sides.
-
-# Kingdom icons (alpha) AND per-species sprites (post-alpha) both author at
-# 32×32 native. Same PNG slot — when species art lands, kingdom icon retires
-# without engine changes.
-const KINGDOM_ICON_SIZE: int = 32
-const KINGDOM_ICON_HALF: float = 16.0
-const SYMBIOSIS_OFFSET: float = 16.0  # diagonal offset from tile center for dual icons
+const TILE_SIZE: int = 48   # Locked 2026-05-22 — see VISUAL_DIRECTION.md
+							# "Locked long-term canvas (2026-05-22)". Cluster
+							# sprite fills the tile (48×48 native), biome shows
+							# through transparent margins and between organisms.
+							# Cluster rendering itself lands in VM-B1; for now,
+							# the existing 32-px kingdom icons render oversized
+							# relative to the smaller tile (~67% coverage) —
+							# temporary visual state until VM-B1.
 
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 
@@ -33,10 +30,10 @@ const BIOME_IDS: Array[StringName] = [
 	&"tundra", &"mineral_vent", &"swamp", &"rock"
 ]
 
-# Symbiosis ring color (Locked palette 2026-05-18) — gold rim around tiles
-# where multiple kingdoms share occupancy.
+# Locked palette: gold marker color for symbiosis adjacency indicators
+# (corner dots + edge highlights). Used by VM-B3 when adjacency-symbiosis
+# rendering lands.
 const SYMBIOSIS_GOLD: Color = Color(0.85, 0.72, 0.28, 1.0)
-const SYMBIOSIS_RING_WIDTH: float = 3.0  # bumped from 2 at the new 96-px tile scale
 
 # Phase 15a tile pulse — disabled, kept as concept for slime-mold-style flow.
 const PULSE_CHANCE: float = 0.0
@@ -157,22 +154,46 @@ class _StructureFusionOverlay extends Node2D:
 # Per-kingdom icon renderer drawn ON TOP of biome substrate. Tinted by
 # species.tile_marker_color. Shape varies by kingdom. Maturation handled
 # by scale + alpha + accent rim done by the parent in set_state().
-class _SpeciesIcon extends Node2D:
-	# Fixed 32×32 square footprint for every icon — no resize for symbiosis.
-	# Same scale as future per-species sprites (post-alpha): kingdom icons
-	# slot retires when species art lands, no engine change needed.
-	const ICON_SIZE: float = 32.0
-	const ICON_HALF: float = 16.0
+class _SpeciesCluster extends Node2D:
+	# VM-B1 (2026-05-22 lock): cluster-in-biome rendering. Replaces the prior
+	# _SpeciesIcon focal-icon model. Each tile renders as a few small
+	# organisms scattered within the inner area; biome substrate shows
+	# through transparent margins and between organisms. Density variant
+	# steps up with same-kingdom neighbor count, giving the "growing
+	# together" feel without auto-tile geometry. See
+	# docs/VISUAL_DIRECTION.md "Locked long-term canvas (2026-05-22)".
 
-	# Commissioned kingdom textures (white-on-transparent, modulated in code
-	# by tile_marker_color). Drop a PNG into the path to enable; otherwise
-	# the procedural placeholder shape draws as fallback.
-	const _KINGDOM_TEXTURE_PATHS: Dictionary[StringName, String] = {
-		&"plantae":  "res://assets/art/kingdoms/plantae.png",
-		&"fungi":    "res://assets/art/kingdoms/fungi.png",
-		&"animals":  "res://assets/art/kingdoms/animals.png",
-		&"hybrid":   "res://assets/art/kingdoms/hybrid.png"
+	# Cluster fills the tile. Hardcoded to track TILE_SIZE 48 — update both
+	# in sync if the tile size ever changes.
+	const CLUSTER_SIZE: float = 48.0
+	const CLUSTER_HALF: float = 24.0
+	# Transparent margin so biome shows at tile edges in every variant.
+	const INNER_MARGIN: float = 4.0
+
+	const VARIANT_PIONEER: int = 0
+	const VARIANT_ESTABLISHING: int = 1
+	const VARIANT_ESTABLISHED: int = 2
+	const VARIANT_MATURE: int = 3
+
+	const _VARIANT_NAMES: Array[StringName] = [
+		&"pioneer", &"establishing", &"established", &"mature"
+	]
+
+	# Commissioned cluster textures. File naming: <kingdom>_NN.png where NN
+	# is 01..04 corresponding to pioneer/establishing/established/mature.
+	# White-on-transparent expected; species tile_marker_color modulates at
+	# draw time. If a PNG is missing the procedural placeholder draws instead.
+	const _CLUSTER_TEXTURE_PATHS: Dictionary[StringName, String] = {
+		&"plantae_pioneer":      "res://assets/art/kingdoms/plantae_01.png",
+		&"plantae_establishing": "res://assets/art/kingdoms/plantae_02.png",
+		&"plantae_established":  "res://assets/art/kingdoms/plantae_03.png",
+		&"plantae_mature":       "res://assets/art/kingdoms/plantae_04.png",
+		&"fungi_pioneer":        "res://assets/art/kingdoms/fungi_01.png",
+		&"fungi_establishing":   "res://assets/art/kingdoms/fungi_02.png",
+		&"fungi_established":    "res://assets/art/kingdoms/fungi_03.png",
+		&"fungi_mature":         "res://assets/art/kingdoms/fungi_04.png"
 	}
+
 	static var _texture_cache: Dictionary[StringName, Texture2D] = {}
 	static var _texture_cache_warmed: bool = false
 
@@ -180,115 +201,131 @@ class _SpeciesIcon extends Node2D:
 		if _texture_cache_warmed:
 			return
 		_texture_cache_warmed = true
-		for kid in _KINGDOM_TEXTURE_PATHS.keys():
-			var path: String = _KINGDOM_TEXTURE_PATHS[kid]
+		for key in _CLUSTER_TEXTURE_PATHS.keys():
+			var path: String = _CLUSTER_TEXTURE_PATHS[key]
 			if ResourceLoader.exists(path):
 				var tex := load(path) as Texture2D
 				if tex != null:
-					_texture_cache[kid] = tex
+					_texture_cache[key] = tex
 
 	var kingdom_id: StringName = &""
-	var icon_color: Color = Color.WHITE
+	var cluster_color: Color = Color.WHITE
+	var variant: int = 0
+	var seed_value: int = 0
 	var stage: int = 1            # 0 sprout, 1 mature, 2 ancient
-	var icon_alpha: float = 1.0
-	var stack_offset: Vector2 = Vector2.ZERO
+	var cluster_alpha: float = 0.95
 
 	func _init() -> void:
-		# Pixel-art rendering: never bilinear-filter the kingdom textures.
 		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		_warm_texture_cache()
 
-	func set_state(kid: StringName, color: Color, m_stage: int, offset: Vector2 = Vector2.ZERO, _is_dual: bool = false) -> void:
+	func set_state(kid: StringName, color: Color, v: int, p_seed: int, m_stage: int) -> void:
 		kingdom_id = kid
-		icon_color = color
+		cluster_color = color
+		variant = clamp(v, 0, 3)
+		seed_value = p_seed
 		stage = m_stage
-		stack_offset = offset
 		match stage:
-			0:    icon_alpha = 0.55
-			2:    icon_alpha = 1.0
-			_:    icon_alpha = 0.95
+			0:    cluster_alpha = 0.55
+			2:    cluster_alpha = 1.0
+			_:    cluster_alpha = 0.95
 		queue_redraw()
 
 	func _draw() -> void:
-		var c: Color = icon_color
-		c.a = icon_alpha
-		var center: Vector2 = stack_offset
-		var rect := Rect2(center - Vector2(ICON_HALF, ICON_HALF), Vector2(ICON_SIZE, ICON_SIZE))
+		var c: Color = cluster_color
+		c.a = cluster_alpha
 
-		# Prefer commissioned PNG (modulated by species color); fall back to
-		# procedural shape if no asset exists for this kingdom.
-		var tex: Texture2D = _texture_cache.get(kingdom_id, null)
+		# Prefer commissioned PNG (modulated by species color); fall back
+		# to procedural placeholder if no asset exists for this (kingdom,
+		# variant) pair. The 4 density variants per kingdom drop into the
+		# same slot when VM-C1 commission art arrives.
+		var key: StringName = StringName(String(kingdom_id) + "_" + String(_VARIANT_NAMES[variant]))
+		var tex: Texture2D = _texture_cache.get(key, null)
 		if tex != null:
+			var rect := Rect2(Vector2(-CLUSTER_HALF, -CLUSTER_HALF), Vector2(CLUSTER_SIZE, CLUSTER_SIZE))
 			draw_texture_rect(tex, rect, false, c)
 		else:
-			# Procedural placeholder: solid colored square + dark frame +
-			# kingdom-distinguishing inner pattern.
-			draw_rect(rect, c, true)
-			var frame: Color = c.darkened(0.55)
-			frame.a = c.a
-			draw_rect(rect, frame, false, 1.0)
-			match kingdom_id:
-				&"plantae":   _inner_plantae(center, c)
-				&"fungi":     _inner_fungi(center, c)
-				&"animals":   _inner_animal(center, c)
-				&"hybrid":    _inner_hybrid(center, c)
-				_:            pass
+			_draw_procedural(c)
 
-		# Maturation cues: rim accent on the ancient stage. The 32×32 frame
-		# stays fixed so symbiosis layout never shifts based on age.
+		# Ancient stage rim accent (carried from prior model — subtle inner
+		# rim to signal maturation weight without overpowering the cluster).
 		if stage == 2:
 			var rim: Color = c.lightened(0.40)
-			rim.a = 0.75
-			draw_rect(rect.grow(1.5), rim, false, 1.5)
+			rim.a = 0.55
+			var rim_rect := Rect2(
+				Vector2(-CLUSTER_HALF + INNER_MARGIN, -CLUSTER_HALF + INNER_MARGIN),
+				Vector2(CLUSTER_SIZE - INNER_MARGIN * 2.0, CLUSTER_SIZE - INNER_MARGIN * 2.0)
+			)
+			draw_rect(rim_rect, rim, false, 1.0)
 
-	# Each _inner_<kingdom> draws a distinguishing pattern inside the 32×32
-	# square. Pattern uses a darker shade of icon_color so the kingdom reads
-	# even when tinted by species color in code. Sized for ~24 px of usable
-	# inner area (32 − 4 px margin each side for the dark frame).
-	func _inner_plantae(center: Vector2, c: Color) -> void:
-		var dark: Color = c.darkened(0.40)
+	# Procedural placeholder: scattered small organisms within the inner
+	# area, kingdom-shaped, deterministically positioned by seed_value so
+	# each tile has a stable layout across redraws.
+	func _draw_procedural(c: Color) -> void:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed_value
+
+		var inner_half: float = CLUSTER_HALF - INNER_MARGIN
+		var dark: Color = c.darkened(0.35)
 		dark.a = c.a
-		# Three vertical strokes — chunky tuft glyph. Each blade ~5×20.
-		for i in range(3):
-			var dx: float = -10.0 + float(i) * 10.0
-			draw_rect(Rect2(center + Vector2(dx - 2.5, -10.0), Vector2(5.0, 20.0)), dark, true)
-
-	func _inner_fungi(center: Vector2, c: Color) -> void:
-		var dark: Color = c.darkened(0.40)
-		dark.a = c.a
-		# Mushroom cap glyph: rounded dome ~18 px diameter + stem ~6×14.
-		draw_circle(center + Vector2(0.0, -3.0), 9.0, dark)
-		draw_rect(Rect2(center + Vector2(-3.0, -3.0), Vector2(6.0, 14.0)), dark, true)
-
-	func _inner_animal(center: Vector2, c: Color) -> void:
-		var dark: Color = c.darkened(0.40)
-		dark.a = c.a
-		# Centered diamond ~20 px across.
-		var pts := PackedVector2Array([
-			center + Vector2(0.0, -10.0),
-			center + Vector2(10.0, 0.0),
-			center + Vector2(0.0, 10.0),
-			center + Vector2(-10.0, 0.0)
-		])
-		draw_colored_polygon(pts, dark)
-
-	func _inner_hybrid(center: Vector2, c: Color) -> void:
-		var light: Color = c.lightened(0.35)
+		var light: Color = c.lightened(0.20)
 		light.a = c.a
-		# Lichen patch: embedded dots ~3 px radius each, scattered.
-		draw_circle(center + Vector2(-5.0, -5.0), 3.5, light)
-		draw_circle(center + Vector2(5.0, 2.0), 3.5, light)
-		draw_circle(center + Vector2(-2.0, 7.0), 2.5, light)
 
+		# Mature: grove pattern — one large central organism + 4 satellites
+		# in a rough ring. Reads as "this tile is the defining feature."
+		if variant == VARIANT_MATURE:
+			_draw_organism(Vector2.ZERO, _organism_size(variant) * 1.7, light, dark)
+			var ring_radius: float = inner_half * 0.65
+			for i in range(4):
+				var angle: float = TAU * float(i) / 4.0 + rng.randf_range(-0.4, 0.4)
+				var radial_jitter: float = ring_radius * rng.randf_range(0.85, 1.05)
+				var p: Vector2 = Vector2(cos(angle), sin(angle)) * radial_jitter
+				_draw_organism(p, _organism_size(variant) * 0.7, light, dark)
+			return
 
-# Symbiosis ring + per-kingdom dual-icon composite for tiles with 2+ kingdoms.
-class _SymbiosisRing extends Node2D:
-	var radius: float = 14.0
-	var color: Color = Color(0.85, 0.72, 0.28, 0.85)
-	var width: float = 2.0
+		# Pioneer / establishing / established: scattered placement, count
+		# steps up with density. Stable across redraws via seeded RNG.
+		var org_count: int = [2, 3, 5][variant]
+		for i in range(org_count):
+			var x: float = rng.randf_range(-inner_half, inner_half)
+			var y: float = rng.randf_range(-inner_half, inner_half)
+			_draw_organism(Vector2(x, y), _organism_size(variant), light, dark)
 
-	func _draw() -> void:
-		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 32, color, width)
+	func _organism_size(v: int) -> float:
+		return [3.5, 4.0, 4.5, 5.5][v]
+
+	# Each organism's shape distinguishes its kingdom. Dark fill carries
+	# the kingdom-tinted species color; light accent is a small highlight
+	# (mostly for fungi caps so they read with a hint of dimensionality).
+	func _draw_organism(center: Vector2, size: float, light: Color, dark: Color) -> void:
+		match kingdom_id:
+			&"plantae":
+				# Upward-pointing triangle (stem/sprout from above).
+				var plant_pts := PackedVector2Array([
+					center + Vector2(0.0, -size),
+					center + Vector2(size * 0.7, size * 0.6),
+					center + Vector2(-size * 0.7, size * 0.6)
+				])
+				draw_colored_polygon(plant_pts, dark)
+			&"fungi":
+				# Round cap with a small light highlight (top-down mushroom).
+				draw_circle(center, size * 0.8, dark)
+				draw_circle(center + Vector2(-size * 0.25, -size * 0.25), size * 0.3, light)
+			&"animals":
+				# Diamond marker (consistent with prior animal inset).
+				var animal_pts := PackedVector2Array([
+					center + Vector2(0.0, -size),
+					center + Vector2(size, 0.0),
+					center + Vector2(0.0, size),
+					center + Vector2(-size, 0.0)
+				])
+				draw_colored_polygon(animal_pts, dark)
+			&"hybrid":
+				# Composite dot (lichen-like).
+				draw_circle(center, size * 0.7, light)
+				draw_circle(center, size * 0.35, dark)
+			_:
+				draw_circle(center, size * 0.5, dark)
 
 
 var _tile_occupants: Dictionary[Vector2i, Dictionary] = {}
@@ -434,7 +471,7 @@ func _make_biome_texture(
 	var speckle: Color = Color8(0xee, 0xf4, 0xff).lerp(era_tint, era_blend * 0.5)
 	var img := Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	# Border is proportional to tile size so it stays visible at every scale
-	# we might lock to. At 96 px tile, 3 px border = 6% on each edge.
+	# we might lock to. At TILE_SIZE 48 → border 2 px (~4%); at 96 → 3 px (~6%).
 	var border_w: int = maxi(2, int(TILE_SIZE / 32))
 	for y in range(TILE_SIZE):
 		for x in range(TILE_SIZE):
@@ -591,6 +628,8 @@ func set_occupant(coord: Vector2i, kingdom_id: StringName, species_id: StringNam
 	occ[kingdom_id] = species_id
 	_tile_occupants[coord] = occ
 	_repaint_tile(coord)
+	# Density variant for cardinal neighbors may have stepped up — repaint them.
+	_repaint_neighbors(coord)
 
 
 func clear_occupant(coord: Vector2i, kingdom_id: StringName) -> void:
@@ -603,11 +642,14 @@ func clear_occupant(coord: Vector2i, kingdom_id: StringName) -> void:
 	else:
 		_tile_occupants[coord] = occ
 	_repaint_tile(coord)
+	# Density variant for cardinal neighbors may have stepped down — repaint them.
+	_repaint_neighbors(coord)
 
 
 func clear_all_occupants(coord: Vector2i) -> void:
 	_tile_occupants.erase(coord)
 	_repaint_tile(coord)
+	_repaint_neighbors(coord)
 
 
 func _repaint_tile(coord: Vector2i) -> void:
@@ -615,10 +657,22 @@ func _repaint_tile(coord: Vector2i) -> void:
 	_paint_composite(coord, occ)
 
 
-# Composite painter — replaces _paint_fill + _paint_border + _paint_cluster_edges.
-# Builds (or rebuilds) a single Node2D per tile that holds: species icons
-# (1 or 2), animal marker, symbiosis ring (when applicable). Biome substrate
-# stays visible underneath because nothing here paints a full-tile fill.
+# Cardinal neighbors' density variants depend on this tile's occupancy.
+# Called from set/clear/clear_all_occupants so they refresh when the
+# center tile changes.
+func _repaint_neighbors(coord: Vector2i) -> void:
+	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var n: Vector2i = coord + offset
+		if _tile_occupants.has(n):
+			_repaint_tile(n)
+
+
+# Composite painter (VM-B1, 2026-05-22 lock): one cluster Node2D per tile.
+# Single species per tile (VM-A2 invariant), density variant chosen by
+# same-kingdom neighbor count. Biome substrate stays visible underneath
+# because the cluster sprite has transparent margins and gaps between
+# organisms. Adjacency-symbiosis rendering (corner dots + edge highlights
+# for compatible-kingdom neighbors) lands in VM-B3 as a separate pass.
 func _paint_composite(coord: Vector2i, occ: Dictionary) -> void:
 	# Tear down existing composite if any.
 	var existing: Node2D = _tile_composites.get(coord, null)
@@ -637,64 +691,56 @@ func _paint_composite(coord: Vector2i, occ: Dictionary) -> void:
 		_last_stage_by_coord.erase(coord)
 		return
 
+	# Single-species invariant — pick the one occupant.
+	var keys: Array = occ.keys()
+	if keys.is_empty():
+		return
+	var kingdom_id: StringName = keys[0]
+	var species_id: StringName = occ[kingdom_id]
+
 	var composite := Node2D.new()
 	composite.position = map_to_local(coord)
 	composite.z_index = 1
 	_overlay_layer.add_child(composite)
 	_tile_composites[coord] = composite
 
-	var plant_id: StringName = occ.get(&"plantae", &"")
-	var fungi_id: StringName = occ.get(&"fungi", &"")
-	var animal_id: StringName = occ.get(&"animals", &"")
-
-	var has_plant: bool = plant_id != &""
-	var has_fungi: bool = fungi_id != &""
-	var has_animal: bool = animal_id != &""
-
-	# Maturation stage drives icon scale + alpha.
+	# Maturation stage drives cluster alpha + ancient rim accent.
 	var age_ticks: int = _get_tile_age_ticks(coord)
 	var stage: int = _maturation_stage(age_ticks)
 	_last_stage_by_coord[coord] = stage
 
-	# Dual-icon symbiosis: plant under fungi, both offset slightly so each
-	# silhouette stays legible. Single-occupant tiles keep their icon centered.
-	if has_plant and has_fungi:
-		# Diagonal placement of two 14-px icons inside the 48-px tile:
-		# plant lower-left, fungi upper-right. Both keep their full 14×14
-		# footprint — no resize — separated by SYMBIOSIS_OFFSET so corners
-		# touch at tile center but don't overlap.
-		var plant_icon := _SpeciesIcon.new()
-		plant_icon.set_state(&"plantae", _species_color(plant_id), stage, Vector2(-SYMBIOSIS_OFFSET, SYMBIOSIS_OFFSET), true)
-		plant_icon.z_index = 0
-		composite.add_child(plant_icon)
-		var fungi_icon := _SpeciesIcon.new()
-		fungi_icon.set_state(&"fungi", _species_color(fungi_id), stage, Vector2(SYMBIOSIS_OFFSET, -SYMBIOSIS_OFFSET), true)
-		fungi_icon.z_index = 1
-		composite.add_child(fungi_icon)
-		var ring := _SymbiosisRing.new()
-		# Ring sits just inside tile edge so it visually frames the whole
-		# symbiosis composite. At 96 px tile, radius 44 leaves 4 px to edge;
-		# icon corners may poke slightly past which reads as "two organisms
-		# inside a marked tile" — the intended affordance.
-		ring.radius = 44.0
-		ring.color = Color(SYMBIOSIS_GOLD.r, SYMBIOSIS_GOLD.g, SYMBIOSIS_GOLD.b, 0.85)
-		ring.width = SYMBIOSIS_RING_WIDTH
-		ring.z_index = 2
-		composite.add_child(ring)
-	elif has_plant:
-		var plant_icon2 := _SpeciesIcon.new()
-		plant_icon2.set_state(&"plantae", _species_color(plant_id), stage)
-		composite.add_child(plant_icon2)
-	elif has_fungi:
-		var fungi_icon2 := _SpeciesIcon.new()
-		fungi_icon2.set_state(&"fungi", _species_color(fungi_id), stage)
-		composite.add_child(fungi_icon2)
+	# Density variant by same-kingdom cardinal neighbor count.
+	var variant: int = _compute_density_variant(coord, kingdom_id)
+	# Deterministic per-coord seed so layout is stable across redraws.
+	# coord.x ∈ [0..31], coord.y ∈ [0..47]; the offset is large enough that
+	# nearby tiles get visibly different layouts.
+	var cluster_seed: int = coord.x * 73 + coord.y * 131
 
-	if has_animal:
-		var animal_icon := _SpeciesIcon.new()
-		animal_icon.set_state(&"animals", _species_color(animal_id), stage)
-		animal_icon.z_index = 3
-		composite.add_child(animal_icon)
+	var cluster := _SpeciesCluster.new()
+	cluster.set_state(kingdom_id, _species_color(species_id), variant, cluster_seed, stage)
+	composite.add_child(cluster)
+
+
+# Same-kingdom 4-neighbor count → density variant. See VISUAL_DIRECTION.md
+# "Ecological-stage clustering" table.
+#   0      → 0 pioneer       (1-2 organisms, lots of biome visible)
+#   1-2    → 1 establishing  (3 organisms, moderate cover)
+#   3      → 2 established   (5 organisms, dense cluster)
+#   4      → 3 mature        (grove pattern: central organism + 4 satellites)
+func _compute_density_variant(coord: Vector2i, kingdom_id: StringName) -> int:
+	var count: int = 0
+	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var n: Vector2i = coord + offset
+		var n_occ: Dictionary = _tile_occupants.get(n, {})
+		if n_occ.has(kingdom_id):
+			count += 1
+	if count == 0:
+		return 0
+	if count <= 2:
+		return 1
+	if count == 3:
+		return 2
+	return 3
 
 
 func _species_color(species_id: StringName) -> Color:

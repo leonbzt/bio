@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bfnh3beveqkxb"
-path="res://.godot/imported/ChatGPT Image 21. Mai 2026, 16_34_30.png-b30124b5af1f1b5b72be7ab27348ea15.ctex"
+uid="uid://bs8yrfnwxwiub"
+path="res://.godot/imported/fungi_04.png-293297698c07f8c683d80829fc45923f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://builds/screenshots/ChatGPT Image 21. Mai 2026, 16_34_30.png"
-dest_files=["res://.godot/imported/ChatGPT Image 21. Mai 2026, 16_34_30.png-b30124b5af1f1b5b72be7ab27348ea15.ctex"]
+source_file="res://assets/art/kingdoms/fungi_04.png"
+dest_files=["res://.godot/imported/fungi_04.png-293297698c07f8c683d80829fc45923f.ctex"]
 
 [params]
 

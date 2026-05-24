@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cwfn2gl7n3orv"
-path="res://.godot/imported/fungi.png-cba59110620885fd31a4f7032240674b.ctex"
+uid="uid://dtqjws74xvrxj"
+path="res://.godot/imported/plantae_01.png-9fbf4a54184156c809fa7a4624a007e5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/kingdoms/fungi.png"
-dest_files=["res://.godot/imported/fungi.png-cba59110620885fd31a4f7032240674b.ctex"]
+source_file="res://assets/art/kingdoms/plantae_01.png"
+dest_files=["res://.godot/imported/plantae_01.png-9fbf4a54184156c809fa7a4624a007e5.ctex"]
 
 [params]
 

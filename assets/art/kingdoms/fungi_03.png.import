@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://n7cwr58afxe7"
-path="res://.godot/imported/making_biomes_and_species_visible.png-dff5a9f2cf669fce8ae4b37d44b8bda3.ctex"
+uid="uid://pvwiqsp0xg46"
+path="res://.godot/imported/fungi_03.png-64cd0bdd3805a83e9af9a0447a1654af.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://builds/screenshots/making_biomes_and_species_visible.png"
-dest_files=["res://.godot/imported/making_biomes_and_species_visible.png-dff5a9f2cf669fce8ae4b37d44b8bda3.ctex"]
+source_file="res://assets/art/kingdoms/fungi_03.png"
+dest_files=["res://.godot/imported/fungi_03.png-64cd0bdd3805a83e9af9a0447a1654af.ctex"]
 
 [params]
 

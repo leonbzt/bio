@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://du8d3xa8jvso2"
-path="res://.godot/imported/swamp_biome_gpt.png-5069acc6c4e59179210ff43f159e7907.ctex"
+uid="uid://tgl6gi4wwlqy"
+path="res://.godot/imported/plantae_04.png-b883ac074bbbd30c601d54c4f7b32727.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://builds/screenshots/swamp_biome_gpt.png"
-dest_files=["res://.godot/imported/swamp_biome_gpt.png-5069acc6c4e59179210ff43f159e7907.ctex"]
+source_file="res://assets/art/kingdoms/plantae_04.png"
+dest_files=["res://.godot/imported/plantae_04.png-b883ac074bbbd30c601d54c4f7b32727.ctex"]
 
 [params]
 

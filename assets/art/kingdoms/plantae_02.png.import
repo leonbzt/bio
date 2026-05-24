@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dypxdlgtnmke7"
-path="res://.godot/imported/final.png-50bf7493c769a0d294deb2f19c7a6095.ctex"
+uid="uid://ciarwuhkf2e8c"
+path="res://.godot/imported/plantae_02.png-1c7e7547f410fd3c60e7b8c32dc79586.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://builds/screenshots/final.png"
-dest_files=["res://.godot/imported/final.png-50bf7493c769a0d294deb2f19c7a6095.ctex"]
+source_file="res://assets/art/kingdoms/plantae_02.png"
+dest_files=["res://.godot/imported/plantae_02.png-1c7e7547f410fd3c60e7b8c32dc79586.ctex"]
 
 [params]
 

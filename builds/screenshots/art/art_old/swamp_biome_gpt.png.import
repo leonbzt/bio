@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cuh0dkwih1irh"
-path="res://.godot/imported/map.png-8a161d2f22e4bc39bb0943bc97a81a87.ctex"
+uid="uid://du8d3xa8jvso2"
+path="res://.godot/imported/swamp_biome_gpt.png-61124426869a520eead879b663c99949.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://builds/screenshots/map.png"
-dest_files=["res://.godot/imported/map.png-8a161d2f22e4bc39bb0943bc97a81a87.ctex"]
+source_file="res://builds/screenshots/art/art_old/swamp_biome_gpt.png"
+dest_files=["res://.godot/imported/swamp_biome_gpt.png-61124426869a520eead879b663c99949.ctex"]
 
 [params]
 

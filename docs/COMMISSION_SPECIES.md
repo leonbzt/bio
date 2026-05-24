@@ -1,6 +1,10 @@
 # Commission Brief — Species Sprites (Placeholder Alpha Set)
 
-**Status**: ⏸ **DEFERRED** as of 2026-05-21. Alpha will use procedurally-drawn kingdom-shape icons tinted by species color instead of per-species PNGs. See `docs/COMMISSION_KINGDOM_ICONS.md` for the smaller alpha commission scope (4 kingdom icons instead of 14 species sprites). Pick this brief back up post-alpha once the layered rendering model is proven and per-species visual identity becomes the visible bottleneck.
+**Status**: ⏸ **DEFERRED** (deferral confirmed 2026-05-22). Alpha uses 4 kingdom-level cluster density variants per kingdom, tinted by species color — see `docs/COMMISSION_KINGDOM_ICONS.md` for the alpha commission scope (8 PNGs instead of 14 per-species sprites).
+
+When this brief is reactivated post-alpha, the spec changes to match the 2026-05-22 visual model: per-species art drops into the **48 × 48 px cluster slot** (not the 32-px focal-icon slot in the prior spec below). Each per-species commission would deliver 4 density variants (pioneer / establishing / established / mature) for a species-specific cluster — same density progression as kingdom-level art, but with per-species silhouette identity. That's **4 × 14 = 56 PNGs** for the full roster, so reactivation should follow validated need (per-species identity becoming a visible bottleneck) and budget availability.
+
+Sections below are the **pre-2026-05-22** spec (32 px focal icons) and are retained as historical context. Treat as superseded.
 
 **Original references**: `docs/VISUAL_DIRECTION.md`, `builds/screenshots/map.png`, `builds/screenshots/final.png`, `builds/screenshots/making_biomes_and_species_visible.png`.
 

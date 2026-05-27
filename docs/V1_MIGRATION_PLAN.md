@@ -194,9 +194,9 @@ Stay deleted, not stubbed. No pre-emptive hooks.
 
 ---
 
-## 6. Open questions for implementer
+## 6. Open questions for implementer — RESOLVED 2026-05-27
 
-1. **Branch strategy** — feature branch off main, or in-place on main with frequent commits? Recommend feature branch given the destructive cuts.
-2. **Species renames** — keep current filenames (`tree_fern_stem`, `mycelium_thread`, `common_grazer`) OR rename to Carboniferous-themed (`calamites`, `mycorrhizal_network`, `arthropleura`) to match onboarding copy? Renaming touches all references but reads better.
-3. **Cut-vs-comment strategy** — physically delete cut files OR leave on disk and just unwire? Delete is cleaner; preserves git history for v2 reference.
-4. **Save migration** — existing saves break under the resource cut. Acceptable for prototype (alpha audience) OR write a migration path? Recommend acceptable break + version bump.
+1. **Branch strategy** — **In-place on main** with frequent focused commits. Each step in § 3 ends with a runnable build, so the working tree stays shippable between steps.
+2. **Species renames** — **No renames.** Calamites / Mycorrhizal Network / Arthropleura already exist as `.tres` files (verified 2026-05-27). Use existing IDs.
+3. **Cut-vs-comment strategy** — **Unwired.** Files stay on disk; remove their references from scene trees / autoload registry / signal connections. Git history preserves them for v2 reference, but they don't load.
+4. **Save migration** — **Accepted break.** Bump `SAVE_VERSION`; existing saves get zeroed. Alpha audience; no migration path written.

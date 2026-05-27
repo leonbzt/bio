@@ -25,6 +25,10 @@ extends Resource
 @export var base_traits: Array[TraitData] = []
 @export var tick_yield: Dictionary = {}   # {resource_id: float}
 
+# Per-tile-per-tick input rates. Output throttles proportionally when the global pool
+# can't satisfy total consumption (bottleneck mechanic).
+@export var consume_input: Dictionary = {}
+
 # Costs.
 @export var introduce_cost: Dictionary = {}   # one-shot per-run cost (Locked Decision 13)
 @export var colonize_cost: Dictionary = {}    # per-tile placement cost
@@ -66,3 +70,8 @@ extends Resource
 
 # Per-biome biomass yield multiplier; missing key defaults to 1.0 at use site.
 @export var biome_affinity: Dictionary = {}
+
+# Per-species tile sprite set. Four paths for the four maturity/density stages
+# used by the scatter overlay (sprout / small cluster / dense cluster / mature).
+# Empty = fall back to the kingdom-level default sprites.
+@export var tile_sprite_paths: Array[String] = []

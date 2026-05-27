@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"arthropleura"
+display_name = "Arthropleura"
+description = "Two meters long. Eats leaf litter. The largest land invertebrate ever to crawl."
+kingdom_id = &"animals"
+sprite = null
+base_traits = Array[Resource]([])
+introduce_cost = {
+"biomass": 40.0
+}
+colonize_cost = {
+"biomass": 8.0
+}
+tick_yield = {
+"decay": 1.5
+}
+consume_input = {
+"biomass": 1.5
+}
+placement_rule = &"animal_anchor"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"animals", &"scavenger"])
+tick_effects = Array[StringName]([&"frass_enrichment"])
+unlock_ep_cost = 2
+unlock_prerequisites = Array[StringName]([])
+era_requires = &"carboniferous"
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.5, 0.3, 0.2, 1)
+tile_marker_shape = &"border"
+latin_name = "Arthropleura armata (Carboniferous)"
+lineage_id = &"myriapod_giant"
+biome_affinity = {
+&"wetland": 1.2,
+&"open_ground": 1.0,
+&"lush_canopy": 1.3,
+&"tundra": 0.4
+}
+tile_sprite_paths = Array[String]([
+"res://assets/art/organisms/animalia/arthroplura_01.png",
+"res://assets/art/organisms/animalia/arthroplura_02.png",
+"res://assets/art/organisms/animalia/arthroplura_03.png",
+"res://assets/art/organisms/animalia/arthroplura_04.png"
+])

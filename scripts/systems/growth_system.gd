@@ -63,6 +63,11 @@ func _on_tick(_delta_seconds: float) -> void:
 func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: float) -> void:
 	if species == null or coords.is_empty():
 		return
+	var input_throttle: float = _compute_input_throttle(species, coords.size())
+	if input_throttle <= 0.0:
+		return
+	_spend_inputs(species, coords.size(), input_throttle)
+	base_mult *= input_throttle
 	var kingdom_id: StringName = species.kingdom_id
 	var trait_mods: Dictionary = _compute_trait_modifiers(species)
 	var meta_mult: float = _get_meta_growth_multiplier() if kingdom_id == &"plantae" else 1.0
@@ -130,6 +135,8 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 						per_tile *= 1.50
 					if bool(_territory.get_tile_data(coord, "structure_old_growth", false)):
 						per_tile *= 2.00
+					if bool(_territory.get_tile_data(coord, "structure_fern_grove", false)):
+						per_tile *= 1.30
 				per_tile *= biomass_mult
 				if MetaModifiers.is_unlocked(&"extinction_survivor"):
 					per_tile *= 1.10
@@ -194,10 +201,16 @@ func _effect_corpse_decay(_species: SpeciesData, _coords: Array[Vector2i]) -> vo
 
 
 func _effect_mycorrhizal_bond_apply(_species: SpeciesData, coords: Array[Vector2i]) -> void:
+	# Single-species-per-tile means plants and fungi can't co-occupy a tile.
+	# The bond fires on adjacency: for each mycorrhizal tile, tag any cardinal
+	# plant neighbor so GrowthSystem can apply the +20% yield and the bond
+	# overlay can draw the golden link.
 	for coord in coords:
-		var occ: Dictionary = _territory.peek_occupants(coord)
-		if occ.has(&"plantae") and not bool(_territory.get_tile_data(coord, "mycorrhizal_bond", false)):
-			_territory.set_tile_data(coord, "mycorrhizal_bond", true)
+		for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var neighbor: Vector2i = coord + offset
+			var occ: Dictionary = _territory.peek_occupants(neighbor)
+			if occ.has(&"plantae") and not bool(_territory.get_tile_data(neighbor, "mycorrhizal_bond", false)):
+				_territory.set_tile_data(neighbor, "mycorrhizal_bond", true)
 
 
 func _on_ability_used(id: StringName, payload: Dictionary) -> void:
@@ -314,3 +327,30 @@ func _has_ancient_neighbor_of_same_kingdom(coord: Vector2i, kingdom_id: StringNa
 func _read_current_tick() -> int:
 	var stats: Dictionary = GameState.run_save.get("statistics", {}) as Dictionary
 	return int(stats.get("tick_count", 0))
+
+
+func _compute_input_throttle(species: SpeciesData, num_tiles: int) -> float:
+	if species.consume_input.is_empty() or num_tiles <= 0:
+		return 1.0
+	var throttle: float = 1.0
+	for resource_id in species.consume_input.keys():
+		var rate: float = float(species.consume_input[resource_id])
+		if rate <= 0.0:
+			continue
+		var needed: float = rate * float(num_tiles)
+		var available: float = ResourceLedger.get_amount(StringName(resource_id))
+		if available < needed:
+			throttle = minf(throttle, available / needed)
+	return throttle
+
+
+func _spend_inputs(species: SpeciesData, num_tiles: int, throttle: float) -> void:
+	if species.consume_input.is_empty() or throttle <= 0.0 or num_tiles <= 0:
+		return
+	for resource_id in species.consume_input.keys():
+		var rate: float = float(species.consume_input[resource_id])
+		if rate <= 0.0:
+			continue
+		var spent: float = rate * float(num_tiles) * throttle
+		if spent > 0.0:
+			ResourceLedger.add(StringName(resource_id), -spent)

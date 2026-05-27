@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"calamites"
+display_name = "Calamites"
+description = "Segmented stalks rise in dense stands at the water's edge. Where they fall, peat begins."
+kingdom_id = &"plantae"
+sprite = null
+base_traits = Array[Resource]([])
+introduce_cost = {}
+colonize_cost = {
+"biomass": 5.0
+}
+tick_yield = {
+"biomass": 2.0,
+"decay": 0.2
+}
+consume_input = {
+"nutrients": 1.0
+}
+placement_rule = &"adjacent_empty"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"plantae", &"pioneer"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 0
+unlock_prerequisites = Array[StringName]([])
+era_requires = &"carboniferous"
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.45, 0.7, 0.45, 1)
+tile_marker_shape = &"leaf"
+latin_name = "Calamites suckowii (Carboniferous)"
+lineage_id = &"horsetail_pioneer"
+biome_affinity = {
+&"wetland": 1.6,
+&"open_ground": 1.0,
+&"lush_canopy": 0.8,
+&"tundra": 0.4
+}
+tile_sprite_paths = Array[String]([
+"res://assets/art/organisms/plantae/calamite_01.png",
+"res://assets/art/organisms/plantae/calamite_02.png",
+"res://assets/art/organisms/plantae/calamite_03.png",
+"res://assets/art/organisms/plantae/calamite_04.png"
+])

@@ -48,6 +48,8 @@ signal prestige_triggered(summary: Dictionary)
 signal run_loaded(save_version: int)
 signal goal_progress_changed(progress: Dictionary)
 signal goal_met()
+signal checkpoint_triggered(id: StringName, payload: Dictionary)
+signal cycle_closed()
 
 # Era + ecosystem (Phase 12)
 signal era_transition_started(from_era: StringName, to_era: StringName)

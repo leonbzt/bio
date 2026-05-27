@@ -1,196 +1,68 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/ui/goal_banner.gd" id="2"]
-[ext_resource type="Script" path="res://scripts/ui/resource_label.gd" id="4"]
-[ext_resource type="Theme" path="res://assets/ui/theme.tres" id="5"]
-[ext_resource type="PackedScene" path="res://scenes/ui/species_panel.tscn" id="6"]
-[ext_resource type="Script" path="res://scripts/ui/biome_legend.gd" id="7"]
-[ext_resource type="Script" path="res://scripts/ui/multiplier_chips.gd" id="8"]
-[ext_resource type="PackedScene" path="res://scenes/ui/adaptation_chip.tscn" id="9"]
+[ext_resource type="Theme" path="res://assets/ui/theme.tres" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/ui/species_panel.tscn" id="3"]
 
 [node name="HUD" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-theme = ExtResource("5")
+theme = ExtResource("2")
 script = ExtResource("1")
 mouse_filter = 2
 
-[node name="PauseButton" type="Button" parent="."]
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
+[node name="TopBar" type="PanelContainer" parent="."]
+anchor_right = 1.0
 offset_left = 4.0
 offset_top = 4.0
-offset_right = 60.0
-offset_bottom = 36.0
-text = "Menu"
+offset_right = -4.0
+offset_bottom = 124.0
 
-[node name="IdentityStrip" type="PanelContainer" parent="."]
-anchor_left = 0.0
-anchor_right = 1.0
-offset_left = 64.0
-offset_top = 4.0
-offset_right = -120.0
-offset_bottom = 36.0
-
-[node name="IdentityLabel" type="Label" parent="IdentityStrip"]
+[node name="Margin" type="MarginContainer" parent="TopBar"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-text = "Ecosystem"
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="ColumnLayout" type="VBoxContainer" parent="TopBar/Margin"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+alignment = 1
+
+[node name="EcosystemNameLabel" type="Label" parent="TopBar/Margin/ColumnLayout"]
+text = "Coal Swamp"
 horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
 
-[node name="RecipesButton" type="Button" parent="."]
-anchor_left = 1.0
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = -116.0
-offset_top = 4.0
-offset_right = -44.0
-offset_bottom = 36.0
-text = "Guide"
+[node name="BiomassCounter" type="Label" parent="TopBar/Margin/ColumnLayout"]
+text = "0"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 48
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 
-[node name="TickIndicator" type="ColorRect" parent="."]
+[node name="RateLabel" type="Label" parent="TopBar/Margin/ColumnLayout"]
+text = "0.0/s"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.533333, 0.866667, 0.533333, 1)
+
+[node name="PauseButton" type="Button" parent="."]
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -32.0
+offset_left = -56.0
 offset_top = 8.0
 offset_right = -8.0
-offset_bottom = 32.0
+offset_bottom = 40.0
+text = "II"
+
+[node name="TickIndicator" type="ColorRect" parent="."]
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 10.0
+offset_bottom = 10.0
 color = Color(0.9, 0.9, 0.9, 1)
 
-[node name="Bar" type="PanelContainer" parent="."]
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 4.0
-offset_top = 40.0
-offset_right = 96.0
-offset_bottom = 40.0
-mouse_filter = 2
-
-[node name="Margin" type="MarginContainer" parent="Bar"]
-theme_override_constants/margin_left = 4
-theme_override_constants/margin_right = 4
-theme_override_constants/margin_top = 4
-theme_override_constants/margin_bottom = 4
-
-[node name="ResourcesRow" type="VBoxContainer" parent="Bar/Margin"]
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-
-[node name="Resources" type="VBoxContainer" parent="Bar/Margin/ResourcesRow"]
-size_flags_horizontal = 3
-theme_override_constants/separation = 1
-
-[node name="BiomassLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
-text = "Biomass: 0"
-
-[node name="NutrientsLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
-text = "Nutrients: 0"
-
-[node name="SunlightLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
-text = "Sunlight: 0"
-
-[node name="DecayLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
-text = "Decay: 0"
-
-[node name="SporesLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
-text = "Spores: 0"
-
-[node name="ProteinLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
-script = ExtResource("4")
-resource_id = &"protein"
-tooltip_when_inactive = "Unlock Animal Genesis to harvest protein."
-active_kingdoms = [&"animals"]
-
-[node name="LifeforceLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
-script = ExtResource("4")
-resource_id = &"lifeforce"
-tooltip_when_inactive = "Predators draw lifeforce from prey."
-active_niches = [&"lichen_common", &"common_predator"]
-
-[node name="BloodCohesionLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
-script = ExtResource("4")
-resource_id = &"blood_cohesion"
-tooltip_when_inactive = "Unlock Animal Genesis to feel the pulse."
-active_kingdoms = [&"animals"]
-
-[node name="GrayMatterLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
-script = ExtResource("4")
-resource_id = &"gray_matter"
-tooltip_when_inactive = "Unlock Animal Genesis to spark insight."
-active_kingdoms = [&"animals"]
-
-[node name="MycelialStabilityLabel" type="Label" parent="Bar/Margin/ResourcesRow/Resources"]
-script = ExtResource("4")
-resource_id = &"mycelial_stability"
-tooltip_when_inactive = "Unlock Lichen Heritage to fortify mycelium."
-active_niches = [&"lichen_common"]
-
-[node name="Spacer1" type="HSeparator" parent="Bar/Margin/ResourcesRow"]
-
-[node name="AdaptationChip" parent="Bar/Margin/ResourcesRow" instance=ExtResource("9")]
-
-[node name="Spacer2" type="HSeparator" parent="Bar/Margin/ResourcesRow"]
-
-[node name="BiomeLegend" type="VBoxContainer" parent="Bar/Margin/ResourcesRow"]
-size_flags_horizontal = 3
-script = ExtResource("7")
-mouse_filter = 2
-
-[node name="Spacer3" type="HSeparator" parent="Bar/Margin/ResourcesRow"]
-
-[node name="GoalBanner" type="PanelContainer" parent="Bar/Margin/ResourcesRow"]
-custom_minimum_size = Vector2(0, 36)
-script = ExtResource("2")
-
-[node name="VBox" type="VBoxContainer" parent="Bar/Margin/ResourcesRow/GoalBanner"]
-anchor_right = 1.0
-anchor_bottom = 1.0
-
-[node name="GoalText" type="Label" parent="Bar/Margin/ResourcesRow/GoalBanner/VBox"]
-text = "Reach 30 tiles"
-autowrap_mode = 2
-
-[node name="ProgressLabel" type="Label" parent="Bar/Margin/ResourcesRow/GoalBanner/VBox"]
-text = "0 / 30"
-
-[node name="ProgressBar" type="ProgressBar" parent="Bar/Margin/ResourcesRow/GoalBanner/VBox"]
-custom_minimum_size = Vector2(0, 4)
-
-[node name="AbilitiesBar" type="HBoxContainer" parent="."]
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -220.0
-offset_top = -112.0
-offset_right = -16.0
-offset_bottom = -72.0
-alignment = 2
-
-[node name="SpeciesPanel" parent="." instance=ExtResource("6")]
-
-[node name="EventToast" type="PanelContainer" parent="."]
-visible = false
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -140.0
-offset_top = 40.0
-offset_right = 140.0
-offset_bottom = 96.0
-custom_minimum_size = Vector2(280, 56)
-
-[node name="ToastContent" type="VBoxContainer" parent="EventToast"]
-anchor_right = 1.0
-anchor_bottom = 1.0
-
-[node name="ToastTitle" type="Label" parent="EventToast/ToastContent"]
-text = "Event"
-
-[node name="ToastBody" type="Label" parent="EventToast/ToastContent"]
-text = "Description"
+[node name="SpeciesPanel" parent="." instance=ExtResource("3")]

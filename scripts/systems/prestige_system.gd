@@ -18,36 +18,34 @@ func _ready() -> void:
 		_nodes_by_id[node.id] = node
 
 
-static func calculate_prestige_reward(total_biomass_earned: float, species_diversity: int = 1) -> int:
-	var base: int = int(sqrt(maxf(0.0, total_biomass_earned) / 10.0))
-	var diversity_mult: float = 1.0
-	if species_diversity >= 3:
-		diversity_mult = 1.2
-	elif species_diversity == 2:
-		diversity_mult = 1.1
-	return int(round(base * diversity_mult))
+static func calculate_prestige_reward(biomass: float, cycle_closed: bool, tier_mult: float = 1.0) -> int:
+	var reproductions: int = int(biomass / 100.0)
+	var closure_bonus: int = 50 if cycle_closed else 0
+	return int(round((reproductions + closure_bonus) * tier_mult))
 
 
 func get_pending_reward() -> int:
-	var earned: float = float(GameState.run_save.get("statistics", {}).get("total_biomass_earned", 0.0))
-	var diversity: int = (GameState.run_save.get("unlocked_species_in_run", []) as Array).size()
-	return calculate_prestige_reward(earned, diversity)
+	var biomass: float = float(GameState.run_save.get("hero_biomass_lifetime_produced", 0.0))
+	var closed: bool = bool(GameState.run_save.get("cycle_closed", false))
+	return calculate_prestige_reward(biomass, closed, 1.0)
 
 
 func trigger_prestige() -> void:
 	var bonus_ep: int = _award_extinction_survivor_bonus_if_eligible()
-	var earned: float = float(GameState.run_save.get("statistics", {}).get("total_biomass_earned", 0.0))
-	var diversity: int = (GameState.run_save.get("unlocked_species_in_run", []) as Array).size()
-	var reward: int = calculate_prestige_reward(earned, diversity) + bonus_ep
+	var biomass: float = float(GameState.run_save.get("hero_biomass_lifetime_produced", 0.0))
+	var closed: bool = bool(GameState.run_save.get("cycle_closed", false))
+	var reward: int = calculate_prestige_reward(biomass, closed, 1.0) + bonus_ep
+	var reproductions: int = int(biomass / 100.0)
 	_record_kingdom_played()
 	_record_species_played()
-	_update_meta_stats(reward, earned)
+	_update_meta_stats(reward, biomass)
+	_append_lineage_run(biomass, reproductions, closed, reward)
 	var summary := {
 		"evolution_points_earned": reward,
 		"extinction_bonus": bonus_ep,
-		"total_biomass_earned": earned,
-		"species_cultivated": diversity,
-		"starting_species_id": GameState.run_save.get("starting_species_id", "")
+		"biomass": biomass,
+		"reproductions": reproductions,
+		"cycle_closed": closed
 	}
 	_reset_run_state()
 	EventBus.prestige_triggered.emit(summary)
@@ -102,8 +100,9 @@ func start_run(species: SpeciesData) -> void:
 	EventBus.placement_target_changed.emit(String(species.id))
 	EventBus.run_started.emit(species.kingdom_id)
 	EventBus.species_introduced.emit(species.id)
-	for key in species.tick_yield.keys():
-		ResourceLedger.add(StringName(key), float(species.tick_yield[key]) * 10.0)
+	ResourceLedger.add(ResourceLedger.BIOMASS, 50.0)
+	ResourceLedger.add(ResourceLedger.NUTRIENTS, 50.0)
+	ResourceLedger.add(ResourceLedger.DECAY, 50.0)
 	SaveSystem.save_now()
 
 
@@ -286,6 +285,9 @@ func _reset_run_state() -> void:
 		"goal_id": "",
 		"goal_progress": {},
 		"goal_met": false,
+		"hero_biomass_lifetime_produced": 0.0,
+		"cycle_closed": false,
+		"checkpoints_fired": {},
 		"statistics": {
 			"total_biomass_earned": 0.0,
 			"tiles_colonized": 0,
@@ -322,3 +324,17 @@ func _award_extinction_survivor_bonus_if_eligible() -> int:
 		if dl.has_method("unlock"):
 			dl.unlock(&"disc_milestone_extinction_survivor")
 	return 25
+
+
+func _append_lineage_run(biomass: float, reproductions: int, cycle_closed: bool, evolution_earned: int) -> void:
+	var runs: Array = GameState.meta_save.get("lineage_runs", []) as Array
+	var run_index: int = runs.size() + 1
+	runs.append({
+		"run_index": run_index,
+		"date_unix": int(Time.get_unix_time_from_system()),
+		"biomass": biomass,
+		"reproductions": reproductions,
+		"cycle_closed": cycle_closed,
+		"evolution_earned": evolution_earned
+	})
+	GameState.meta_save["lineage_runs"] = runs

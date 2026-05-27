@@ -11,9 +11,12 @@ const _TICK_EFFECT_HANDLERS: Dictionary = {
 # Phase 15a: tile maturation constants
 const SPROUTING_DURATION: int = 15
 const MATURE_DURATION: int = 45
+const CYCLE_CLOSURE_CONFIRM_TICKS: int = 5
 
 var _all_species: Dictionary[StringName, SpeciesData] = {}
 var _cached_tick: int = 0
+var _species_throttle_cache: Dictionary[StringName, float] = {}
+var _closure_ticks_held: int = 0
 
 @onready var _territory: Node = get_node("../TerritorySystem")
 @onready var _nutrients: Node = get_node("../NutrientSystem")
@@ -24,6 +27,7 @@ func _ready() -> void:
 	_load_species_index()
 	EventBus.tick.connect(_on_tick)
 	EventBus.ability_used.connect(_on_ability_used)
+	EventBus.run_started.connect(_on_run_started)
 
 
 func _load_species_index() -> void:
@@ -58,20 +62,25 @@ func _on_tick(_delta_seconds: float) -> void:
 			continue
 		_apply_yields(species, coords, 1.0)
 		_apply_tick_effects(species, coords)
+	_check_cycle_closure()
 
 
 func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: float) -> void:
 	if species == null or coords.is_empty():
 		return
 	var input_throttle: float = _compute_input_throttle(species, coords.size())
+	_species_throttle_cache[species.id] = input_throttle
 	if input_throttle <= 0.0:
 		return
 	_spend_inputs(species, coords.size(), input_throttle)
 	base_mult *= input_throttle
+	if bool(GameState.run_save.get("cycle_closed", false)):
+		base_mult *= 1.5
 	var kingdom_id: StringName = species.kingdom_id
 	var trait_mods: Dictionary = _compute_trait_modifiers(species)
 	var meta_mult: float = _get_meta_growth_multiplier() if kingdom_id == &"plantae" else 1.0
 	var extra_biomass: float = 0.0
+	var produced_hero_biomass: float = 0.0
 	if MetaModifiers.is_unlocked(&"endophytic_bridge"):
 		for coord in coords:
 			if _is_endophytic_partner(coord, kingdom_id):
@@ -162,8 +171,51 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 			total += per_tile
 		if total > 0.0:
 			ResourceLedger.add(resource_key, total)
+			if kingdom_id == &"plantae" and resource_key == ResourceLedger.BIOMASS:
+				produced_hero_biomass += total
 	if extra_biomass > 0.0:
 		ResourceLedger.add(ResourceLedger.BIOMASS, extra_biomass)
+		if kingdom_id == &"plantae":
+			produced_hero_biomass += extra_biomass
+	if produced_hero_biomass > 0.0:
+		_add_hero_lifetime_biomass(produced_hero_biomass)
+
+
+func get_species_throttle(species_id: StringName) -> float:
+	return float(_species_throttle_cache.get(species_id, 1.0))
+
+
+func _on_run_started(_kingdom_id: StringName) -> void:
+	_species_throttle_cache.clear()
+	_closure_ticks_held = 0
+
+
+func _add_hero_lifetime_biomass(amount: float) -> void:
+	if amount <= 0.0:
+		return
+	var current: float = float(GameState.run_save.get("hero_biomass_lifetime_produced", 0.0))
+	GameState.run_save["hero_biomass_lifetime_produced"] = current + amount
+
+
+func _check_cycle_closure() -> void:
+	if bool(GameState.run_save.get("cycle_closed", false)):
+		return
+	var has_plant: bool = _territory.get_kingdom_tile_count(&"plantae") > 0
+	var has_fungus: bool = _territory.get_kingdom_tile_count(&"fungi") > 0
+	var has_animal: bool = _territory.get_kingdom_tile_count(&"animals") > 0
+	if not (has_plant and has_fungus and has_animal):
+		_closure_ticks_held = 0
+		return
+	if ResourceLedger.get_amount(ResourceLedger.NUTRIENTS) <= 0.0 \
+			or ResourceLedger.get_amount(ResourceLedger.BIOMASS) <= 0.0 \
+			or ResourceLedger.get_amount(ResourceLedger.DECAY) <= 0.0:
+		_closure_ticks_held = 0
+		return
+	_closure_ticks_held += 1
+	if _closure_ticks_held >= CYCLE_CLOSURE_CONFIRM_TICKS:
+		GameState.run_save["cycle_closed"] = true
+		EventBus.cycle_closed.emit()
+		SaveSystem.save_now()
 
 
 func _apply_tick_effects(species: SpeciesData, coords: Array[Vector2i]) -> void:

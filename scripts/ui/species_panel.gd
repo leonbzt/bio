@@ -38,6 +38,7 @@ func _ready() -> void:
 	EventBus.species_leveled.connect(func(_id, _level): _refresh())
 	AdaptationSystem.adaptation_changed.connect(func(_v): _refresh())
 	EventBus.placement_target_changed.connect(func(_id): _refresh())
+	EventBus.tick.connect(func(_delta): _refresh())
 	# HTML5 fix: parent (HUD) sometimes reports a stale size during _ready,
 	# so anchor_bottom=1 lands at the wrong y. Re-assert dock layout deferred
 	# and on viewport resize. grow_vertical=0 (from the scene) handles the
@@ -261,7 +262,7 @@ func _build_available_row(species: SpeciesData) -> Control:
 	row.add_child(info)
 	var button := Button.new()
 	button.text = "Introduce"
-	button.disabled = not ResourceLedger.can_afford(species.introduce_cost)
+	button.disabled = not GameState.can_afford_hero_biomass(_get_biomass_cost(species))
 	button.pressed.connect(func() -> void:
 		_introduce_species(species)
 	)
@@ -272,9 +273,9 @@ func _build_available_row(species: SpeciesData) -> Control:
 func _introduce_species(species: SpeciesData) -> void:
 	if species == null:
 		return
-	if not ResourceLedger.can_afford(species.introduce_cost):
+	var cost: float = _get_biomass_cost(species)
+	if not GameState.spend_hero_biomass(cost):
 		return
-	ResourceLedger.spend_bundle(species.introduce_cost)
 	var in_run: Array = GameState.run_save.get("unlocked_species_in_run", []) as Array
 	if not in_run.has(String(species.id)):
 		in_run.append(String(species.id))
@@ -282,6 +283,12 @@ func _introduce_species(species: SpeciesData) -> void:
 	EventBus.species_introduced.emit(species.id)
 	SaveSystem.save_now()
 	_refresh()
+
+
+func _get_biomass_cost(species: SpeciesData) -> float:
+	if species == null:
+		return 0.0
+	return float(species.introduce_cost.get("biomass", 0.0))
 
 
 func _is_species_era_available(species: SpeciesData) -> bool:

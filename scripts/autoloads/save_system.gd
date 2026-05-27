@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 19
+const SAVE_VERSION: int = 20
 
 # Kingdom precedence for the v17 → v18 multi → single occupant flatten.
 # When a v17 tile had >1 kingdom slot, the migration keeps the species whose
@@ -327,6 +327,7 @@ func _build_default_save() -> Dictionary:
 			"species_unlocked": ["calamites", "tree_fern_psaronius", "mycorrhizal_network", "arthropleura", "dwarf_willow", "steppe_sedge", "cushion_moss", "reindeer_lichen", "permafrost_yeast"],
 			"species_played": [],
 			"lineages_played": [],
+			"lineage_runs": [],
 			"structures_discovered": [],
 			"current_era_id": "carboniferous",
 			"current_ecosystem_id": "carbo_coal_swamp",
@@ -374,6 +375,9 @@ func _build_default_save() -> Dictionary:
 			"goal_id": "",
 			"goal_progress": {},
 			"goal_met": false,
+			"hero_biomass_lifetime_produced": 0.0,
+			"cycle_closed": false,
+			"checkpoints_fired": {},
 			"statistics": {
 				"total_biomass_earned": 0.0,
 				"tiles_colonized": 0,
@@ -473,6 +477,9 @@ func _repair_species_unlocked(meta: Dictionary) -> void:
 	if not meta.has("lineages_played"):
 		meta["lineages_played"] = []
 		dirty = true
+	if not meta.has("lineage_runs"):
+		meta["lineage_runs"] = []
+		dirty = true
 	if not meta.has("post_extinction"):
 		meta["post_extinction"] = {}
 		dirty = true
@@ -495,6 +502,12 @@ func _repair_species_unlocked(meta: Dictionary) -> void:
 		run["adaptation"] = 0.0
 	if not run.has("species_levels"):
 		run["species_levels"] = {}
+	if not run.has("hero_biomass_lifetime_produced"):
+		run["hero_biomass_lifetime_produced"] = 0.0
+	if not run.has("cycle_closed"):
+		run["cycle_closed"] = false
+	if not run.has("checkpoints_fired"):
+		run["checkpoints_fired"] = {}
 
 
 func _migrate_v11_to_v12(save: Dictionary) -> void:

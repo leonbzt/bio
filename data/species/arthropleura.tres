@@ -11,7 +11,7 @@ kingdom_id = &"animals"
 sprite = null
 base_traits = Array[Resource]([])
 introduce_cost = {
-"biomass": 40.0
+"biomass": 50.0
 }
 colonize_cost = {
 "biomass": 8.0

@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"lepidodendron"
+display_name = "Lepidodendron"
+description = "Diamond-bark scale trees. Thirty meters tall. The signature crown of the coal age."
+kingdom_id = &"plantae"
+sprite = null
+base_traits = Array[Resource]([])
+introduce_cost = {
+"biomass": 80.0
+}
+colonize_cost = {
+"biomass": 15.0
+}
+tick_yield = {
+"biomass": 1.0
+}
+placement_rule = &"adjacent_empty"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"plantae", &"successor"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 4
+unlock_prerequisites = Array[StringName]([&"calamites"])
+era_requires = &"carboniferous"
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.2, 0.45, 0.2, 1)
+tile_marker_shape = &"leaf"
+latin_name = "Lepidodendron aculeatum (Carboniferous)"
+lineage_id = &"arborescent"
+biome_affinity = {
+&"wetland": 0.8,
+&"open_ground": 0.7,
+&"lush_canopy": 1.5,
+&"tundra": 0.3
+}

@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"prototaxites"
+display_name = "Prototaxites"
+description = "Eight meters of fungal tower. Older than trees, taller than anything around them. What they ate, no one is sure."
+kingdom_id = &"fungi"
+sprite = null
+base_traits = Array[Resource]([])
+introduce_cost = {
+"biomass": 60.0
+}
+colonize_cost = {
+"biomass": 12.0
+}
+tick_yield = {
+"biomass": 0.6,
+"nutrients": 0.3
+}
+placement_rule = &"fungi_substrate"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"fungi"])
+tick_effects = Array[StringName]([&"corpse_decay"])
+unlock_ep_cost = 3
+unlock_prerequisites = Array[StringName]([&"mycorrhizal_network"])
+era_requires = &"carboniferous"
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.7, 0.65, 0.5, 1)
+tile_marker_shape = &"spore"
+latin_name = "Prototaxites loganii (Devonian-Carboniferous)"
+lineage_id = &"fungal_tower"
+biome_affinity = {
+&"wetland": 1.2,
+&"open_ground": 0.8,
+&"lush_canopy": 1.4,
+&"tundra": 0.4
+}

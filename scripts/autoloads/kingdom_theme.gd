@@ -15,7 +15,7 @@ extends Node
 ##
 
 const SMALL_FONT: FontFile = preload("res://assets/ui/fonts/Tiny5-Regular.ttf")
-const SMALL_FONT_SIZE: int = 8
+const SMALL_FONT_SIZE: int = 14
 
 const KINGDOMS: Dictionary[StringName, Dictionary] = {
 	&"plantae": {

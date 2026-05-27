@@ -90,6 +90,10 @@ func _ready() -> void:
 	EventBus.structure_promoted.connect(_on_structure_promoted)
 	_refresh_identity_strip()
 	_refresh_abilities()
+	# run_started fires inside the starting_species_picker before this scene
+	# loads, so the signal listener above misses it. Check on _ready too so
+	# the onboarding overlay actually appears on a fresh Coal Swamp run.
+	_maybe_show_onboarding()
 
 
 func _ensure_fullscreen_layout() -> void:

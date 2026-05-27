@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"woolly_mammoth"
+display_name = "Woolly Mammoth"
+description = "A walking biome. Where it goes, the steppe stays steppe; where it does not, the forest creeps in."
+kingdom_id = &"animals"
+sprite = null
+base_traits = Array[Resource]([])
+introduce_cost = {
+"biomass": 80.0
+}
+colonize_cost = {
+"biomass": 15.0
+}
+tick_yield = {
+"biomass": 0.5
+}
+placement_rule = &"animal_anchor"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"animals", &"herbivore"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 3
+unlock_prerequisites = Array[StringName]([&"steppe_sedge"])
+era_requires = &"pleistocene"
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.4, 0.3, 0.25, 1)
+tile_marker_shape = &"border"
+latin_name = "Mammuthus primigenius (Pleistocene)"
+lineage_id = &"proboscidean"
+biome_affinity = {
+&"tundra": 1.5,
+&"open_ground": 1.1,
+&"wetland": 0.8,
+&"lush_canopy": 0.7
+}

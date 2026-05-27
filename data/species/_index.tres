@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="SpeciesIndex" load_steps=17 format=3]
+[gd_resource type="Resource" script_class="SpeciesIndex" load_steps=31 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/species_index.gd" id="1"]
 [ext_resource type="Resource" path="res://data/species/pioneer_grass.tres" id="2"]
@@ -16,7 +16,21 @@
 [ext_resource type="Resource" path="res://data/species/creeping_vine.tres" id="14"]
 [ext_resource type="Resource" path="res://data/species/spore_drift.tres" id="15"]
 [ext_resource type="Resource" path="res://data/species/scavenger_swarm.tres" id="16"]
+[ext_resource type="Resource" path="res://data/species/calamites.tres" id="17"]
+[ext_resource type="Resource" path="res://data/species/tree_fern_psaronius.tres" id="18"]
+[ext_resource type="Resource" path="res://data/species/lepidodendron.tres" id="19"]
+[ext_resource type="Resource" path="res://data/species/prototaxites.tres" id="20"]
+[ext_resource type="Resource" path="res://data/species/mycorrhizal_network.tres" id="21"]
+[ext_resource type="Resource" path="res://data/species/meganeura.tres" id="22"]
+[ext_resource type="Resource" path="res://data/species/arthropleura.tres" id="23"]
+[ext_resource type="Resource" path="res://data/species/dwarf_willow.tres" id="24"]
+[ext_resource type="Resource" path="res://data/species/steppe_sedge.tres" id="25"]
+[ext_resource type="Resource" path="res://data/species/cushion_moss.tres" id="26"]
+[ext_resource type="Resource" path="res://data/species/reindeer_lichen.tres" id="27"]
+[ext_resource type="Resource" path="res://data/species/permafrost_yeast.tres" id="28"]
+[ext_resource type="Resource" path="res://data/species/woolly_mammoth.tres" id="29"]
+[ext_resource type="Resource" path="res://data/species/saber_tooth.tres" id="30"]
 
 [resource]
 script = ExtResource("1")
-species = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16")])
+species = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30")])

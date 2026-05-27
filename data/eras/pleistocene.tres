@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EraData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/era_data.gd" id="1"]
+[ext_resource type="Resource" path="res://data/ecosystems/pleist_glaciers_edge.tres" id="2"]
+[ext_resource type="Resource" path="res://data/ecosystems/pleist_mammoth_steppe.tres" id="3"]
+[ext_resource type="Resource" path="res://data/ecosystems/pleist_taiga_border.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+id = &"pleistocene"
+display_name = "Ice Age"
+description = "Mile-thick ice sheets reshape continents. The world is cold, sparse, and strange. Hairy giants engineer their own grasslands. Fungi and lichen colonize what nothing else can."
+available_kingdoms = [&"plantae", &"fungi", &"animals"]
+ecosystems = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4")])
+tint_color = Color(0.85, 0.92, 1.0, 1.0)
+transition_narrative = "The forests fall. The air cools. Ice creeps south, and the great cathedrals of coal-bark go under it.
+
+A long time passes. A very long time.
+
+When the cold steadies into something almost predictable, things appear at the edges of the ice. They are large. They are warm. They keep the grass alive by walking through it.
+
+You are about to be a sedge, or a moss, or a lichen, or perhaps something much heavier than that.
+
+Begin again."
+unlock_requires_prev_era = &"carboniferous"

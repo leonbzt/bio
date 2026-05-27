@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_ecosystem_carbo_coal_swamp"
+title = "The Loop That Buries Itself"
+body = "Plants grew, plants died, plants did not finish rotting. Sediment piled on sediment.
+Millions of years and the pressure of all that weight turned what you grew into a different rock entirely. You will not see this happen. You are doing it anyway."
+category = &"ecosystem"
+trigger_id = &"carbo_coal_swamp"

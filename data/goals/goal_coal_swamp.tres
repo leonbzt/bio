@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="PerRunGoalData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/per_run_goal_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"coal_swamp"
+display_text = "Fill the Coal Gauge"
+tracker = &"biomass_earned"
+target = 1000.0
+niches = []
+kingdoms = []

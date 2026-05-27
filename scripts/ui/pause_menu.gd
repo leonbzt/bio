@@ -16,9 +16,13 @@ func _ready() -> void:
 	_reset_button.pressed.connect(_on_reset_pressed)
 	_reset_dialog.confirmed.connect(_on_reset_confirmed)
 	_reset_dialog.title = "Reset Save"
-	_reset_dialog.dialog_text = "Delete your local save? This cannot be undone."
+	_reset_dialog.dialog_text = "Delete your local save?\nThis cannot be undone."
 	_reset_dialog.ok_button_text = "Reset"
 	_reset_dialog.cancel_button_text = "Cancel"
+	# Cap width — the larger default font (size 11) was making the dialog
+	# stretch to the screen edge. Explicit min/initial size keeps it compact.
+	_reset_dialog.min_size = Vector2i(280, 140)
+	_reset_dialog.size = Vector2i(320, 160)
 	EventBus.goal_met.connect(_on_goal_met)
 	EventBus.run_started.connect(func(_k): _reset_prestige_glow())
 	_reset_prestige_glow()

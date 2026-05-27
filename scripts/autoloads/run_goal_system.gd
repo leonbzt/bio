@@ -69,6 +69,18 @@ func is_met() -> bool:
 func _on_run_started(kingdom_id: StringName) -> void:
 	_last_biomass_sample = 0.0
 	_rng.seed = int(GameState.run_seed) ^ int(Time.get_unix_time_from_system())
+	# Ecosystem override: each ecosystem can pin a specific goal so its banner
+	# matches its completion criterion (Coal Swamp → "Fill the Coal Gauge"),
+	# instead of rolling from the random pool.
+	if has_node("/root/EraSystem"):
+		var era_system: Node = get_node("/root/EraSystem")
+		if era_system.has_method("get_current_ecosystem"):
+			var eco: EcosystemData = era_system.get_current_ecosystem()
+			if eco != null and eco.goal_id != &"":
+				for goal in _all_goals:
+					if goal.id == eco.goal_id:
+						_set_goal(goal.id)
+						return
 	var starter_species: StringName = StringName(GameState.run_save.get("starting_species_id", ""))
 	var candidates: Array[PerRunGoalData] = []
 	for goal in _all_goals:

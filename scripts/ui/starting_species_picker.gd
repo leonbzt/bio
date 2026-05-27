@@ -66,18 +66,25 @@ func _get_candidates() -> Array[SpeciesData]:
 	# Fog does not apply here; the picker runs before the world exists.
 	var unlocked: Array = GameState.meta_save.get("species_unlocked", []) as Array
 	var filter: Array[StringName] = ecosystem.starting_species_filter
+	var era_id: StringName = ecosystem.era_id
 	if filter.is_empty():
 		for species_id in unlocked:
 			var species: SpeciesData = _species_by_id.get(StringName(species_id), null)
-			if species != null:
-				result.append(species)
+			if species == null:
+				continue
+			if species.era_requires != &"" and species.era_requires != era_id:
+				continue
+			result.append(species)
 	else:
 		for species_id in filter:
 			if not unlocked.has(String(species_id)):
 				continue
 			var species: SpeciesData = _species_by_id.get(species_id, null)
-			if species != null:
-				result.append(species)
+			if species == null:
+				continue
+			if species.era_requires != &"" and species.era_requires != era_id:
+				continue
+			result.append(species)
 	return result
 
 
@@ -88,6 +95,9 @@ func _build_card(species: SpeciesData) -> PanelContainer:
 	panel.add_child(vbox)
 	var name := Label.new()
 	name.text = species.display_name
+	name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name.add_theme_font_size_override("font_size", 16)
+	name.add_theme_color_override("font_color", Color(1.0, 1.0, 0.95))
 	vbox.add_child(name)
 	if species.latin_name != "":
 		var lat := Label.new()

@@ -3,12 +3,12 @@ extends Control
 ## Custom canvas that lays out evolution nodes by (wing, tier) and draws prereq lines.
 ##
 
-const COL_WIDTH: int = 140
-const ROW_HEIGHT: int = 120
+const COL_WIDTH: int = 160
+const ROW_HEIGHT: int = 140
 const COL_GUTTER: int = 16
-const NODE_WIDTH: int = 124
-const NODE_HEIGHT: int = 92
-const STACK_GAP: int = 8
+const NODE_WIDTH: int = 144
+const NODE_HEIGHT: int = 116
+const STACK_GAP: int = 10
 const WINGS: Array[StringName] = [&"plantae", &"fungi", &"defense", &"hybrid", &"animals", &"meta"]
 const WING_COLORS: Dictionary = {
 	&"plantae": Color(0.35, 0.78, 0.42),
@@ -102,12 +102,16 @@ func _rebuild() -> void:
 					tier_base_y[tier] + stack_index * (NODE_HEIGHT + STACK_GAP)
 				)
 				_node_positions[node.id] = pos
-				var button := Button.new()
+				var button := TooltipButton.new()
 				button.position = pos
 				button.custom_minimum_size = Vector2(NODE_WIDTH, NODE_HEIGHT)
 				button.size = Vector2(NODE_WIDTH, NODE_HEIGHT)
-				button.clip_text = true
-				button.autowrap_mode = TextServer.AUTOWRAP_WORD
+				# clip_text=false so text wraps via autowrap; with the larger
+				# default font (size 11) the old clip swallowed the EP line.
+				# TooltipButton overrides _make_custom_tooltip to return a
+				# wrapping Label so node descriptions don't clip off-screen.
+				button.clip_text = false
+				button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				add_child(button)
 				_node_buttons[node.id] = button
 				_restyle_button(button, node)

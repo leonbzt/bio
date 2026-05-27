@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EcosystemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ecosystem_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"pleist_glaciers_edge"
+display_name = "Glacier's Edge"
+description = "Bare stone, just freed from the ice. Whatever grows here will be the first thing to do so since the last freeze."
+era_id = &"pleistocene"
+biome_recipe = {
+&"open_ground": 0.7,
+&"tundra": 0.3
+}
+biome_cluster_size = 3.0
+completion_criterion = &"biomass_earned"
+completion_target = 75.0
+completion_required_species = &""
+completion_required_biome = &""
+starting_species_filter = Array[StringName]([&"reindeer_lichen", &"cushion_moss"])
+unlock_text = "Bare stone, just freed from the ice. Whatever grows here will be the first thing to do so."
+complete_text = "Where there was rock, there is now a thin green skin. It is the most fragile victory of life so far."

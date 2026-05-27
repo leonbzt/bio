@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EraData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/era_data.gd" id="1"]
+[ext_resource type="Resource" path="res://data/ecosystems/carbo_coal_swamp.tres" id="2"]
+[ext_resource type="Resource" path="res://data/ecosystems/carbo_fern_glade.tres" id="3"]
+[ext_resource type="Resource" path="res://data/ecosystems/carbo_riverside_cathedral.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+id = &"carboniferous"
+display_name = "Coal Forests"
+description = "Atmospheric oxygen at thirty-five percent. Trees taller than cathedrals. The first great forests, and the first great fungi to take them apart. Insects grow to sizes nothing else will match."
+available_kingdoms = [&"plantae", &"fungi", &"animals"]
+ecosystems = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4")])
+tint_color = Color(0.9, 1.0, 0.85, 1.0)
+transition_narrative = ""
+unlock_requires_prev_era = &""

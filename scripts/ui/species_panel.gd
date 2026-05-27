@@ -244,7 +244,10 @@ func _build_available_row(species: SpeciesData) -> Control:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var label := Label.new()
 	label.text = species.display_name
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.95))
 	info.add_child(label)
 	if species.latin_name != "":
 		var lat := Label.new()
@@ -290,6 +293,8 @@ func _is_species_era_available(species: SpeciesData) -> bool:
 	var era: EraData = era_system.get_current_era()
 	if era == null:
 		return true
+	if species.era_requires != &"" and species.era_requires != era.id:
+		return false
 	if era.available_kingdoms.is_empty():
 		return true
 	return era.available_kingdoms.has(species.kingdom_id)

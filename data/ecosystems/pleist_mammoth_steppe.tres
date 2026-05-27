@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EcosystemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ecosystem_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"pleist_mammoth_steppe"
+display_name = "Mammoth Steppe"
+description = "Dry grass to the horizon. Something heavy moves through it, keeping it grass instead of forest."
+era_id = &"pleistocene"
+biome_recipe = {
+&"tundra": 0.7,
+&"open_ground": 0.3
+}
+biome_cluster_size = 4.0
+completion_criterion = &"biomass_earned"
+completion_target = 250.0
+completion_required_species = &""
+completion_required_biome = &""
+starting_species_filter = Array[StringName]([&"steppe_sedge", &"dwarf_willow"])
+unlock_text = "Dry grass to the horizon. Something heavy moves through it, keeping it grass instead of forest."
+complete_text = "The steppe holds together because the mammoth holds it together. Strange, that one body shapes a whole biome."

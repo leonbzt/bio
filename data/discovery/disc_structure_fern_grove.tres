@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_structure_fern_grove"
+title = "The Grove Holds Its Own Weather"
+body = "Five fronds in a cross. The air between them slows. The ground beneath them stays wet.
+Smaller than a forest, larger than a clump. Enough to feed itself."
+category = &"structure"
+trigger_id = &"fern_grove"

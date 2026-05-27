@@ -1,12 +1,14 @@
-[gd_resource type="Resource" script_class="BiomeData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="BiomeData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/biome_data.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/art/tiles/biomes/swamp_01.png" id="2"]
 
 [resource]
 script = ExtResource("1")
-id = &"swamp"
-display_name = "Swamp"
-sunlight_per_tick = 0.7
-nutrient_per_tick = 0.4
-decay_per_tick = 0.5
+id = &"wetland"
+display_name = "Wetland"
+tile_texture = ExtResource("2")
+sunlight_per_tick = 0.6
+nutrient_per_tick = 0.5
+decay_per_tick = 0.2
 chemosynthesis_per_tick = 0.0

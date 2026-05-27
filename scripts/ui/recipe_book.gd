@@ -99,6 +99,9 @@ func _build_species_entry(sp: SpeciesData, known: bool) -> Control:
 	var title := Label.new()
 	title.text = sp.display_name if known else "???"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", Color(1.0, 1.0, 0.95))
 	header.add_child(title)
 	if sp.kingdom_id != &"" and known:
 		var kingdom := Label.new()
@@ -112,6 +115,7 @@ func _build_species_entry(sp: SpeciesData, known: bool) -> Control:
 	if known and sp.latin_name != "":
 		var latin := Label.new()
 		latin.text = sp.latin_name
+		latin.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		latin.add_theme_font_override("font", KingdomTheme.SMALL_FONT)
 		latin.add_theme_font_size_override("font_size", KingdomTheme.SMALL_FONT_SIZE)
 		latin.add_theme_color_override("font_color", Color(0.65, 0.65, 0.55))
@@ -182,6 +186,9 @@ func _build_structure_entry(sd: StructureData, known: bool) -> Control:
 	var title := Label.new()
 	title.text = sd.display_name if known else "???"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", Color(1.0, 1.0, 0.95))
 	header.add_child(title)
 	vbox.add_child(header)
 
@@ -196,6 +203,7 @@ func _build_structure_entry(sd: StructureData, known: bool) -> Control:
 	if known:
 		var pattern_text := Label.new()
 		pattern_text.text = _format_pattern(sd)
+		pattern_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		pattern_text.add_theme_font_override("font", KingdomTheme.SMALL_FONT)
 		pattern_text.add_theme_font_size_override("font_size", KingdomTheme.SMALL_FONT_SIZE)
 		pattern_text.add_theme_color_override("font_color", Color(0.65, 0.75, 0.55))
@@ -275,6 +283,9 @@ func _build_biome_entry(b: BiomeData) -> Control:
 	var title := Label.new()
 	title.text = b.display_name
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", Color(1.0, 1.0, 0.95))
 	header.add_child(title)
 	vbox.add_child(header)
 

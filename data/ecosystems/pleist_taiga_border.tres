@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EcosystemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ecosystem_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"pleist_taiga_border"
+display_name = "Taiga Border"
+description = "Where the forest tries to creep north. Boggy ground holds the line; willow and lichen hold the bog."
+era_id = &"pleistocene"
+biome_recipe = {
+&"wetland": 0.5,
+&"tundra": 0.4,
+&"open_ground": 0.1
+}
+biome_cluster_size = 4.0
+completion_criterion = &"biomass_earned"
+completion_target = 300.0
+completion_required_species = &""
+completion_required_biome = &""
+starting_species_filter = Array[StringName]([&"dwarf_willow", &"permafrost_yeast", &"reindeer_lichen"])
+unlock_text = "Where the forest tries to creep north. Boggy ground holds the line; willow holds the bog."
+complete_text = "The line has not moved. It will not move for ten thousand years. Some borders are kept by patience."

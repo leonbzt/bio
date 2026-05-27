@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DiscoveryEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/discovery_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"disc_era_carboniferous"
+title = "Atmosphere of Thirty-Five Percent"
+body = "Oxygen high enough to let insects grow to monstrous size. Forests so dense their leaving made coal.
+The greenest the world has ever been, before or since."
+category = &"era"
+trigger_id = &"carboniferous"

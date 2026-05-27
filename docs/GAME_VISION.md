@@ -92,17 +92,26 @@ After Carnivore plantae run:
 
 **One world to start, advancing across geological eras.** Each era opens new kingdoms, species, and challenges.
 
-Era examples:
-- **Cryogenian** → only microbial life, fungi limited to extremophiles, no plants yet.
-- **Devonian** → first plants, first fungi, no animals on land.
-- **Carboniferous** → giant ferns, abundant decomposers, atmospheric oxygen shifts.
-- **Mesozoic** → giant reptilian herbivores, predators, gymnosperms.
+### Alpha-locked starter eras (see `docs/ALPHA_LOCK.md` for full content)
+
+The alpha ships with two eras, picked for universal name recognition and maximum visual contrast:
+
+- **Carboniferous** ("Coal Forests") — plants are unambiguously the protagonists; giant lycopsids and fungal towers; signature insect Meganeura.
+- **Pleistocene** ("Ice Age") — universally recognized; mammoth and saber-tooth as charismatic megafauna; tundra and peat-bog biomes.
+
+Each era ships 3 maps (ecosystems), 4 biomes total (2 shared + 2 era-signature), 7 species per era (3 plants + 2 fungi + 2 animals), and 5 core interactions. **Coal Swamp** (Carboniferous) is the first map to ship as the playable vertical slice.
+
+### Aspirational era pipeline (post-alpha, directional)
+
+- **Cryogenian** → only microbial life, fungi limited to extremophiles, no plants yet. Reserved as a later "deep time" unlock once players are hooked.
+- **Devonian** → first plants, first fungi, no animals on land. Species absorbed into Carboniferous where biologically appropriate.
+- **Cretaceous / Mesozoic** → giant reptilian herbivores, predators, gymnosperms.
 - **Anthropocene** → climate volatility, invasive species, every kingdom available.
 - **Speculative / alien** → eventually, parallel worlds with non-Earth biospheres.
 
-Within each era, **multiple ecosystems** to complete (shallow sea, exposed rock, swamp, etc.). Player picks **which ecosystem to tackle next** and **how to tackle it** (which kingdom × niche × species combination). All ecosystems in an era must be completed before advancing to the next era — but the order and strategy are the player's.
+Within each era, **multiple ecosystems** to complete. Player picks **which ecosystem to tackle next** and **how to tackle it** (which kingdom × niche × species combination). All ecosystems in an era must be completed before advancing to the next era — but the order and strategy are the player's.
 
-This gives the run loop a **route layer** above the run itself: not just "play another run" but "I need to clear the Devonian's tidal-pool ecosystem; let me try it as parasitic fungi this time."
+This gives the run loop a **route layer** above the run itself: not just "play another run" but "I need to clear the Mammoth Steppe; let me try it with a Lichen pioneer setup this time."
 
 ## Emergent structures (parked design)
 

@@ -144,6 +144,8 @@ func _apply_bonus(sd: StructureData, entry: Dictionary) -> void:
 			_bonus_fairy_ring(entry, true)
 		&"decay_pit":
 			_bonus_decay_pit(entry, true)
+		&"fern_grove":
+			_bonus_fern_grove(entry, true)
 		_:
 			push_warning("StructureRegistry: unknown bonus handler %s" % String(sd.bonus_handler))
 
@@ -158,6 +160,8 @@ func _revert_bonus(sd: StructureData, entry: Dictionary) -> void:
 			_bonus_fairy_ring(entry, false)
 		&"decay_pit":
 			_bonus_decay_pit(entry, false)
+		&"fern_grove":
+			_bonus_fern_grove(entry, false)
 
 
 func _clear_all_structure_bonuses() -> void:
@@ -191,6 +195,8 @@ func _find_pattern_matches(sd: StructureData) -> Array:
 			return _match_block_with_adjacent(sd.pattern_params)
 		&"area_on_biome":
 			return _match_area_on_biome(sd.pattern_params)
+		&"cross_5_same_species":
+			return _match_cross_5(sd.pattern_params)
 		_:
 			return []
 
@@ -199,6 +205,10 @@ func _match_block(params: Dictionary) -> Array:
 	var w: int = int(params.get("width", 3))
 	var h: int = int(params.get("height", 3))
 	var kingdom_id: StringName = StringName(params.get("kingdom_id", ""))
+	# Optional species lock — when set, the block must be made of this exact
+	# species (e.g., Fern Grove requires tree_fern_psaronius, not any plantae).
+	# Empty = "any same species", the legacy behavior.
+	var required_species: StringName = StringName(params.get("required_species", ""))
 	var out: Array = []
 	for y in range(_tile_grid.GRID_HEIGHT - h + 1):
 		for x in range(_tile_grid.GRID_WIDTH - w + 1):
@@ -213,6 +223,9 @@ func _match_block(params: Dictionary) -> Array:
 					if sp == &"":
 						ok = false
 						break
+					if required_species != &"" and sp != required_species:
+						ok = false
+						break
 					if first_species == &"":
 						first_species = sp
 					elif sp != first_species:
@@ -223,6 +236,43 @@ func _match_block(params: Dictionary) -> Array:
 					break
 			if ok:
 				out.append({"anchor": anchor, "tiles": coords})
+	return out
+
+
+func _match_cross_5(params: Dictionary) -> Array:
+	# Plus / cross shape: a center tile plus its 4 cardinal neighbors, all of
+	# the same species (and optionally locked to a specific species). Used by
+	# Fern Grove — fronds spreading radially from a central frond.
+	var kingdom_id: StringName = StringName(params.get("kingdom_id", ""))
+	var required_species: StringName = StringName(params.get("required_species", ""))
+	var out: Array = []
+	for y in range(1, _tile_grid.GRID_HEIGHT - 1):
+		for x in range(1, _tile_grid.GRID_WIDTH - 1):
+			var center: Vector2i = Vector2i(x, y)
+			var positions: Array[Vector2i] = [
+				center,
+				center + Vector2i.UP,
+				center + Vector2i.DOWN,
+				center + Vector2i.LEFT,
+				center + Vector2i.RIGHT,
+			]
+			var first_species: StringName = &""
+			var ok: bool = true
+			for p in positions:
+				var sp: StringName = _territory.get_occupant(p, kingdom_id)
+				if sp == &"":
+					ok = false
+					break
+				if required_species != &"" and sp != required_species:
+					ok = false
+					break
+				if first_species == &"":
+					first_species = sp
+				elif sp != first_species:
+					ok = false
+					break
+			if ok:
+				out.append({"anchor": center, "tiles": positions})
 	return out
 
 
@@ -355,6 +405,13 @@ func _bonus_mycorrhizal_hub(entry: Dictionary, apply: bool) -> void:
 func _bonus_old_growth_stand(entry: Dictionary, apply: bool) -> void:
 	for c in entry["tiles"]:
 		_territory.set_tile_data(c, "structure_old_growth", apply)
+
+
+func _bonus_fern_grove(entry: Dictionary, apply: bool) -> void:
+	# Humid microclimate — yield boost on grove tiles only. GrowthSystem
+	# reads structure_fern_grove and multiplies biomass per tile.
+	for c in entry["tiles"]:
+		_territory.set_tile_data(c, "structure_fern_grove", apply)
 
 
 func _bonus_fairy_ring(entry: Dictionary, apply: bool) -> void:

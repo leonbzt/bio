@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EcosystemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ecosystem_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"carbo_riverside_cathedral"
+display_name = "Riverside Cathedral"
+description = "The forest mature. Light filtered through cathedrals of scale-bark and fungal spires older than your species will be."
+era_id = &"carboniferous"
+biome_recipe = {
+&"lush_canopy": 0.5,
+&"wetland": 0.3,
+&"open_ground": 0.2
+}
+biome_cluster_size = 4.0
+completion_criterion = &"biomass_earned"
+completion_target = 500.0
+completion_required_species = &""
+completion_required_biome = &""
+starting_species_filter = Array[StringName]([&"lepidodendron", &"prototaxites", &"tree_fern_psaronius"])
+unlock_text = "The forest mature. Light filtered through cathedrals of scale-bark and fungal spires."
+complete_text = "The cycle holds itself. Some things are wide enough now that nothing else will rise beside them."

@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"tree_fern_psaronius"
+display_name = "Tree Fern"
+description = "A fronded crown atop a slim trunk. Fills the middle layer of every forest in the era."
+kingdom_id = &"plantae"
+sprite = null
+base_traits = Array[Resource]([])
+introduce_cost = {
+"biomass": 25.0
+}
+colonize_cost = {
+"biomass": 8.0
+}
+tick_yield = {
+"biomass": 0.7
+}
+placement_rule = &"adjacent_empty"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"plantae", &"successor"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 0
+unlock_prerequisites = Array[StringName]([])
+era_requires = &"carboniferous"
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.3, 0.55, 0.25, 1)
+tile_marker_shape = &"leaf"
+latin_name = "Psaronius infarctus (Late Carboniferous)"
+lineage_id = &"tree_fern_lineage"
+biome_affinity = {
+&"wetland": 1.0,
+&"open_ground": 0.9,
+&"lush_canopy": 1.3,
+&"tundra": 0.3
+}
+tile_sprite_paths = Array[String]([
+"res://assets/art/organisms/plantae/psaronius_01.png",
+"res://assets/art/organisms/plantae/psaronius_02.png",
+"res://assets/art/organisms/plantae/psaronius_03.png",
+"res://assets/art/organisms/plantae/psaronius_04.png"
+])

@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"reindeer_lichen"
+display_name = "Reindeer Lichen"
+description = "Algae and fungus, working together. Slow. Patient. Survives almost anywhere."
+kingdom_id = &"fungi"
+sprite = null
+base_traits = Array[Resource]([])
+introduce_cost = {}
+colonize_cost = {
+"biomass": 3.0
+}
+tick_yield = {
+"biomass": 0.3,
+"nutrients": 0.1
+}
+placement_rule = &"adjacent_empty"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"fungi", &"pioneer"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 0
+unlock_prerequisites = Array[StringName]([])
+era_requires = &"pleistocene"
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.65, 0.7, 0.55, 1)
+tile_marker_shape = &"spore"
+latin_name = "Cladonia rangiferina (Pleistocene-now)"
+lineage_id = &"lichen"
+biome_affinity = {
+&"tundra": 1.5,
+&"open_ground": 1.4,
+&"wetland": 0.4,
+&"lush_canopy": 0.6
+}

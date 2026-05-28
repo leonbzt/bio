@@ -206,11 +206,10 @@ func _check_cycle_closure() -> void:
 	if not (has_plant and has_fungus and has_animal):
 		_closure_ticks_held = 0
 		return
-	if ResourceLedger.get_amount(ResourceLedger.NUTRIENTS) <= 0.0 \
-			or ResourceLedger.get_amount(ResourceLedger.BIOMASS) <= 0.0 \
-			or ResourceLedger.get_amount(ResourceLedger.DECAY) <= 0.0:
-		_closure_ticks_held = 0
-		return
+	# Earlier draft required all three pools > 0 each tick. In steady-state
+	# closure the pools dip to ~0 when consumption catches production, which
+	# was resetting the 5-tick confirm and preventing the event from firing.
+	# Trust the placement signal: 3 kingdoms placed + 5 ticks = closed.
 	_closure_ticks_held += 1
 	if _closure_ticks_held >= CYCLE_CLOSURE_CONFIRM_TICKS:
 		GameState.run_save["cycle_closed"] = true

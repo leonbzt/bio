@@ -51,10 +51,14 @@ func _ready() -> void:
 		_processed[&"unlock_mycorrhizal"] = true
 	if in_run.has("arthropleura"):
 		_processed[&"unlock_arthropleura"] = true
+	# Mark previously-fired checkpoints as processed instead of re-queuing
+	# them. If the player saw and dismissed the bubble in a prior session,
+	# loading the save shouldn't re-show the same hint. Live checkpoint_triggered
+	# signals fired this session still bubble normally.
 	var fired: Dictionary = GameState.run_save.get("checkpoints_fired", {}) as Dictionary
 	for id in CHECKPOINT_ORDER:
 		if bool(fired.get(String(id), false)):
-			_on_checkpoint_triggered(id, {})
+			_processed[id] = true
 	_refresh()
 
 

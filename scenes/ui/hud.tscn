@@ -16,7 +16,7 @@ anchor_right = 1.0
 offset_left = 4.0
 offset_top = 4.0
 offset_right = -4.0
-offset_bottom = 124.0
+offset_bottom = 160.0
 
 [node name="Margin" type="MarginContainer" parent="TopBar"]
 anchor_right = 1.0
@@ -29,7 +29,8 @@ theme_override_constants/margin_bottom = 8
 [node name="ColumnLayout" type="VBoxContainer" parent="TopBar/Margin"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-alignment = 1
+alignment = 0
+theme_override_constants/separation = 4
 
 [node name="EcosystemNameLabel" type="Label" parent="TopBar/Margin/ColumnLayout"]
 text = "Coal Swamp"

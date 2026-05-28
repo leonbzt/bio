@@ -132,11 +132,11 @@ class _StatusOverlay extends Node2D:
 			var species_id: StringName = species_ids[0]
 			var throttle: float = float(growth.get_species_throttle(species_id))
 			var color: Color = _status_color(throttle)
-			# Larger dot anchored just above the tile's top edge so it doesn't
-			# get lost in the corner. Outline + fill so it reads on any biome.
-			var radius: float = 8.0 if species_id == &"calamites" else 6.0
-			var center: Vector2 = tile_grid.map_to_local(coord) + Vector2(0.0, -tile_grid.TILE_SIZE * 0.36)
-			draw_circle(center, radius + 2.0, OUTLINE)
+			# Big, central, high-contrast dot. Earlier "tiny corner pip" was
+			# easy to miss on a busy biome. Sits above species sprite + fog.
+			var radius: float = 11.0 if species_id == &"calamites" else 9.0
+			var center: Vector2 = tile_grid.map_to_local(coord) + Vector2(0.0, -tile_grid.TILE_SIZE * 0.28)
+			draw_circle(center, radius + 3.0, OUTLINE)
 			draw_circle(center, radius, color)
 
 	func _status_color(throttle: float) -> Color:
@@ -508,7 +508,9 @@ func _ready() -> void:
 	_status_overlay = _StatusOverlay.new()
 	_status_overlay.name = "StatusOverlay"
 	_status_overlay.tile_grid = self
-	_status_overlay.z_index = 3
+	# Status dots must sit above fog (z=4) so they remain visible on revealed
+	# tiles that fall in the fog overlay's draw set.
+	_status_overlay.z_index = 5
 	_overlay_layer.add_child(_status_overlay)
 
 	_fusion_overlay = _StructureFusionOverlay.new()

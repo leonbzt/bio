@@ -6,7 +6,7 @@ const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 # _ready, which positioned the panel below the visible area).
 const DOCK_MARGIN_X: float = 4.0
 const DOCK_MARGIN_BOTTOM: float = 4.0
-const DOCK_COLLAPSED_HEIGHT: float = 56.0
+const DOCK_COLLAPSED_HEIGHT: float = 96.0
 
 # Commissioned per-kingdom icons. Missing entries fall back to the
 # species name's first letter as a glyph.
@@ -24,6 +24,7 @@ var _available_collapsed: bool = true
 @onready var _introduced: HBoxContainer = $Margin/VBox/BottomBar/IntroducedScroll/IntroducedList
 @onready var _available: VBoxContainer = $Margin/VBox/AvailableList
 @onready var _available_header: Button = $Margin/VBox/BottomBar/AvailableHeader
+@onready var _details_label: Label = $Margin/VBox/DetailsLabel
 
 
 func _ready() -> void:
@@ -170,15 +171,9 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 	# 48×48 instead of 36×36 — wider hit zone so the cursor doesn't fall off
 	# the button while the user is still reading the tooltip.
 	btn.custom_minimum_size = Vector2(48, 48)
-	btn.tooltip_text = "%s\n%s\n\n%s\n\nLvl %d/3 (+%d%% yield)" % [
-		species.display_name,
-		species.latin_name if species.latin_name != "" else "",
-		species.description if species.description != "" else "",
-		current_level,
-		int((current_level - 1) * 10)
-	]
-	if next_cost >= 0.0:
-		btn.tooltip_text += "\nLong-press to evolve (%.0f Adaptation)" % next_cost
+	var details_text: String = _format_introduced_details(species, current_level, next_cost)
+	btn.tooltip_text = details_text
+	btn.mouse_entered.connect(func() -> void: _show_details(details_text))
 
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = species.tile_marker_color.darkened(0.30 if not is_active else 0.05)
@@ -264,12 +259,9 @@ func _build_available_row(species: SpeciesData) -> Control:
 	# Tooltip on the whole row so the hover zone is wide enough to read on.
 	row.mouse_filter = Control.MOUSE_FILTER_STOP
 	var cost: float = _get_biomass_cost(species)
-	row.tooltip_text = "%s\n%s\n\n%s\n\nCost: %.0f biomass" % [
-		species.display_name,
-		species.latin_name if species.latin_name != "" else "",
-		species.description if species.description != "" else "",
-		cost
-	]
+	var details_text: String = _format_available_details(species, cost)
+	row.tooltip_text = details_text
+	row.mouse_entered.connect(func() -> void: _show_details(details_text))
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var label := Label.new()
@@ -319,6 +311,35 @@ func _get_biomass_cost(species: SpeciesData) -> float:
 	if species == null:
 		return 0.0
 	return float(species.introduce_cost.get("biomass", 0.0))
+
+
+func _format_introduced_details(species: SpeciesData, current_level: int, next_cost: float) -> String:
+	var parts: Array[String] = []
+	parts.append("%s — %s" % [species.display_name, String(species.kingdom_id).capitalize()])
+	if species.latin_name != "":
+		parts.append(species.latin_name)
+	if species.description != "":
+		parts.append(species.description)
+	parts.append("Lvl %d/3 (+%d%% yield)" % [current_level, int((current_level - 1) * 10)])
+	if next_cost >= 0.0:
+		parts.append("Long-press to evolve (%.0f Adaptation)" % next_cost)
+	return "  ·  ".join(parts)
+
+
+func _format_available_details(species: SpeciesData, cost: float) -> String:
+	var parts: Array[String] = []
+	parts.append("%s — %s" % [species.display_name, String(species.kingdom_id).capitalize()])
+	if species.latin_name != "":
+		parts.append(species.latin_name)
+	if species.description != "":
+		parts.append(species.description)
+	parts.append("Cost: %.0f biomass" % cost)
+	return "  ·  ".join(parts)
+
+
+func _show_details(text: String) -> void:
+	if _details_label != null:
+		_details_label.text = text
 
 
 func _is_species_era_available(species: SpeciesData) -> bool:

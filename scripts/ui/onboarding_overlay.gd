@@ -1,179 +1,129 @@
 extends Control
-##
-## Action-triggered onboarding tooltips. Each step advances when the player
-## performs the action it teaches — not on a Next button. The bubble stays
-## small and non-blocking so the player can interact with the game underneath.
-## State persisted in meta.onboarding_step (-1 = done, 0..STEPS.size()-1 = current).
-##
 
-# Each step: { text, advance_on: signal name, predicate: Callable(payload) -> bool }
-# advance_on is an EventBus signal name. predicate (optional) gates whether
-# the signal fires the advance — e.g., only "species_introduced for mycorrhizal_network".
-const STEPS: Array[Dictionary] = [
-	{
-		"text": "Tap a [Wetland] tile (dark green-brown) to place your first Calamites. It thrives in wet ground.",
-		"advance_on": &"tile_colonized",
-	},
-	{
-		"text": "You have enough biomass — open the species panel below and introduce [Mycorrhizal Network].",
-		"advance_on": &"species_introduced",
-		"species_filter": &"mycorrhizal_network",
-		"hide_until_affordable": &"mycorrhizal_network",
-	},
-	{
-		"text": "Place the network next to your Calamites — the bond boosts both yields.",
-		"advance_on": &"tile_colonized",
-	},
-	{
-		"text": "Plants will die here. Their biomass piles up instead of fully decaying — that is coal forming. Watch the gauge on the left.",
-		"advance_on": &"goal_progress_changed",
-		"progress_threshold": 10.0,
-	},
-	{
-		"text": "Decay is too slow to keep the loop going. Introduce [Arthropleura] — it recycles dead plant matter.",
-		"advance_on": &"species_introduced",
-		"species_filter": &"arthropleura",
-		"hide_until_affordable": &"arthropleura",
-	},
-	{
-		"text": "Now grow your forest. Fill the Coal Gauge to 1000 to complete the Coal Swamp.",
-		"advance_on": &"ecosystem_completed",
-	},
+const CHECKPOINT_TEXT: Dictionary[StringName, String] = {
+	&"place_hero": "Place your first Calamites on a wetland tile (dark green-brown). It thrives in wet ground.",
+	&"unlock_mycorrhizal": "Soil nutrients run thin. Mycorrhizal Network turns dead litter into nutrients. Place it adjacent to your Calamites.",
+	&"unlock_arthropleura": "Dead matter piling up. Arthropleura eats litter and feeds the fungi. Place it nearby.",
+	&"bottleneck_nutrients": "Your nutrients pool is depleted. Place another Mycorrhizal Network.",
+	&"bottleneck_detritus": "Your detritus pool is depleted. Place another Arthropleura.",
+	&"run_complete": "The forest is self-sustaining. Run complete."
+}
+const CHECKPOINT_ORDER: Array[StringName] = [
+	&"place_hero",
+	&"unlock_mycorrhizal",
+	&"unlock_arthropleura",
+	&"bottleneck_nutrients",
+	&"bottleneck_detritus",
+	&"run_complete"
 ]
 
 @onready var _backdrop: ColorRect = $Backdrop
-@onready var _bubble: PanelContainer = $Bubble
 @onready var _body: Label = $Bubble/Margin/VBox/Body
 @onready var _step_label: Label = $Bubble/Margin/VBox/StepLabel
 @onready var _next_btn: Button = $Bubble/Margin/VBox/Actions/NextButton
 @onready var _skip_btn: Button = $Bubble/Margin/VBox/Actions/SkipButton
 
-var _current: int = 0
-var _species_by_id: Dictionary[StringName, SpeciesData] = {}
+var _queue: Array[StringName] = []
+var _processed: Dictionary[StringName, bool] = {}
 
 
 static func should_show() -> bool:
-	# Driven solely by onboarding_step: 0..N-1 = show that step, -1 = dismissed.
-	return int(GameState.meta_save.get("onboarding_step", 0)) >= 0
-
-
-func _ready() -> void:
-	# Non-blocking: the player needs to interact with the game underneath to
-	# trigger the actions this overlay is teaching. Backdrop hidden; bubble
-	# accepts only its own button input.
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if _backdrop != null:
-		_backdrop.visible = false
-	_current = int(GameState.meta_save.get("onboarding_step", 0))
-	if _current < 0 or _current >= STEPS.size():
-		queue_free()
-		return
-	if _next_btn != null:
-		_next_btn.visible = false  # action-triggered, no manual advance
-	if _skip_btn != null:
-		_skip_btn.pressed.connect(_skip)
-	# Connect to every trigger signal once; per-step gating happens in _on_trigger.
-	EventBus.tile_colonized.connect(_on_tile_colonized)
-	EventBus.species_introduced.connect(_on_species_introduced)
-	EventBus.goal_progress_changed.connect(_on_goal_progress_changed)
-	EventBus.ecosystem_completed.connect(_on_ecosystem_completed)
-	# Resource updates drive affordability gating — a step asking the player to
-	# introduce a species stays hidden until they actually have the biomass.
-	EventBus.resource_changed.connect(_on_resource_changed)
-	_load_species_index()
-	_refresh()
-
-
-func _load_species_index() -> void:
-	var index: SpeciesIndex = load("res://data/species/_index.tres") as SpeciesIndex
-	if index == null:
-		return
-	for sp in index.species:
-		if sp != null:
-			_species_by_id[sp.id] = sp
-
-
-func _on_resource_changed(_id: StringName, _amount: float) -> void:
-	# Any resource change might flip affordability — recompute bubble visibility.
-	_apply_visibility()
-
-
-func _apply_visibility() -> void:
-	if _current < 0 or _current >= STEPS.size():
-		visible = false
-		return
-	var step: Dictionary = STEPS[_current]
-	if step.has("hide_until_affordable"):
-		var sid: StringName = StringName(step["hide_until_affordable"])
-		var species: SpeciesData = _species_by_id.get(sid, null)
-		if species != null and not _is_affordable(species.introduce_cost):
-			visible = false
-			return
-	visible = true
-
-
-func _is_affordable(cost: Dictionary) -> bool:
-	for key in cost.keys():
-		var have: float = ResourceLedger.get_amount(StringName(key))
-		if have < float(cost[key]):
-			return false
 	return true
 
 
-func _on_tile_colonized(_coord: Vector2i, _owner: StringName) -> void:
-	_try_advance(&"tile_colonized", {})
-
-
-func _on_species_introduced(species_id: StringName) -> void:
-	_try_advance(&"species_introduced", {"species_id": species_id})
-
-
-func _on_goal_progress_changed(progress: Dictionary) -> void:
-	_try_advance(&"goal_progress_changed", progress)
-
-
-func _on_ecosystem_completed(_eco_id: StringName) -> void:
-	_try_advance(&"ecosystem_completed", {})
-
-
-func _try_advance(signal_name: StringName, payload: Dictionary) -> void:
-	if _current < 0 or _current >= STEPS.size():
-		return
-	var step: Dictionary = STEPS[_current]
-	if StringName(step.get("advance_on", &"")) != signal_name:
-		return
-	# Per-step predicate (one of a small set).
-	if step.has("species_filter"):
-		if StringName(payload.get("species_id", &"")) != StringName(step["species_filter"]):
-			return
-	if step.has("progress_threshold"):
-		if float(payload.get("value", 0.0)) < float(step["progress_threshold"]):
-			return
-	_advance()
-
-
-func _advance() -> void:
-	_current += 1
-	if _current >= STEPS.size():
-		_finish()
-		return
-	GameState.meta_save["onboarding_step"] = _current
-	SaveSystem.save_now()
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop.visible = false
+	_next_btn.text = "Dismiss"
+	_next_btn.visible = true
+	_next_btn.pressed.connect(_dismiss_current)
+	_skip_btn.text = "Hide"
+	_skip_btn.pressed.connect(_hide_overlay)
+	EventBus.checkpoint_triggered.connect(_on_checkpoint_triggered)
+	EventBus.tile_colonized.connect(_on_tile_colonized)
+	EventBus.species_introduced.connect(_on_species_introduced)
+	var territory: Node = get_tree().root.get_node_or_null("World/Systems/TerritorySystem")
+	if territory != null and territory.has_method("get_kingdom_tile_count"):
+		if int(territory.get_kingdom_tile_count(&"plantae")) > 0:
+			_processed[&"place_hero"] = true
+	var in_run: Array = GameState.run_save.get("unlocked_species_in_run", []) as Array
+	if in_run.has("mycorrhizal_network"):
+		_processed[&"unlock_mycorrhizal"] = true
+	if in_run.has("arthropleura"):
+		_processed[&"unlock_arthropleura"] = true
+	# Mark previously-fired checkpoints as processed instead of re-queuing
+	# them. If the player saw and dismissed the bubble in a prior session,
+	# loading the save shouldn't re-show the same hint. Live checkpoint_triggered
+	# signals fired this session still bubble normally.
+	var fired: Dictionary = GameState.run_save.get("checkpoints_fired", {}) as Dictionary
+	for id in CHECKPOINT_ORDER:
+		if bool(fired.get(String(id), false)):
+			_processed[id] = true
 	_refresh()
 
 
-func _skip() -> void:
-	_finish()
+func _on_checkpoint_triggered(id: StringName, _payload: Dictionary) -> void:
+	if _processed.get(id, false) or _queue.has(id):
+		return
+	_queue.push_back(id)
+	_refresh()
 
 
-func _finish() -> void:
-	GameState.meta_save["onboarding_step"] = -1
-	SaveSystem.save_now()
+func _on_tile_colonized(_coord: Vector2i, owner_id: StringName) -> void:
+	if owner_id == &"plantae":
+		_complete_checkpoint(&"place_hero")
+	elif owner_id == &"fungi":
+		# Only dismiss the bottleneck bubble if it's actually showing —
+		# don't pre-empt a future post-closure bottleneck just because the
+		# player placed fungi early.
+		_dismiss_if_queued(&"bottleneck_nutrients")
+	elif owner_id == &"animals":
+		_dismiss_if_queued(&"bottleneck_detritus")
+
+
+func _on_species_introduced(species_id: StringName) -> void:
+	if species_id == &"mycorrhizal_network":
+		_complete_checkpoint(&"unlock_mycorrhizal")
+	elif species_id == &"arthropleura":
+		_complete_checkpoint(&"unlock_arthropleura")
+
+
+func _dismiss_current() -> void:
+	if _queue.is_empty():
+		_hide_overlay()
+		return
+	var id: StringName = _queue.pop_front()
+	_processed[id] = true
+	_refresh()
+
+
+func _complete_checkpoint(id: StringName) -> void:
+	if _queue.has(id):
+		_queue.erase(id)
+	_processed[id] = true
+	_refresh()
+
+
+func _dismiss_if_queued(id: StringName) -> void:
+	# Only acts when the bubble is currently in the queue. Used for bottleneck
+	# checkpoints so an early placement of fungi/animals doesn't pre-emptively
+	# suppress the post-closure bottleneck bubble.
+	if not _queue.has(id):
+		return
+	_queue.erase(id)
+	_processed[id] = true
+	_refresh()
+
+
+func _hide_overlay() -> void:
 	queue_free()
 
 
 func _refresh() -> void:
-	var step: Dictionary = STEPS[_current]
-	_body.text = String(step.get("text", ""))
-	_step_label.text = "%d / %d" % [_current + 1, STEPS.size()]
-	_apply_visibility()
+	if _queue.is_empty():
+		visible = false
+		return
+	visible = true
+	var id: StringName = _queue[0]
+	_body.text = String(CHECKPOINT_TEXT.get(id, String(id)))
+	_step_label.text = "Checkpoint"

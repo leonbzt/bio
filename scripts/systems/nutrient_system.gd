@@ -80,10 +80,8 @@ func _on_tick(_delta_seconds: float) -> void:
 	if not _territory.has_method("get_surface_owned_coords"):
 		return
 	var sun_mult: float = 1.0
-	var nut_mult: float = 1.0
 	if _ambient.has_method("get_multiplier"):
 		sun_mult = float(_ambient.get_multiplier(&"sunlight_multiplier"))
-		nut_mult = float(_ambient.get_multiplier(&"nutrient_multiplier"))
 	var coords: Array[Vector2i] = _territory.get_surface_owned_coords()
 	for coord in coords:
 		var biome: BiomeData = _biome_by_coord.get(coord, null)
@@ -91,13 +89,6 @@ func _on_tick(_delta_seconds: float) -> void:
 			continue
 		if biome.sunlight_per_tick != 0.0:
 			ResourceLedger.add(ResourceLedger.SUNLIGHT, biome.sunlight_per_tick * sun_mult)
-		if biome.nutrient_per_tick != 0.0:
-			var local_nut_mult := nut_mult
-			if bool(_territory.get_tile_data(coord, "structure_decay_pit_aura", false)):
-				local_nut_mult *= 1.30
-			ResourceLedger.add(ResourceLedger.NUTRIENTS, biome.nutrient_per_tick * local_nut_mult)
-		if biome.decay_per_tick != 0.0:
-			ResourceLedger.add(ResourceLedger.DECAY, biome.decay_per_tick)
 
 
 func get_biome_at(coord: Vector2i) -> BiomeData:

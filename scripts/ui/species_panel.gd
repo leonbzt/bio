@@ -6,7 +6,7 @@ const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 # _ready, which positioned the panel below the visible area).
 const DOCK_MARGIN_X: float = 4.0
 const DOCK_MARGIN_BOTTOM: float = 4.0
-const DOCK_COLLAPSED_HEIGHT: float = 56.0
+const DOCK_COLLAPSED_HEIGHT: float = 96.0
 
 # Commissioned per-kingdom icons. Missing entries fall back to the
 # species name's first letter as a glyph.
@@ -24,6 +24,7 @@ var _available_collapsed: bool = true
 @onready var _introduced: HBoxContainer = $Margin/VBox/BottomBar/IntroducedScroll/IntroducedList
 @onready var _available: VBoxContainer = $Margin/VBox/AvailableList
 @onready var _available_header: Button = $Margin/VBox/BottomBar/AvailableHeader
+@onready var _details_label: Label = $Margin/VBox/DetailsLabel
 
 
 func _ready() -> void:
@@ -36,8 +37,17 @@ func _ready() -> void:
 	# (~15+ per tick) was rebuilding every button each tick. Adaptation/leveling
 	# signals already cover the cases where rows actually change.
 	EventBus.species_leveled.connect(func(_id, _level): _refresh())
-	AdaptationSystem.adaptation_changed.connect(func(_v): _refresh())
+	# Previously connected to AdaptationSystem.adaptation_changed → _refresh.
+	# That signal fires every tick (continuous adaptation accumulation), and
+	# _refresh queue_frees every species row. The button under the cursor
+	# would be destroyed and recreated each tick, killing any tooltip mid-
+	# read. Evolve-ready badges now refresh on species_leveled and on
+	# placement target changes — close enough for the prototype.
 	EventBus.placement_target_changed.connect(func(_id): _refresh())
+	# Lightweight per-tick update: just refresh the Introduce buttons' disabled
+	# state. Full _refresh() rebuilt every species row each tick — expensive
+	# enough to cause UI hitching on web export.
+	EventBus.tick.connect(_update_available_affordability)
 	# HTML5 fix: parent (HUD) sometimes reports a stale size during _ready,
 	# so anchor_bottom=1 lands at the wrong y. Re-assert dock layout deferred
 	# and on viewport resize. grow_vertical=0 (from the scene) handles the
@@ -120,6 +130,20 @@ func _refresh() -> void:
 		_available.add_child(_build_available_row(species))
 
 
+func _update_available_affordability(_delta: float) -> void:
+	for row in _available.get_children():
+		if not (row is Control):
+			continue
+		for child in (row as Control).get_children():
+			if not (child is Button):
+				continue
+			var button: Button = child
+			if not button.has_meta("biomass_cost"):
+				continue
+			var cost: float = float(button.get_meta("biomass_cost", 0.0))
+			button.disabled = not GameState.can_afford_hero_biomass(cost)
+
+
 func _kingdom_icon(kingdom_id: StringName) -> Texture2D:
 	if _kingdom_icon_cache.has(kingdom_id):
 		return _kingdom_icon_cache[kingdom_id]
@@ -149,15 +173,12 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 		btn.text = species.display_name.substr(0, 1) if species.display_name != "" else "?"
 	else:
 		btn.text = ""
-	btn.custom_minimum_size = Vector2(36, 36)
-	btn.tooltip_text = "%s\n%s\nLvl %d/3 (+%d%% yield)" % [
-		species.display_name,
-		species.latin_name if species.latin_name != "" else "",
-		current_level,
-		int((current_level - 1) * 10)
-	]
-	if next_cost >= 0.0:
-		btn.tooltip_text += "\nLong-press to evolve (%.0f Adaptation)" % next_cost
+	# 48×48 instead of 36×36 — wider hit zone so the cursor doesn't fall off
+	# the button while the user is still reading the tooltip.
+	btn.custom_minimum_size = Vector2(48, 48)
+	var details_text: String = _format_introduced_details(species, current_level, next_cost)
+	btn.tooltip_text = details_text
+	btn.mouse_entered.connect(func() -> void: _show_details(details_text))
 
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = species.tile_marker_color.darkened(0.30 if not is_active else 0.05)
@@ -240,6 +261,12 @@ func _open_evolve_modal(species: SpeciesData) -> void:
 func _build_available_row(species: SpeciesData) -> Control:
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Tooltip on the whole row so the hover zone is wide enough to read on.
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	var cost: float = _get_biomass_cost(species)
+	var details_text: String = _format_available_details(species, cost)
+	row.tooltip_text = details_text
+	row.mouse_entered.connect(func() -> void: _show_details(details_text))
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var label := Label.new()
@@ -261,7 +288,8 @@ func _build_available_row(species: SpeciesData) -> Control:
 	row.add_child(info)
 	var button := Button.new()
 	button.text = "Introduce"
-	button.disabled = not ResourceLedger.can_afford(species.introduce_cost)
+	button.set_meta("biomass_cost", cost)
+	button.disabled = not GameState.can_afford_hero_biomass(cost)
 	button.pressed.connect(func() -> void:
 		_introduce_species(species)
 	)
@@ -272,9 +300,9 @@ func _build_available_row(species: SpeciesData) -> Control:
 func _introduce_species(species: SpeciesData) -> void:
 	if species == null:
 		return
-	if not ResourceLedger.can_afford(species.introduce_cost):
+	var cost: float = _get_biomass_cost(species)
+	if not GameState.spend_hero_biomass(cost):
 		return
-	ResourceLedger.spend_bundle(species.introduce_cost)
 	var in_run: Array = GameState.run_save.get("unlocked_species_in_run", []) as Array
 	if not in_run.has(String(species.id)):
 		in_run.append(String(species.id))
@@ -282,6 +310,41 @@ func _introduce_species(species: SpeciesData) -> void:
 	EventBus.species_introduced.emit(species.id)
 	SaveSystem.save_now()
 	_refresh()
+
+
+func _get_biomass_cost(species: SpeciesData) -> float:
+	if species == null:
+		return 0.0
+	return float(species.introduce_cost.get("biomass", 0.0))
+
+
+func _format_introduced_details(species: SpeciesData, current_level: int, next_cost: float) -> String:
+	var parts: Array[String] = []
+	parts.append("%s — %s" % [species.display_name, String(species.kingdom_id).capitalize()])
+	if species.latin_name != "":
+		parts.append(species.latin_name)
+	if species.description != "":
+		parts.append(species.description)
+	parts.append("Lvl %d/3 (+%d%% yield)" % [current_level, int((current_level - 1) * 10)])
+	if next_cost >= 0.0:
+		parts.append("Long-press to evolve (%.0f Adaptation)" % next_cost)
+	return "  ·  ".join(parts)
+
+
+func _format_available_details(species: SpeciesData, cost: float) -> String:
+	var parts: Array[String] = []
+	parts.append("%s — %s" % [species.display_name, String(species.kingdom_id).capitalize()])
+	if species.latin_name != "":
+		parts.append(species.latin_name)
+	if species.description != "":
+		parts.append(species.description)
+	parts.append("Cost: %.0f biomass" % cost)
+	return "  ·  ".join(parts)
+
+
+func _show_details(text: String) -> void:
+	if _details_label != null:
+		_details_label.text = text
 
 
 func _is_species_era_available(species: SpeciesData) -> bool:

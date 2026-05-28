@@ -74,6 +74,8 @@ signal prestige_triggered(summary: Dictionary)
 signal run_loaded(save_version: int)
 signal goal_progress_changed(progress: Dictionary)
 signal goal_met()
+signal checkpoint_triggered(id: StringName, payload: Dictionary)
+signal cycle_closed()
 
 # Offline progress
 signal replay_started(total_ticks: int)
@@ -378,7 +380,8 @@ Each gameplay system is a single `.gd` script attached to a node under `world.ts
 | `EvolutionSystem` | `scripts/systems/evolution_system.gd` | input | `trait_unlocked`, `evolution_node_unlocked` |
 | `PrestigeSystem` | `scripts/systems/prestige_system.gd` | UI button signals | `prestige_triggered`, `run_started`, `evolution_node_unlocked` |
 | `DiscoveryLog` | `scripts/autoloads/discovery_log.gd` | `evolution_node_unlocked`, `niche_changed`, `event_resolved`, `prestige_triggered` | `discovery_unlocked` |
-| `RunGoalSystem` | `scripts/autoloads/run_goal_system.gd` | `run_started`, `tile_colonized`, `event_resolved`, `organism_died`, `evolution_node_unlocked`, `tick` | `goal_progress_changed`, `goal_met` |
+| `RunGoalSystem` | `scripts/autoloads/run_goal_system.gd` | `run_started`, `tick` | `goal_progress_changed`, `goal_met` |
+| `CheckpointSystem` | `scripts/autoloads/checkpoint_system.gd` | `run_started`, `run_loaded`, `tick` | `checkpoint_triggered` |
 | `RunStatsTracker` | `scripts/systems/run_stats_tracker.gd` | `resource_changed`, `tile_colonized`, `event_resolved` | — (writes only to `GameState.run_save.statistics`) |
 | `OfflineProgress` | `scripts/systems/offline_progress.gd` | `run_loaded` | `replay_started`, `replay_finished`; drives `force_tick(n)` on TickClock |
 

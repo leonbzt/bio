@@ -2,8 +2,7 @@ extends Control
 
 const STRINGS := {
 	"title": "Bio-Fantasy RPG",
-	"play": "Play",
-	"continue": "Continue",
+	"play": "Start Run",
 	"reset": "Reset Save",
 	"reset_title": "Reset Save",
 	"reset_body": "Delete your local save? This cannot be undone.",
@@ -13,8 +12,7 @@ const STRINGS := {
 
 const WORLD_SCENE: String = "res://scenes/world/world.tscn"
 const MENU_SCENE: String = "res://scenes/main/main_menu.tscn"
-const PRESTIGE_SCENE: String = "res://scenes/ui/prestige_screen.tscn"
-const WORLD_MAP_SCENE: String = "res://scenes/ui/world_map.tscn"
+const CALAMITES_PATH: String = "res://data/species/calamites.tres"
 
 @onready var _title: Label = $CenterContainer/VBoxContainer/Title
 @onready var _generations_label: Label = $CenterContainer/VBoxContainer/GenerationsLabel
@@ -22,13 +20,12 @@ const WORLD_MAP_SCENE: String = "res://scenes/ui/world_map.tscn"
 @onready var _continue_button: Button = $CenterContainer/VBoxContainer/ContinueButton
 @onready var _reset_button: Button = $CenterContainer/VBoxContainer/ResetButton
 @onready var _reset_dialog: ConfirmationDialog = $ResetDialog
-@onready var _prestige_system: Node = get_node("/root/PrestigeSystem")
 
 
 func _ready() -> void:
 	_title.text = _s("title")
 	_play_button.text = _s("play")
-	_continue_button.text = _s("continue")
+	_continue_button.visible = false
 	_reset_button.text = _s("reset")
 	_refresh_generations_label()
 
@@ -38,29 +35,42 @@ func _ready() -> void:
 	_reset_dialog.cancel_button_text = _s("cancel")
 
 	_play_button.pressed.connect(_on_play_pressed)
-	_continue_button.pressed.connect(_on_continue_pressed)
 	_reset_button.pressed.connect(_on_reset_pressed)
 	_reset_dialog.confirmed.connect(_on_reset_confirmed)
 
-	if GameState.auto_open_world_map:
-		GameState.auto_open_world_map = false
-		# Deferred so the menu finishes _ready before adding the overlay,
-		# matching the manual Play-button path.
-		call_deferred("_open_kingdom_select")
+	if GameState.auto_start_run:
+		GameState.auto_start_run = false
+		call_deferred("_on_play_pressed")
 
 
 func _on_play_pressed() -> void:
+	# Resume an in-progress run instead of wiping it. PrestigeSystem.start_run
+	# calls _reset_run_state, so unconditionally starting from the menu would
+	# silently destroy hours of progress when the player just wanted to return
+	# to the world.
 	if _has_active_run():
 		get_tree().change_scene_to_file(WORLD_SCENE)
 		return
-	_open_kingdom_select()
+	var species: SpeciesData = load(CALAMITES_PATH) as SpeciesData
+	if species == null:
+		return
+	GameState.meta_save["current_ecosystem_id"] = "carbo_coal_swamp"
+	GameState.meta_save["current_era_id"] = "carboniferous"
+	PrestigeSystem.start_run(species)
+	get_tree().change_scene_to_file(WORLD_SCENE)
 
 
-func _on_continue_pressed() -> void:
-	if _has_active_run():
-		get_tree().change_scene_to_file(WORLD_SCENE)
-	else:
-		_open_kingdom_select()
+func _has_active_run() -> bool:
+	var run: Dictionary = GameState.run_save
+	if not (run is Dictionary):
+		return false
+	if float(run.get("hero_biomass_lifetime_produced", 0.0)) > 0.0:
+		return true
+	if (run.get("tiles", []) as Array).size() > 0:
+		return true
+	if (run.get("organisms", []) as Array).size() > 0:
+		return true
+	return false
 
 
 func _on_reset_pressed() -> void:
@@ -74,50 +84,6 @@ func _on_reset_confirmed() -> void:
 
 func _s(key: String) -> String:
 	return String(STRINGS.get(key, ""))
-
-
-func _has_active_run() -> bool:
-	var run: Dictionary = GameState.run_save
-	if not (run is Dictionary):
-		return false
-	var tiles: Array = run.get("tiles", [])
-	if tiles.size() > 0:
-		return true
-	var organisms: Array = run.get("organisms", [])
-	if organisms.size() > 0:
-		return true
-	var events: Array = run.get("active_events", [])
-	return events.size() > 0
-
-
-func _open_kingdom_select() -> void:
-	# Phase 12: route through the world map first; that flow eventually
-	# instantiates prestige_screen with skip_to_kingdom_select after the
-	# player picks an ecosystem.
-	var scene := load(WORLD_MAP_SCENE)
-	if scene == null or not (scene is PackedScene):
-		_open_prestige_directly()
-		return
-	var map := (scene as PackedScene).instantiate()
-	if map == null:
-		_open_prestige_directly()
-		return
-	add_child(map)
-
-
-func _open_prestige_directly() -> void:
-	# Legacy / fallback path if world_map is missing.
-	var scene := load(PRESTIGE_SCENE)
-	if scene == null or not (scene is PackedScene):
-		return
-	var screen := (scene as PackedScene).instantiate()
-	if screen == null:
-		return
-	if screen.has_method("setup"):
-		screen.setup(_prestige_system)
-	if screen.has_method("set"):
-		screen.set("skip_to_kingdom_select", true)
-	add_child(screen)
 
 
 const _DESCRIPTOR_THRESHOLDS: Array = [

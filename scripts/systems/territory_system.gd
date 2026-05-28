@@ -178,6 +178,11 @@ func get_kingdom_occupied_coords(kingdom_id: StringName) -> Array[Vector2i]:
 	return result
 
 
+func get_kingdom_tile_count(kingdom_id: StringName) -> int:
+	var set_dict: Dictionary = _kingdom_to_coords.get(kingdom_id, {}) as Dictionary
+	return set_dict.size()
+
+
 func get_species_occupied_coords(species_id: StringName) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	var set_dict: Dictionary = _species_to_coords.get(species_id, {}) as Dictionary

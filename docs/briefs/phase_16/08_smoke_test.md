@@ -14,7 +14,7 @@
 1. Launch the game from main menu.
 2. Click "Start Run".
 
-**Expect**: world.tscn loads. Calamites is the locked placement target. HUD shows starting biomass = 50 (seeded pool). EcosystemNameLabel shows "Coal Swamp". leon: biomass = 20
+**Expect**: world.tscn loads. Calamites is the locked placement target. HUD shows hero biomass = 0 (the *lifetime production* counter, separate from the global B pool which is seeded at 50). EcosystemNameLabel shows "Coal Swamp".
 
 ## Test 2 — First placement + biomass tick
 

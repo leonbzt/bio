@@ -111,6 +111,42 @@ class _BondOverlay extends Node2D:
 				draw_circle(mid, ts * 0.06, Color(1.0, 1.0, 0.85, 1.0))
 
 
+class _StatusOverlay extends Node2D:
+	var tile_grid
+	const COLOR_OK: Color = Color(0.53, 0.80, 0.40)
+	const COLOR_THROTTLED: Color = Color(0.92, 0.78, 0.30)
+	const COLOR_STARVING: Color = Color(0.86, 0.30, 0.30)
+	const OUTLINE: Color = Color(0.06, 0.06, 0.08, 0.85)
+
+	func _draw() -> void:
+		if tile_grid == null:
+			return
+		var growth: Node = tile_grid._get_growth_system()
+		if growth == null or not growth.has_method("get_species_throttle"):
+			return
+		for coord in tile_grid._tile_occupants.keys():
+			var occupants: Dictionary = tile_grid._tile_occupants[coord]
+			var species_ids: Array = occupants.values()
+			if species_ids.is_empty():
+				continue
+			var species_id: StringName = species_ids[0]
+			var throttle: float = float(growth.get_species_throttle(species_id))
+			var color: Color = _status_color(throttle)
+			# Big, central, high-contrast dot. Earlier "tiny corner pip" was
+			# easy to miss on a busy biome. Sits above species sprite + fog.
+			var radius: float = 11.0 if species_id == &"calamites" else 9.0
+			var center: Vector2 = tile_grid.map_to_local(coord) + Vector2(0.0, -tile_grid.TILE_SIZE * 0.28)
+			draw_circle(center, radius + 3.0, OUTLINE)
+			draw_circle(center, radius, color)
+
+	func _status_color(throttle: float) -> Color:
+		if throttle >= 0.7:
+			return COLOR_OK
+		if throttle >= 0.3:
+			return COLOR_THROTTLED
+		return COLOR_STARVING
+
+
 class _HaloOverlay extends Node2D:
 	var tile_grid
 
@@ -400,6 +436,7 @@ var _edges_overlay: _EdgesOverlay
 var _fog_overlay: _FogOverlay
 var _halo_overlay: _HaloOverlay
 var _bond_overlay: _BondOverlay
+var _status_overlay: _StatusOverlay
 # VM-B1.5: single overlay drawing all organisms across the grid in world
 # coords with side-view sprites. Replaces per-tile cluster Node2Ds.
 var _organism_overlay: _OrganismScatterOverlay
@@ -430,6 +467,7 @@ const MATURATION_MATURE_TICKS: int = 45
 const AGE_REFRESH_INTERVAL: int = 5
 var _ticks_since_age_refresh: int = 0
 var _last_stage_by_coord: Dictionary[Vector2i, int] = {}
+var _status_redraw_tick: int = 0
 
 
 func _ready() -> void:
@@ -467,6 +505,14 @@ func _ready() -> void:
 	_bond_overlay.z_index = 3
 	_overlay_layer.add_child(_bond_overlay)
 
+	_status_overlay = _StatusOverlay.new()
+	_status_overlay.name = "StatusOverlay"
+	_status_overlay.tile_grid = self
+	# Status dots must sit above fog (z=4) so they remain visible on revealed
+	# tiles that fall in the fog overlay's draw set.
+	_status_overlay.z_index = 5
+	_overlay_layer.add_child(_status_overlay)
+
 	_fusion_overlay = _StructureFusionOverlay.new()
 	_fusion_overlay.name = "StructureFusion"
 	_fusion_overlay.tile_grid = self
@@ -482,6 +528,7 @@ func _ready() -> void:
 	EventBus.era_changed.connect(_on_era_changed)
 	EventBus.run_loaded.connect(_on_run_loaded)
 	EventBus.tick.connect(_on_tick_pulse)
+	EventBus.tick.connect(_on_tick_status_overlay)
 	_pulse_rng.randomize()
 
 	call_deferred("_populate")
@@ -740,6 +787,8 @@ func _update_tile_stage(coord: Vector2i) -> void:
 func _request_scatter_redraw() -> void:
 	if _organism_overlay != null:
 		_organism_overlay.queue_redraw()
+	if _status_overlay != null:
+		_status_overlay.queue_redraw()
 
 
 func _species_color(species_id: StringName) -> Color:
@@ -789,6 +838,7 @@ func _on_era_changed(_era_id: StringName) -> void:
 
 
 func _on_run_loaded(_save_version: int) -> void:
+	_status_redraw_tick = 0
 	call_deferred("_rebuild_base_visuals")
 
 
@@ -860,6 +910,25 @@ func _maturation_stage(age_ticks: int) -> int:
 	if age_ticks < MATURATION_SPROUTING_TICKS + MATURATION_MATURE_TICKS:
 		return 1
 	return 2
+
+
+func _on_tick_status_overlay(_delta: float) -> void:
+	_status_redraw_tick += 1
+	if _status_redraw_tick < 10:
+		return
+	_status_redraw_tick = 0
+	if _status_overlay != null:
+		_status_overlay.queue_redraw()
+
+
+func _get_growth_system() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	var world: Node = tree.root.get_node_or_null("World")
+	if world == null:
+		return null
+	return world.get_node_or_null("Systems/GrowthSystem")
 
 
 func _get_territory_for_age() -> Node:

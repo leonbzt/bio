@@ -114,8 +114,9 @@ class _BondOverlay extends Node2D:
 class _StatusOverlay extends Node2D:
 	var tile_grid
 	const COLOR_OK: Color = Color(0.53, 0.80, 0.40)
-	const COLOR_THROTTLED: Color = Color(0.87, 0.87, 0.40)
-	const COLOR_STARVING: Color = Color(0.80, 0.40, 0.40)
+	const COLOR_THROTTLED: Color = Color(0.92, 0.78, 0.30)
+	const COLOR_STARVING: Color = Color(0.86, 0.30, 0.30)
+	const OUTLINE: Color = Color(0.06, 0.06, 0.08, 0.85)
 
 	func _draw() -> void:
 		if tile_grid == null:
@@ -131,8 +132,11 @@ class _StatusOverlay extends Node2D:
 			var species_id: StringName = species_ids[0]
 			var throttle: float = float(growth.get_species_throttle(species_id))
 			var color: Color = _status_color(throttle)
-			var radius: float = 4.0 if species_id == &"calamites" else 3.0
-			var center: Vector2 = tile_grid.map_to_local(coord) + Vector2(tile_grid.TILE_SIZE * 0.30, -tile_grid.TILE_SIZE * 0.30)
+			# Larger dot anchored just above the tile's top edge so it doesn't
+			# get lost in the corner. Outline + fill so it reads on any biome.
+			var radius: float = 8.0 if species_id == &"calamites" else 6.0
+			var center: Vector2 = tile_grid.map_to_local(coord) + Vector2(0.0, -tile_grid.TILE_SIZE * 0.36)
+			draw_circle(center, radius + 2.0, OUTLINE)
 			draw_circle(center, radius, color)
 
 	func _status_color(throttle: float) -> Color:

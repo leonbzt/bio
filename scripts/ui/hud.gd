@@ -21,10 +21,25 @@ func _ready() -> void:
 	EventBus.run_started.connect(_on_run_started)
 	EventBus.run_loaded.connect(_on_run_loaded)
 	EventBus.cycle_closed.connect(_on_cycle_closed)
+	_install_resource_tooltips()
 	_refresh_ecosystem_name()
 	_last_lifetime_biomass = GameState.get_hero_biomass()
 	_on_tick(0.0)
 	_maybe_show_onboarding()
+
+
+func _install_resource_tooltips() -> void:
+	# Tooltips for the HUD labels. Labels default to MOUSE_FILTER_STOP in
+	# Godot 4 so tooltip_text is enough to wire them up.
+	if _biomass_label != null:
+		_biomass_label.mouse_filter = Control.MOUSE_FILTER_STOP
+		_biomass_label.tooltip_text = "Hero biomass — your run's progress.\nGoal: 100,000. Drops when you place new species (placement cost). Cycle closure boosts production ×1.5."
+	if _rate_label != null:
+		_rate_label.mouse_filter = Control.MOUSE_FILTER_STOP
+		_rate_label.tooltip_text = "Production per second.\nRises as the trophic web closes. Stalls when an input pool is empty."
+	if _ecosystem_label != null:
+		_ecosystem_label.mouse_filter = Control.MOUSE_FILTER_STOP
+		_ecosystem_label.tooltip_text = "Coal Swamp — a Carboniferous wetland.\nYour starting ecosystem."
 
 
 func _on_pause_pressed() -> void:

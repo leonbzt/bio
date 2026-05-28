@@ -167,10 +167,13 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 		btn.text = species.display_name.substr(0, 1) if species.display_name != "" else "?"
 	else:
 		btn.text = ""
-	btn.custom_minimum_size = Vector2(36, 36)
-	btn.tooltip_text = "%s\n%s\nLvl %d/3 (+%d%% yield)" % [
+	# 48×48 instead of 36×36 — wider hit zone so the cursor doesn't fall off
+	# the button while the user is still reading the tooltip.
+	btn.custom_minimum_size = Vector2(48, 48)
+	btn.tooltip_text = "%s\n%s\n\n%s\n\nLvl %d/3 (+%d%% yield)" % [
 		species.display_name,
 		species.latin_name if species.latin_name != "" else "",
+		species.description if species.description != "" else "",
 		current_level,
 		int((current_level - 1) * 10)
 	]
@@ -258,6 +261,15 @@ func _open_evolve_modal(species: SpeciesData) -> void:
 func _build_available_row(species: SpeciesData) -> Control:
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Tooltip on the whole row so the hover zone is wide enough to read on.
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	var cost: float = _get_biomass_cost(species)
+	row.tooltip_text = "%s\n%s\n\n%s\n\nCost: %.0f biomass" % [
+		species.display_name,
+		species.latin_name if species.latin_name != "" else "",
+		species.description if species.description != "" else "",
+		cost
+	]
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var label := Label.new()
@@ -279,7 +291,6 @@ func _build_available_row(species: SpeciesData) -> Control:
 	row.add_child(info)
 	var button := Button.new()
 	button.text = "Introduce"
-	var cost: float = _get_biomass_cost(species)
 	button.set_meta("biomass_cost", cost)
 	button.disabled = not GameState.can_afford_hero_biomass(cost)
 	button.pressed.connect(func() -> void:

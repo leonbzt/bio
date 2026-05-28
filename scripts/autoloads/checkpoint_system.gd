@@ -90,13 +90,16 @@ func _fire(id: StringName) -> void:
 func _unlock_mycorrhizal_ready() -> bool:
 	var hero_biomass: float = GameState.get_hero_biomass()
 	var starvation: bool = _age_starvation(CHECKPOINT_UNLOCK_MYCORRHIZAL, ResourceLedger.NUTRIENTS, _short_grace_ticks())
-	return hero_biomass >= 50.0 or starvation
+	# Threshold bumped 50 → 150 (2026-05-28 playtest). 50 fired ~25s after
+	# the first Calamites placement — before the player could absorb the
+	# first bubble. 150 ≈ 75s at base throughput.
+	return hero_biomass >= 150.0 or starvation
 
 
 func _unlock_arthropleura_ready() -> bool:
 	var hero_biomass: float = GameState.get_hero_biomass()
 	var starvation: bool = _age_starvation(CHECKPOINT_UNLOCK_ARTHROPLEURA, ResourceLedger.DECAY, _short_grace_ticks())
-	return hero_biomass >= 500.0 or starvation
+	return hero_biomass >= 800.0 or starvation
 
 
 func _bottleneck_nutrients_ready() -> bool:

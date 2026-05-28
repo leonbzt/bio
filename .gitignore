@@ -28,3 +28,11 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Exported web builds — 100+ MB each, regenerable from Godot
+/builds/web/alphatest/
+/builds/web/v0.1/
+/builds/web/v0.2/
+
+# Debug screenshots — bulk; not gameplay assets
+/builds/screenshots/

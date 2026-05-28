@@ -1,12 +1,12 @@
 [gd_resource type="Resource" script_class="EcosystemIndex" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/ecosystem_index.gd" id="1"]
-[ext_resource type="Resource" path="res://data/ecosystems/cryo_polar_ice.tres" id="2"]
-[ext_resource type="Resource" path="res://data/ecosystems/cryo_volcanic_vent.tres" id="3"]
-[ext_resource type="Resource" path="res://data/ecosystems/cryo_under_ice_sea.tres" id="4"]
-[ext_resource type="Resource" path="res://data/ecosystems/dev_tidal_pool.tres" id="5"]
-[ext_resource type="Resource" path="res://data/ecosystems/dev_forest_edge.tres" id="6"]
-[ext_resource type="Resource" path="res://data/ecosystems/dev_inland_swamp.tres" id="7"]
+[ext_resource type="Resource" path="res://data/ecosystems/carbo_coal_swamp.tres" id="2"]
+[ext_resource type="Resource" path="res://data/ecosystems/carbo_fern_glade.tres" id="3"]
+[ext_resource type="Resource" path="res://data/ecosystems/carbo_riverside_cathedral.tres" id="4"]
+[ext_resource type="Resource" path="res://data/ecosystems/pleist_glaciers_edge.tres" id="5"]
+[ext_resource type="Resource" path="res://data/ecosystems/pleist_mammoth_steppe.tres" id="6"]
+[ext_resource type="Resource" path="res://data/ecosystems/pleist_taiga_border.tres" id="7"]
 
 [resource]
 script = ExtResource("1")

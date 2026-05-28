@@ -1,80 +1,134 @@
 Bio — itch.io page copy
 
-Copy/paste each section into the matching field on the itch.io project page.
+Paste each section into the matching field on the itch.io project page.
+Last updated 2026-05-25.
 
 
-SHORT DESCRIPTION (one-liner)
+SHORT DESCRIPTION
+=================
 
-A pocket-sized incremental about evolving life — place species, form structures, prestige across eras.
-
-
-FULL DESCRIPTION (main body)
-
-Bio is a portrait-mobile incremental about growing an ecosystem from a single tile out. Pick a starting species, tap to colonize a biome, and let resources accumulate. Place more species across plant / fungi / lichen niches to form clusters and unlock structures. When you hit your run goal, prestige to convert the work into Evolution Points and start a new generation with permanent upgrades.
-
-This is an early alpha — the core loop runs end-to-end, but content is still thin and balance is rough. I'm posting it for feedback on feel, pacing, and clarity. Bugs and rough edges expected.
-
-Why this exists
-
-Most incrementals reward bigger numbers; Bio rewards arrangement. Where you place a species matters as much as how many you have — biomes have affinities, neighbors form structures, and clusters generate the floating income that drives the loop.
-
-What's in alpha
-
-- 3 kingdoms (plantae, fungi, lichen) and ~15 species across the early eras
-- Per-tile structure discovery (find the patterns; the Field Guide remembers them)
-- Three currency layers: resources to adaptation to evolution points
-- Fog of war, rock obstacles, era-gated content
-- One-tap onboarding the first time you play
-
-What's coming
-
-- Animal kingdom (predators / herbivores / decomposers as placeable actors)
-- Carboniferous era and beyond
-- Visual overhaul (dither textures, sprite art)
-
-Known issues
-
-- Late game can hitch on slower machines — perf pass is in progress
-- Some Unicode glyphs may render as boxes depending on your browser's font fallback
-- Saves are stored in browser local storage; clearing site data will reset progress
-
-If anything feels off — confusing onboarding, pacing dead spots, layout breaking on your screen — please open an issue or comment. That's the whole point of the alpha.
+Plant a swamp. Wait three hundred million years. Make coal. A solo prototype where ecology is the magic system.
 
 
-HOW TO PLAY (guide section)
+FULL DESCRIPTION
+================
 
-The core loop
+# Bio — a prototype
 
-1. Tap a tile to colonize it with your current species. Resources start ticking up.
-2. Pick a species from the buttons at the bottom of the screen. Tap once to select; tap again on an already-selected species to evolve it (costs Adaptation).
-3. Open the Avail toggle to introduce a new species from your unlocked roster.
-4. Form structures by arranging tiles into specific patterns (rings, blocks, kingdom-adjacent shapes). Each discovered structure shows up in the Field Guide.
-5. Hit the run goal shown in the left panel. When it's met, tap Menu then Prestige to convert your run into Evolution Points.
-6. Spend EP in the evolution tree to unlock permanent buffs and new species for future runs.
+I'm Leon. I've spent a few months building this on my own, and this is the first build I've shown anyone outside my house.
 
-Reading the HUD
+What's playable here is one map. The Coal Swamp, in the Carboniferous. The point of putting this out now is to find out if the idea works. If the loop is interesting. If "ecology as the magic system" pulls you in or just sounds pretentious. I'd rather know that now than after another six months.
 
-- Left column: live resources (Biomass, Nutrients, Sunlight, Decay, Spores, and unlockables). Below that: your adaptation pool, the biomes present on the current map, and your run goal.
-- Bottom strip: species selection. Tap to pick a placement target; long-press or tap-active-again to evolve.
-- Top-right Guide button: the Field Guide — three tabs (Species / Structures / Biomes). Structures appear as ??? silhouettes until you discover them.
-- Top-right pause button: settings, prestige, save management.
+## The idea
 
-Tips
+You play life itself. Not a character, a category of living thing. You pick a starting species, you place it on a grid, and you grow an ecosystem.
 
-- Biomes have affinities — a species placed on its preferred biome yields more. Hover/tap a tile to see biome info, or check the Biomes tab of the Field Guide.
-- Clusters of the same species drift a floating income label every few seconds. Bigger clusters = bigger floats.
-- Tile maturation: tiles age into Sprouting, Mature, Ancient stages over time and pay better as they get older. Don't churn through them.
-- Don't prestige too early — the EP curve favors longer runs, but a stuck run is worth converting and resetting.
-- The Field Guide is your reference for structure patterns. Once you've formed one in a run, the formula stays unlocked across runs.
+Plants thrive on the biomes they evolved for. Fungi boost adjacent plants. Five tree ferns in a + cross form a "grove" that holds its own weather. Things die. The dead don't always rot.
 
-Controls
+The "magic" is real biology. Calamites prefers Wetland because horsetails really did. Mycorrhizal networks boost plant yield because they really do. There's no fireball damage, no skill tree of arbitrary +5% buffs. Just the things life has actually done for a few hundred million years, abstracted onto a grid.
 
-- Tap: colonize tile / select species / press button
-- Tap-active species or right-click: open evolve modal
-- Tap outside a modal: close it
-- The game is portrait-only; rotate your phone or resize the browser window vertically for the intended layout.
+## What's playable
+
+One map. Coal Swamp.
+
+Four species: Calamites (giant horsetail), Tree Fern (the Psaronius lineage), Mycorrhizal Network, Arthropleura (a two-meter giant millipede).
+
+Two biomes: Wetland, where coal forms, and Open Ground, where pioneers land.
+
+One structure: Fern Grove. Plant five tree ferns in a + shape and you get a humid microclimate worth +30% yield on every tile inside.
+
+One win condition: fill the Coal Gauge to 1000. A run takes around 10 to 15 minutes.
+
+That's the whole build. No second map, no other era, no endgame. Just the loop, played once or twice.
+
+## What's designed but not built
+
+So you know where the game is supposed to go. None of this is a promise.
+
+More eras. Pleistocene with mammoths and sabertooths. Cretaceous, the obvious one. Cryogenian, snowball Earth and microbial life clinging on.
+
+More species per era, with lineages that carry forward. Your "horsetail pioneer" line follows you across eras as a different species in the same role.
+
+More structures. Mycorrhizal Hub, Old-Growth Stand, Fairy Ring. Eventually Coral Reef and Termite Mound, which are also their own playable lifeforms.
+
+Layered organisms. Lichen is plant plus fungus. Coral is animal plus algae plus symbiont. Each one a curated pack with its own placement rules.
+
+A cross-kingdom evolution tree where playing fungi unlocks animal abilities and playing animals unlocks new plant niches. The meta-game lives there.
+
+If any of that sounds wrong or you'd rather see something else first, tell me.
+
+## Quick tutorial
+
+The in-game tutorial walks through this step by step. Short version:
+
+The grid is mostly Wetland (dark, peaty water) with a pocket of Open Ground (dry, recently disturbed) in the middle.
+
+Tap a Wetland tile to plant your first Calamites. It has high affinity here, about 60% more yield than on dry ground. Biomass starts ticking up on the left.
+
+Once you can afford it, introduce a Mycorrhizal Network from the species panel and place it next to your Calamites. They share a +20% bond. A small golden link appears between the two tiles to show the bond is active.
+
+Plants will die. On Wetland, dead biomass doesn't fully decay. It piles into coal. Watch the gauge fill.
+
+The cycle slows because decay is slow. Introduce Arthropleura, place it near dying plants, and the loop accelerates.
+
+To push harder, plant five Tree Ferns in a + cross. One center tile, four cardinals. They form a Fern Grove worth +30% yield on every grove tile.
+
+Coal Gauge reaches 1000, the ecosystem completes. Prestige to bank Evolution Points and try again with what you learned.
+
+Three things worth keeping in mind. Biome affinity matters. Adjacency matters. Tiles age over time and pay better as they mature, so don't churn through them.
+
+## What I want from you
+
+Even one sentence helps. The things I'm wondering about:
+
+- Did the tutorial work, or did you get stuck somewhere?
+- Did filling the gauge feel earned, or did it drag?
+- Would you replay for a tighter run?
+- Does the deep-time framing pull you in, or does it feel pretentious?
+- If the next era is the Pleistocene with mammoths, does that interest you more or less than Cretaceous dinosaurs?
+
+Bugs and layout breaks also welcome. I read every comment.
+
+## Known issues
+
+Mycorrhizal Network sprite is still a placeholder. The other three species are properly drawn. The commission is in.
+
+Balance is rough. The Coal Gauge target is 1000. If it feels too slow or too fast, that's the single most important number for me to hear about.
+
+Single save slot, no profiles yet.
+
+The other ecosystems show up locked in the world map. They're not built yet. Completing Coal Swamp won't unlock real content past it in this prototype.
+
+Tested on Godot 4 web export and Android. Other targets are best-effort.
 
 
-TAGS (suggested)
+TAGS
+====
 
-incremental, idle, biology, ecology, pixel-art, mobile-friendly, portrait, tile-based, prestige, alpha
+incremental, idle, ecology, biology, paleontology, mobile-friendly, portrait, tile-based, prototype, solo-developer, alpha
+
+
+PLATFORM AND PRICING
+====================
+
+Free during prototype. Pay-what-you-want is on, in case you want to chip in toward the next sprite commission.
+
+Web build for browser playtest. Android APK for direct mobile install. iOS isn't supported during prototype (no Mac, no Apple dev account).
+
+
+SCREENSHOT GUIDANCE
+===================
+
+Five candidates for the page gallery. Pick the ones that read best in your build.
+
+1. Coal Swamp at start. Empty grid with biome variety visible, species panel ready. Caption: "One species, one swamp, one unfilled gauge."
+
+2. Early growth. A small cluster of Calamites with Mycorrhizal Network adjacent, golden bond markers visible. Caption: "Plant on wet ground. Pair with fungus. The bond does the rest."
+
+3. Fern Grove. Five tree ferns in a + with the cool-green halo. Caption: "Five fronds together hold their own weather."
+
+4. Arthropleura recycling. The giant millipede next to dying plant tiles. Caption: "Two meters of appetite. Recycles what the forest drops."
+
+5. Coal Gauge near full. Late-run state, dense forest, gauge close to 1000. Caption: "Three hundred million years from now, someone digs this up."
+
+Skip any shot that prominently features the Mycorrhizal Network sprite until the real art lands.

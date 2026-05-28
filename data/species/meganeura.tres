@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"meganeura"
+display_name = "Meganeura"
+description = "Wingspan: seventy centimeters. The high oxygen lets it grow. The high oxygen lets everything grow."
+kingdom_id = &"animals"
+sprite = null
+base_traits = Array[Resource]([])
+introduce_cost = {
+"biomass": 50.0
+}
+colonize_cost = {
+"biomass": 10.0
+}
+tick_yield = {
+"biomass": 0.4
+}
+placement_rule = &"animal_anchor"
+placement_targets = Array[StringName]([])
+tags = Array[StringName]([&"animals", &"predator"])
+tick_effects = Array[StringName]([])
+unlock_ep_cost = 5
+unlock_prerequisites = Array[StringName]([&"arthropleura"])
+era_requires = &"carboniferous"
+recipe_components = Array[StringName]([])
+tile_marker_color = Color(0.4, 0.55, 0.8, 1)
+tile_marker_shape = &"border"
+latin_name = "Meganeura monyi (Late Carboniferous)"
+lineage_id = &"paleoptera_giant"
+biome_affinity = {
+&"wetland": 1.3,
+&"open_ground": 0.9,
+&"lush_canopy": 1.2,
+&"tundra": 0.3
+}

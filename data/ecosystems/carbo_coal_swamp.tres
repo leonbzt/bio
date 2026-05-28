@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EcosystemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ecosystem_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"carbo_coal_swamp"
+display_name = "Coal Swamp"
+description = "Drowned forest. Standing water swallows the dead before they can rot. Biomass piles below, slow-cooking into something darker."
+era_id = &"carboniferous"
+biome_recipe = {
+&"wetland": 0.8,
+&"open_ground": 0.2
+}
+biome_cluster_size = 5.0
+completion_criterion = &"biomass_earned"
+completion_target = 50.0
+completion_required_species = &""
+completion_required_biome = &""
+starting_species_filter = Array[StringName]([&"calamites"])
+unlock_text = "The swamp is endless. Something will grow here, or nothing will. You decide which."
+complete_text = "Below the water, the dead pile up. In a few million years, your descendants will dig it up and call it coal."
+goal_id = &"coal_swamp"

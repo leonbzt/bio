@@ -23,10 +23,10 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -160.0
-offset_top = -220.0
+offset_top = -250.0
 offset_right = 160.0
-offset_bottom = -40.0
-custom_minimum_size = Vector2(320, 180)
+offset_bottom = -110.0
+custom_minimum_size = Vector2(320, 140)
 
 [node name="Margin" type="MarginContainer" parent="Bubble"]
 theme_override_constants/margin_left = 12

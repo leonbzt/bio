@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EcosystemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ecosystem_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"carbo_fern_glade"
+display_name = "Fern Glade"
+description = "Light reaches the floor here. Things grow tall before they grow strong, in the brief windows between fires."
+era_id = &"carboniferous"
+biome_recipe = {
+&"open_ground": 0.5,
+&"lush_canopy": 0.3,
+&"wetland": 0.2
+}
+biome_cluster_size = 3.0
+completion_criterion = &"biomass_earned"
+completion_target = 200.0
+completion_required_species = &""
+completion_required_biome = &""
+starting_species_filter = Array[StringName]([&"tree_fern_psaronius", &"lepidodendron", &"calamites"])
+unlock_text = "Light reaches the floor here. Things grow tall before they grow strong."
+complete_text = "Each crown remembers the seedling it was. The fire that comes next will rewrite the ground."

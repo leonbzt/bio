@@ -76,6 +76,41 @@ class _FogOverlay extends Node2D:
 				draw_rect(Rect2(origin, Vector2(tile_grid.TILE_SIZE, tile_grid.TILE_SIZE)), tile_grid.FOG_COLOR, true)
 
 
+class _BondOverlay extends Node2D:
+	# Golden symbiosis markers — visualises mycorrhizal bonds between plant
+	# tiles and their adjacent fungus partners. Scans bonded plant tiles each
+	# redraw, finds the neighboring fungus, draws a gold link + a small dot
+	# on each end.
+	var tile_grid
+
+	const BOND_GOLD: Color = Color(1.0, 0.82, 0.32, 0.85)
+	const BOND_GOLD_BRIGHT: Color = Color(1.0, 0.92, 0.55, 1.0)
+
+	func _draw() -> void:
+		if tile_grid == null:
+			return
+		var territory: Node = tile_grid._get_territory_for_age()
+		if territory == null:
+			return
+		var ts: float = float(tile_grid.TILE_SIZE)
+		for coord in territory.get_all_owned_coords():
+			if not bool(territory.get_tile_data(coord, "mycorrhizal_bond", false)):
+				continue
+			var plant_center: Vector2 = tile_grid.map_to_local(coord)
+			# Find any adjacent fungus tile to anchor the link.
+			for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				var n: Vector2i = coord + offset
+				var occ: Dictionary = territory.peek_occupants(n)
+				if not occ.has(&"fungi"):
+					continue
+				var fungus_center: Vector2 = tile_grid.map_to_local(n)
+				# Midpoint marker — a small golden capsule between the two tiles.
+				var mid: Vector2 = (plant_center + fungus_center) * 0.5
+				draw_line(plant_center, fungus_center, BOND_GOLD, 2.0, true)
+				draw_circle(mid, ts * 0.12, BOND_GOLD_BRIGHT)
+				draw_circle(mid, ts * 0.06, Color(1.0, 1.0, 0.85, 1.0))
+
+
 class _HaloOverlay extends Node2D:
 	var tile_grid
 
@@ -151,194 +186,223 @@ class _StructureFusionOverlay extends Node2D:
 			draw_circle(pos + Vector2(0, ts * 0.06), ts * 0.05, Color(0.30, 0.18, 0.38, 0.85))
 
 
-# Per-kingdom icon renderer drawn ON TOP of biome substrate. Tinted by
-# species.tile_marker_color. Shape varies by kingdom. Maturation handled
-# by scale + alpha + accent rim done by the parent in set_state().
-class _SpeciesCluster extends Node2D:
-	# VM-B1 (2026-05-22 lock): cluster-in-biome rendering. Replaces the prior
-	# _SpeciesIcon focal-icon model. Each tile renders as a few small
-	# organisms scattered within the inner area; biome substrate shows
-	# through transparent margins and between organisms. Density variant
-	# steps up with same-kingdom neighbor count, giving the "growing
-	# together" feel without auto-tile geometry. See
-	# docs/VISUAL_DIRECTION.md "Locked long-term canvas (2026-05-22)".
+# VM-B1.5 (2026-05-25): procedural world-space organism scatter using the
+# commissioned side-view sprites (plantae_01..04, fungi_01..04) as the
+# organism icons. Each candidate is placed on a jittered world-coord
+# grid, culled by tile occupancy, then drawn as a sprite anchored at
+# bottom-center so it "stands" on its cell position (3/4 side-view
+# feel). Candidates are y-sorted so lower-screen sprites draw over
+# upper-screen ones. Animals/hybrid use procedural fallbacks until
+# their sprites exist.
+class _OrganismScatterOverlay extends Node2D:
+	var tile_grid
 
-	# Cluster fills the tile. Hardcoded to track TILE_SIZE 48 — update both
-	# in sync if the tile size ever changes.
-	const CLUSTER_SIZE: float = 48.0
-	const CLUSTER_HALF: float = 24.0
-	# Transparent margin so biome shows at tile edges in every variant.
-	const INNER_MARGIN: float = 4.0
+	# Average spacing between organism candidate centers, in world px.
+	# 20 px on 48 px tiles → ~6 candidates per fully-occupied tile.
+	# Tuned sparser than the original 14 px (~12/tile) — keeps clusters
+	# readable now that biome tile art is landing under the organisms.
+	const CELL_SIZE: int = 20
+	const JITTER_RANGE: float = 6.0
 
-	const VARIANT_PIONEER: int = 0
-	const VARIANT_ESTABLISHING: int = 1
-	const VARIANT_ESTABLISHED: int = 2
-	const VARIANT_MATURE: int = 3
-
-	const _VARIANT_NAMES: Array[StringName] = [
-		&"pioneer", &"establishing", &"established", &"mature"
-	]
-
-	# Commissioned cluster textures. File naming: <kingdom>_NN.png where NN
-	# is 01..04 corresponding to pioneer/establishing/established/mature.
-	# White-on-transparent expected; species tile_marker_color modulates at
-	# draw time. If a PNG is missing the procedural placeholder draws instead.
-	const _CLUSTER_TEXTURE_PATHS: Dictionary[StringName, String] = {
-		&"plantae_pioneer":      "res://assets/art/kingdoms/plantae_01.png",
-		&"plantae_establishing": "res://assets/art/kingdoms/plantae_02.png",
-		&"plantae_established":  "res://assets/art/kingdoms/plantae_03.png",
-		&"plantae_mature":       "res://assets/art/kingdoms/plantae_04.png",
-		&"fungi_pioneer":        "res://assets/art/kingdoms/fungi_01.png",
-		&"fungi_establishing":   "res://assets/art/kingdoms/fungi_02.png",
-		&"fungi_established":    "res://assets/art/kingdoms/fungi_03.png",
-		&"fungi_mature":         "res://assets/art/kingdoms/fungi_04.png"
+	# Sprite indices per kingdom. _01 is single organism (most common),
+	# _02 small cluster, _03 denser cluster, _04 mature feature (rare).
+	const _SPRITE_PATHS: Dictionary[StringName, Array] = {
+		&"plantae": [
+			"res://assets/art/kingdoms/plantae_01.png",
+			"res://assets/art/kingdoms/plantae_02.png",
+			"res://assets/art/kingdoms/plantae_03.png",
+			"res://assets/art/kingdoms/plantae_04.png",
+		],
+		&"fungi": [
+			"res://assets/art/kingdoms/fungi_01.png",
+			"res://assets/art/kingdoms/fungi_02.png",
+			"res://assets/art/kingdoms/fungi_03.png",
+			"res://assets/art/kingdoms/fungi_04.png",
+		]
 	}
 
-	static var _texture_cache: Dictionary[StringName, Texture2D] = {}
-	static var _texture_cache_warmed: bool = false
+	# Size-class roll → (sprite_idx, scale). ~65% single small organism,
+	# ~25% small cluster, ~8% denser feature, ~2% mature canopy.
+	# Scales tuned for 48 px native sprites: 0.35 ~ 17 px, 0.85 ~ 40 px.
+	const _SIZE_CLASSES: Array = [
+		[166, 0, 0.38],   # roll < 166: sprite_01 at 0.38
+		[230, 1, 0.48],   # roll < 230: sprite_02 at 0.48
+		[250, 2, 0.62],   # roll < 250: sprite_03 at 0.62
+		[256, 3, 0.85],   # otherwise:  sprite_04 at 0.85
+	]
 
-	static func _warm_texture_cache() -> void:
-		if _texture_cache_warmed:
+	static var _texture_cache: Dictionary[StringName, Array] = {}
+	static var _species_texture_cache: Dictionary[StringName, Array] = {}
+	static var _cache_warmed: bool = false
+
+	static func _warm_cache() -> void:
+		if _cache_warmed:
 			return
-		_texture_cache_warmed = true
-		for key in _CLUSTER_TEXTURE_PATHS.keys():
-			var path: String = _CLUSTER_TEXTURE_PATHS[key]
-			if ResourceLoader.exists(path):
-				var tex := load(path) as Texture2D
-				if tex != null:
-					_texture_cache[key] = tex
-
-	var kingdom_id: StringName = &""
-	var cluster_color: Color = Color.WHITE
-	var variant: int = 0
-	var seed_value: int = 0
-	var stage: int = 1            # 0 sprout, 1 mature, 2 ancient
-	var cluster_alpha: float = 0.95
+		_cache_warmed = true
+		for kingdom in _SPRITE_PATHS.keys():
+			var paths: Array = _SPRITE_PATHS[kingdom]
+			var textures: Array = []
+			for path in paths:
+				if ResourceLoader.exists(path):
+					var tex := load(path) as Texture2D
+					if tex != null:
+						textures.append(tex)
+			if not textures.is_empty():
+				_texture_cache[kingdom] = textures
+		# Per-species overrides — any species that authored tile_sprite_paths
+		# gets its own cached texture array; the draw loop prefers these over
+		# the kingdom fallback.
+		var species_index := load("res://data/species/_index.tres")
+		if species_index is SpeciesIndex:
+			for species in (species_index as SpeciesIndex).species:
+				if species == null or species.tile_sprite_paths.is_empty():
+					continue
+				var textures: Array = []
+				for path in species.tile_sprite_paths:
+					if path != "" and ResourceLoader.exists(path):
+						var tex := load(path) as Texture2D
+						if tex != null:
+							textures.append(tex)
+				if not textures.is_empty():
+					_species_texture_cache[species.id] = textures
 
 	func _init() -> void:
 		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		_warm_texture_cache()
-
-	func set_state(kid: StringName, color: Color, v: int, p_seed: int, m_stage: int) -> void:
-		kingdom_id = kid
-		cluster_color = color
-		variant = clamp(v, 0, 3)
-		seed_value = p_seed
-		stage = m_stage
-		match stage:
-			0:    cluster_alpha = 0.55
-			2:    cluster_alpha = 1.0
-			_:    cluster_alpha = 0.95
-		queue_redraw()
+		_warm_cache()
 
 	func _draw() -> void:
-		var c: Color = cluster_color
-		c.a = cluster_alpha
-
-		# Prefer commissioned PNG (modulated by species color); fall back
-		# to procedural placeholder if no asset exists for this (kingdom,
-		# variant) pair. The 4 density variants per kingdom drop into the
-		# same slot when VM-C1 commission art arrives.
-		var key: StringName = StringName(String(kingdom_id) + "_" + String(_VARIANT_NAMES[variant]))
-		var tex: Texture2D = _texture_cache.get(key, null)
-		if tex != null:
-			var rect := Rect2(Vector2(-CLUSTER_HALF, -CLUSTER_HALF), Vector2(CLUSTER_SIZE, CLUSTER_SIZE))
-			draw_texture_rect(tex, rect, false, c)
-		else:
-			_draw_procedural(c)
-
-		# Ancient stage rim accent (carried from prior model — subtle inner
-		# rim to signal maturation weight without overpowering the cluster).
-		if stage == 2:
-			var rim: Color = c.lightened(0.40)
-			rim.a = 0.55
-			var rim_rect := Rect2(
-				Vector2(-CLUSTER_HALF + INNER_MARGIN, -CLUSTER_HALF + INNER_MARGIN),
-				Vector2(CLUSTER_SIZE - INNER_MARGIN * 2.0, CLUSTER_SIZE - INNER_MARGIN * 2.0)
-			)
-			draw_rect(rim_rect, rim, false, 1.0)
-
-	# Procedural placeholder: scattered small organisms within the inner
-	# area, kingdom-shaped, deterministically positioned by seed_value so
-	# each tile has a stable layout across redraws.
-	func _draw_procedural(c: Color) -> void:
-		var rng := RandomNumberGenerator.new()
-		rng.seed = seed_value
-
-		var inner_half: float = CLUSTER_HALF - INNER_MARGIN
-		var dark: Color = c.darkened(0.35)
-		dark.a = c.a
-		var light: Color = c.lightened(0.20)
-		light.a = c.a
-
-		# Mature: grove pattern — one large central organism + 4 satellites
-		# in a rough ring. Reads as "this tile is the defining feature."
-		if variant == VARIANT_MATURE:
-			_draw_organism(Vector2.ZERO, _organism_size(variant) * 1.7, light, dark)
-			var ring_radius: float = inner_half * 0.65
-			for i in range(4):
-				var angle: float = TAU * float(i) / 4.0 + rng.randf_range(-0.4, 0.4)
-				var radial_jitter: float = ring_radius * rng.randf_range(0.85, 1.05)
-				var p: Vector2 = Vector2(cos(angle), sin(angle)) * radial_jitter
-				_draw_organism(p, _organism_size(variant) * 0.7, light, dark)
+		if tile_grid == null:
 			return
+		var occupants: Dictionary = tile_grid._tile_occupants
+		if occupants.is_empty():
+			return
+		var ts: int = tile_grid.TILE_SIZE
 
-		# Pioneer / establishing / established: scattered placement, count
-		# steps up with density. Stable across redraws via seeded RNG.
-		var org_count: int = [2, 3, 5][variant]
-		for i in range(org_count):
-			var x: float = rng.randf_range(-inner_half, inner_half)
-			var y: float = rng.randf_range(-inner_half, inner_half)
-			_draw_organism(Vector2(x, y), _organism_size(variant), light, dark)
+		# Cell window covering the bounding box of all occupied tiles, plus
+		# 1-cell bleed so candidates whose center jitters in from the next
+		# tile still get evaluated.
+		var min_c: Vector2i = Vector2i(2147483647, 2147483647)
+		var max_c: Vector2i = Vector2i(-2147483648, -2147483648)
+		for coord in occupants.keys():
+			if coord.x < min_c.x: min_c.x = coord.x
+			if coord.y < min_c.y: min_c.y = coord.y
+			if coord.x > max_c.x: max_c.x = coord.x
+			if coord.y > max_c.y: max_c.y = coord.y
+		var cx_start: int = (min_c.x * ts) / CELL_SIZE - 1
+		var cy_start: int = (min_c.y * ts) / CELL_SIZE - 1
+		var cx_end: int = ((max_c.x + 1) * ts) / CELL_SIZE + 1
+		var cy_end: int = ((max_c.y + 1) * ts) / CELL_SIZE + 1
 
-	func _organism_size(v: int) -> float:
-		return [3.5, 4.0, 4.5, 5.5][v]
+		# Collect first, sort by y, draw back-to-front. Side-view sprites
+		# need lower-screen ones on top of upper-screen ones at overlap.
+		# Each entry: [pos, kingdom_id, species_id, sprite_idx, scale, alpha_mul]
+		var candidates: Array = []
+		for cy in range(cy_start, cy_end):
+			for cx in range(cx_start, cx_end):
+				var h: int = _cell_hash(cx, cy)
+				var jx: float = ((float(h & 0xFF) / 255.0) * 2.0 - 1.0) * JITTER_RANGE
+				var jy: float = ((float((h >> 8) & 0xFF) / 255.0) * 2.0 - 1.0) * JITTER_RANGE
+				var pos := Vector2(
+					float(cx * CELL_SIZE) + float(CELL_SIZE) * 0.5 + jx,
+					float(cy * CELL_SIZE) + float(CELL_SIZE) * 0.5 + jy
+				)
+				var tile := Vector2i(
+					int(floor(pos.x / float(ts))),
+					int(floor(pos.y / float(ts)))
+				)
+				if not occupants.has(tile):
+					continue
+				if tile_grid._is_in_active_fusion(tile):
+					continue
+				var occ: Dictionary = occupants[tile]
+				var keys: Array = occ.keys()
+				if keys.is_empty():
+					continue
+				var kingdom_id: StringName = keys[0]
+				var species_id: StringName = occ[kingdom_id]
 
-	# Each organism's shape distinguishes its kingdom. Dark fill carries
-	# the kingdom-tinted species color; light accent is a small highlight
-	# (mostly for fungi caps so they read with a hint of dimensionality).
-	func _draw_organism(center: Vector2, size: float, light: Color, dark: Color) -> void:
+				# Size-class roll picks sprite + scale.
+				var roll: int = (h >> 16) & 0xFF
+				var sprite_idx: int = 0
+				var scale: float = 0.4
+				for sc in _SIZE_CLASSES:
+					if roll < sc[0]:
+						sprite_idx = sc[1]
+						scale = sc[2]
+						break
+
+				# Stage modulates scale only (0 sprout, 1 mature, 2 ancient).
+				# Opacity stays at 1.0 — organisms read more clearly when their
+				# growth is shown by size, not by fading in/out.
+				var stage: int = tile_grid._last_stage_by_coord.get(tile, 1)
+				var alpha_mul: float = 1.0
+				var size_mul: float = [0.75, 1.0, 1.10][stage]
+				scale *= size_mul
+
+				candidates.append([pos, kingdom_id, species_id, sprite_idx, scale, alpha_mul])
+
+		candidates.sort_custom(func(a, b): return a[0].y < b[0].y)
+
+		for cand in candidates:
+			_draw_organism(cand[0], cand[1], cand[2], cand[3], cand[4], cand[5])
+
+	func _draw_organism(pos: Vector2, kingdom_id: StringName, species_id: StringName,
+			sprite_idx: int, scale: float, alpha_mul: float) -> void:
+		# Prefer per-species art when authored; fall back to kingdom-level art.
+		var textures: Array = _species_texture_cache.get(species_id, [])
+		if textures.is_empty():
+			textures = _texture_cache.get(kingdom_id, [])
+		if not textures.is_empty():
+			var tex: Texture2D = textures[mini(sprite_idx, textures.size() - 1)]
+			var w: float = float(tex.get_width()) * scale
+			var h: float = float(tex.get_height()) * scale
+			# Bottom-center anchor — sprite stands on pos (3/4 side-view).
+			var rect := Rect2(pos - Vector2(w * 0.5, h), Vector2(w, h))
+			var mod := Color(1.0, 1.0, 1.0, alpha_mul)
+			draw_texture_rect(tex, rect, false, mod)
+			return
+		# Procedural fallback for animals/hybrid (no sprites yet).
+		var color: Color = tile_grid._species_color(species_id)
+		color.a = alpha_mul
+		var size: float = 6.0 * scale
+		var dark: Color = color.darkened(0.30)
+		dark.a = color.a
+		var light: Color = color.lightened(0.25)
+		light.a = color.a
 		match kingdom_id:
-			&"plantae":
-				# Upward-pointing triangle (stem/sprout from above).
-				var plant_pts := PackedVector2Array([
-					center + Vector2(0.0, -size),
-					center + Vector2(size * 0.7, size * 0.6),
-					center + Vector2(-size * 0.7, size * 0.6)
-				])
-				draw_colored_polygon(plant_pts, dark)
-			&"fungi":
-				# Round cap with a small light highlight (top-down mushroom).
-				draw_circle(center, size * 0.8, dark)
-				draw_circle(center + Vector2(-size * 0.25, -size * 0.25), size * 0.3, light)
 			&"animals":
-				# Diamond marker (consistent with prior animal inset).
-				var animal_pts := PackedVector2Array([
-					center + Vector2(0.0, -size),
-					center + Vector2(size, 0.0),
-					center + Vector2(0.0, size),
-					center + Vector2(-size, 0.0)
-				])
-				draw_colored_polygon(animal_pts, dark)
+				var d_top := pos + Vector2(0.0, -size)
+				var d_right := pos + Vector2(size, 0.0)
+				var d_bot := pos + Vector2(0.0, size)
+				var d_left := pos + Vector2(-size, 0.0)
+				draw_colored_polygon(PackedVector2Array([d_top, d_right, d_bot, d_left]), dark)
 			&"hybrid":
-				# Composite dot (lichen-like).
-				draw_circle(center, size * 0.7, light)
-				draw_circle(center, size * 0.35, dark)
+				draw_circle(pos, size * 0.8, light)
+				draw_circle(pos, size * 0.4, dark)
 			_:
-				draw_circle(center, size * 0.5, dark)
+				draw_circle(pos, size * 0.5, dark)
+
+	# Deterministic hash from cell coord. Stable across redraws so layout
+	# doesn't shimmer when occupancy changes.
+	func _cell_hash(cx: int, cy: int) -> int:
+		var h: int = cx * 374761393 + cy * 668265263
+		h = (h ^ (h >> 13)) * 1274126177
+		h = h ^ (h >> 16)
+		return h & 0x7FFFFFFF
 
 
 var _tile_occupants: Dictionary[Vector2i, Dictionary] = {}
 var _species_by_id: Dictionary[StringName, SpeciesData] = {}
 var _biome_textures: Dictionary[StringName, Texture2D] = {}
 var _biome_sprites: Dictionary[Vector2i, Sprite2D] = {}
-# Per-tile composite Node2D parented at tile center; holds species icons +
-# animal marker + symbiosis ring as children.
-var _tile_composites: Dictionary[Vector2i, Node2D] = {}
 var _overlay_layer: Node2D
 var _edges_overlay: _EdgesOverlay
 var _fog_overlay: _FogOverlay
 var _halo_overlay: _HaloOverlay
+var _bond_overlay: _BondOverlay
+# VM-B1.5: single overlay drawing all organisms across the grid in world
+# coords with side-view sprites. Replaces per-tile cluster Node2Ds.
+var _organism_overlay: _OrganismScatterOverlay
 var _pulse_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _revealed_set: Dictionary[Vector2i, bool] = {}
 var _obstacle_set: Dictionary[Vector2i, bool] = {}
@@ -377,6 +441,12 @@ func _ready() -> void:
 	_overlay_layer.name = "OccupantOverlay"
 	add_child(_overlay_layer)
 
+	_organism_overlay = _OrganismScatterOverlay.new()
+	_organism_overlay.name = "OrganismScatter"
+	_organism_overlay.tile_grid = self
+	_organism_overlay.z_index = 1
+	_overlay_layer.add_child(_organism_overlay)
+
 	_edges_overlay = _EdgesOverlay.new()
 	_edges_overlay.name = "EdgesOverlay"
 	_edges_overlay.tile_grid = self
@@ -388,6 +458,14 @@ func _ready() -> void:
 	_halo_overlay.tile_grid = self
 	_halo_overlay.z_index = 3
 	_overlay_layer.add_child(_halo_overlay)
+
+	_bond_overlay = _BondOverlay.new()
+	_bond_overlay.name = "SymbiosisBonds"
+	_bond_overlay.tile_grid = self
+	# Same z as halos but draws after — sits on top of biome tile + halos,
+	# under organism sprites so the species art still reads clearly.
+	_bond_overlay.z_index = 3
+	_overlay_layer.add_child(_bond_overlay)
 
 	_fusion_overlay = _StructureFusionOverlay.new()
 	_fusion_overlay.name = "StructureFusion"
@@ -440,20 +518,26 @@ func _build_biome_textures() -> Dictionary[StringName, Texture2D]:
 	var out: Dictionary[StringName, Texture2D] = {}
 	var era_tint: Color = _get_era_tint()
 	out[&"base"] = _make_biome_texture(Color8(0x2a, 0x2a, 0x2c), Color8(0x1a, 0x1a, 0x1c), era_tint, 0.05, false, false)
+	# Alpha biomes — procedural fallbacks; authored PNGs override below.
+	# Wetland: warm green-brown peat (formerly &"swamp").
+	out[&"wetland"] = _make_biome_texture(Color8(0x5a, 0x70, 0x2a), Color8(0x37, 0x4a, 0x18), era_tint, 0.10, false, false)
+	# Open ground: charred earth — black ash for Carbo burn scar.
+	out[&"open_ground"] = _make_biome_texture(Color8(0x33, 0x2a, 0x24), Color8(0x1c, 0x16, 0x12), era_tint, 0.06, false, false)
+	# Lush canopy: cool deep forest green (formerly &"forest_edge").
+	out[&"lush_canopy"] = _make_biome_texture(Color8(0x35, 0x55, 0x28), Color8(0x1f, 0x36, 0x18), era_tint, 0.10, false, false)
 	# Tundra: pale cool blue.
 	out[&"tundra"] = _make_biome_texture(Color8(0xa5, 0xc8, 0xee), Color8(0x6f, 0x95, 0xc5), era_tint, 0.10, false, true)
-	# Mineral vent: dark stone, orange flecks.
-	out[&"mineral_vent"] = _make_biome_texture(Color8(0x3a, 0x3a, 0x40), Color8(0x26, 0x26, 0x2b), era_tint, 0.08, true, false)
-	# Swamp: warm green-brown peat.
-	out[&"swamp"] = _make_biome_texture(Color8(0x5a, 0x70, 0x2a), Color8(0x37, 0x4a, 0x18), era_tint, 0.10, false, false)
-	# Grassland: yellow-green meadow.
-	out[&"grassland"] = _make_biome_texture(Color8(0x78, 0x95, 0x4a), Color8(0x52, 0x6e, 0x2e), era_tint, 0.10, false, false)
-	# Rich soil: warm umber brown.
-	out[&"rich_soil"] = _make_biome_texture(Color8(0x6a, 0x55, 0x38), Color8(0x45, 0x35, 0x20), era_tint, 0.10, false, false)
-	# Forest edge: cooler forest green.
-	out[&"forest_edge"] = _make_biome_texture(Color8(0x4a, 0x6a, 0x35), Color8(0x2a, 0x42, 0x1e), era_tint, 0.10, false, false)
-	# Rock: neutral dark gray.
+	# Rock: neutral dark gray (fallback for unconfigured biomes).
 	out[&"rock"] = _make_biome_texture(Color8(0x55, 0x55, 0x55), Color8(0x2a, 0x2a, 0x2c), era_tint, 0.05, false, false)
+	# Authored biome tile art overrides — any BiomeData with a non-null
+	# `tile_texture` replaces its procedural fallback.
+	var biome_index := load("res://data/biomes/_index.tres")
+	if biome_index is BiomeIndex:
+		for biome in (biome_index as BiomeIndex).biomes:
+			if biome == null:
+				continue
+			if biome.tile_texture != null:
+				out[biome.id] = biome.tile_texture
 	return out
 
 
@@ -548,10 +632,9 @@ func add_structure_halo(key: String, tiles: Array[Vector2i], color: Color) -> vo
 		# PLUS the bounding-box interior, so hidden-composite covers the
 		# whole visual footprint, not just the colonized cells.
 		_fusion_footprints[key] = _expand_footprint(tiles, _fusion_anchors[key], struct_id)
-		# Hide composites within the footprint by repainting (composites
-		# check _is_in_active_fusion and skip rendering).
-		for coord in _fusion_footprints[key]:
-			_repaint_tile(coord)
+		# Scatter overlay culls organisms inside active fusion footprints
+		# via _is_in_active_fusion, so a single redraw is enough.
+		_request_scatter_redraw()
 		if _fusion_overlay != null:
 			_fusion_overlay.queue_redraw()
 	_redraw_halos()
@@ -561,14 +644,10 @@ func remove_structure_halo(key: String) -> void:
 	_structure_halos.erase(key)
 	_halo_colors.erase(key)
 	if _fusion_kinds.has(key):
-		var footprint: Array = _fusion_footprints.get(key, [])
 		_fusion_kinds.erase(key)
 		_fusion_anchors.erase(key)
 		_fusion_footprints.erase(key)
-		# Restore composite visibility on tiles that just left a fused
-		# structure footprint.
-		for coord in footprint:
-			_repaint_tile(coord)
+		_request_scatter_redraw()
 		if _fusion_overlay != null:
 			_fusion_overlay.queue_redraw()
 	_redraw_halos()
@@ -627,9 +706,8 @@ func set_occupant(coord: Vector2i, kingdom_id: StringName, species_id: StringNam
 	var occ: Dictionary = _tile_occupants.get(coord, {})
 	occ[kingdom_id] = species_id
 	_tile_occupants[coord] = occ
-	_repaint_tile(coord)
-	# Density variant for cardinal neighbors may have stepped up — repaint them.
-	_repaint_neighbors(coord)
+	_update_tile_stage(coord)
+	_request_scatter_redraw()
 
 
 func clear_occupant(coord: Vector2i, kingdom_id: StringName) -> void:
@@ -641,106 +719,27 @@ func clear_occupant(coord: Vector2i, kingdom_id: StringName) -> void:
 		_tile_occupants.erase(coord)
 	else:
 		_tile_occupants[coord] = occ
-	_repaint_tile(coord)
-	# Density variant for cardinal neighbors may have stepped down — repaint them.
-	_repaint_neighbors(coord)
+	_update_tile_stage(coord)
+	_request_scatter_redraw()
 
 
 func clear_all_occupants(coord: Vector2i) -> void:
 	_tile_occupants.erase(coord)
-	_repaint_tile(coord)
-	_repaint_neighbors(coord)
+	_update_tile_stage(coord)
+	_request_scatter_redraw()
 
 
-func _repaint_tile(coord: Vector2i) -> void:
-	var occ: Dictionary = _tile_occupants.get(coord, {})
-	_paint_composite(coord, occ)
-
-
-# Cardinal neighbors' density variants depend on this tile's occupancy.
-# Called from set/clear/clear_all_occupants so they refresh when the
-# center tile changes.
-func _repaint_neighbors(coord: Vector2i) -> void:
-	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		var n: Vector2i = coord + offset
-		if _tile_occupants.has(n):
-			_repaint_tile(n)
-
-
-# Composite painter (VM-B1, 2026-05-22 lock): one cluster Node2D per tile.
-# Single species per tile (VM-A2 invariant), density variant chosen by
-# same-kingdom neighbor count. Biome substrate stays visible underneath
-# because the cluster sprite has transparent margins and gaps between
-# organisms. Adjacency-symbiosis rendering (corner dots + edge highlights
-# for compatible-kingdom neighbors) lands in VM-B3 as a separate pass.
-func _paint_composite(coord: Vector2i, occ: Dictionary) -> void:
-	# Tear down existing composite if any.
-	var existing: Node2D = _tile_composites.get(coord, null)
-	if existing != null:
-		existing.queue_free()
-		_tile_composites.erase(coord)
-
-	if occ.is_empty():
+func _update_tile_stage(coord: Vector2i) -> void:
+	if not _tile_occupants.has(coord):
 		_last_stage_by_coord.erase(coord)
 		return
-
-	# Phase E: if this tile is inside an active fused structure footprint,
-	# don't render its individual species composite — the structure overlay
-	# handles the visual.
-	if _is_in_active_fusion(coord):
-		_last_stage_by_coord.erase(coord)
-		return
-
-	# Single-species invariant — pick the one occupant.
-	var keys: Array = occ.keys()
-	if keys.is_empty():
-		return
-	var kingdom_id: StringName = keys[0]
-	var species_id: StringName = occ[kingdom_id]
-
-	var composite := Node2D.new()
-	composite.position = map_to_local(coord)
-	composite.z_index = 1
-	_overlay_layer.add_child(composite)
-	_tile_composites[coord] = composite
-
-	# Maturation stage drives cluster alpha + ancient rim accent.
 	var age_ticks: int = _get_tile_age_ticks(coord)
-	var stage: int = _maturation_stage(age_ticks)
-	_last_stage_by_coord[coord] = stage
-
-	# Density variant by same-kingdom cardinal neighbor count.
-	var variant: int = _compute_density_variant(coord, kingdom_id)
-	# Deterministic per-coord seed so layout is stable across redraws.
-	# coord.x ∈ [0..31], coord.y ∈ [0..47]; the offset is large enough that
-	# nearby tiles get visibly different layouts.
-	var cluster_seed: int = coord.x * 73 + coord.y * 131
-
-	var cluster := _SpeciesCluster.new()
-	cluster.set_state(kingdom_id, _species_color(species_id), variant, cluster_seed, stage)
-	composite.add_child(cluster)
+	_last_stage_by_coord[coord] = _maturation_stage(age_ticks)
 
 
-# Same-kingdom 4-neighbor count → density variant. See VISUAL_DIRECTION.md
-# "Ecological-stage clustering" table.
-#   0      → 0 pioneer       (1-2 organisms, lots of biome visible)
-#   1-2    → 1 establishing  (3 organisms, moderate cover)
-#   3      → 2 established   (5 organisms, dense cluster)
-#   4      → 3 mature        (grove pattern: central organism + 4 satellites)
-func _compute_density_variant(coord: Vector2i, kingdom_id: StringName) -> int:
-	var count: int = 0
-	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		var n: Vector2i = coord + offset
-		var n_occ: Dictionary = _tile_occupants.get(n, {})
-		if n_occ.has(kingdom_id):
-			count += 1
-	if count == 0:
-		return 0
-	if count <= 2:
-		return 1
-	if count == 3:
-		return 2
-	return 3
+func _request_scatter_redraw() -> void:
+	if _organism_overlay != null:
+		_organism_overlay.queue_redraw()
 
 
 func _species_color(species_id: StringName) -> Color:
@@ -777,14 +776,10 @@ func set_subsurface_owner(coord: Vector2i, kingdom_id: StringName, variant: Stri
 
 func clear_owned() -> void:
 	_tile_occupants.clear()
-	for coord in _tile_composites.keys():
-		var c: Node2D = _tile_composites[coord]
-		if c != null:
-			c.queue_free()
-	_tile_composites.clear()
 	_structure_halos.clear()
 	_halo_colors.clear()
 	_last_stage_by_coord.clear()
+	_request_scatter_redraw()
 	_redraw_halos()
 
 
@@ -875,20 +870,27 @@ func _get_territory_for_age() -> Node:
 
 
 func _on_tick_pulse(_delta: float) -> void:
+	# Bonds may have been added/removed by the growth tick — repaint markers.
+	if _bond_overlay != null:
+		_bond_overlay.queue_redraw()
 	if PULSE_CHANCE > 0.0:
-		for coord in _tile_composites.keys():
+		for coord in _tile_occupants.keys():
 			if _pulse_rng.randf() > PULSE_CHANCE:
 				continue
 			_pulse_tile(coord)
-	# Maturation refresh: only repaint composites whose stage actually changed.
+	# Maturation refresh: bump stages; one global redraw if anything changed.
 	_ticks_since_age_refresh += 1
 	if _ticks_since_age_refresh >= AGE_REFRESH_INTERVAL:
 		_ticks_since_age_refresh = 0
+		var any_changed: bool = false
 		for coord in _tile_occupants.keys():
 			var stage: int = _maturation_stage(_get_tile_age_ticks(coord))
 			if _last_stage_by_coord.get(coord, -1) == stage:
 				continue
-			_repaint_tile(coord)
+			_last_stage_by_coord[coord] = stage
+			any_changed = true
+		if any_changed:
+			_request_scatter_redraw()
 
 
 func _pulse_tile(_coord: Vector2i) -> void:

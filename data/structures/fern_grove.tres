@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/structure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"fern_grove"
+display_name = "Fern Grove"
+description = "Tree-ferns arranged in a cross — one central frond and four reaching outward. The fronds shelter the air between them; the ground beneath stays wet."
+pattern_type = &"cross_5_same_species"
+pattern_params = {
+"kingdom_id": "plantae",
+"required_species": "tree_fern_psaronius"
+}
+bonus_handler = &"fern_grove"
+halo_color = Color(0.55, 0.85, 0.5, 0.5)

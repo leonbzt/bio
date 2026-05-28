@@ -83,8 +83,16 @@ func _build_ecosystem_card(eco: EcosystemData) -> PanelContainer:
 	var era_system: Node = _get_era_system()
 	var done: bool = era_system != null and era_system.is_ecosystem_complete(eco.id)
 	var unlocked: bool = era_system == null or era_system.is_ecosystem_unlocked(eco.id)
+	# `playable` field reserved for future alpha-content gating; currently every
+	# authored ecosystem ships playable, so we ignore it here and let the natural
+	# unlock chain (complete previous → unlock next) drive availability.
+	var coming_soon: bool = not eco.playable
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(0, 76)
+	# Force the card to fill the grid column horizontally — otherwise the
+	# Label content shrinks the card to its text width and the title/desc
+	# get squished to the left side of the screen.
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sb := StyleBoxFlat.new()
 	if done:
 		sb.bg_color = Color(0.15, 0.20, 0.15)
@@ -103,8 +111,10 @@ func _build_ecosystem_card(eco: EcosystemData) -> PanelContainer:
 	card.add_theme_stylebox_override("panel", sb)
 
 	var vbox := VBoxContainer.new()
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.add_child(vbox)
 	var title := Label.new()
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# HTML5: ✓ and 🔒 are outside pixel-font glyph coverage — ASCII tags.
 	var title_prefix: String = ""
 	if done:
@@ -112,17 +122,22 @@ func _build_ecosystem_card(eco: EcosystemData) -> PanelContainer:
 	elif not unlocked:
 		title_prefix = "[X] "
 	title.text = title_prefix + eco.display_name
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# Heading style — bigger than body, brighter color for visual hierarchy.
+	title.add_theme_font_size_override("font_size", 16)
 	var title_color: Color
 	if done:
-		title_color = Color(0.95, 0.9, 0.6)
+		title_color = Color(1.0, 0.95, 0.6)
 	elif not unlocked:
 		title_color = Color(0.55, 0.55, 0.6)
 	else:
-		title_color = Color(0.95, 0.95, 0.95)
+		title_color = Color(1.0, 1.0, 0.95)
 	title.add_theme_color_override("font_color", title_color)
 	vbox.add_child(title)
 	var desc := Label.new()
-	if not unlocked:
+	if coming_soon:
+		desc.text = "Coming soon — not in this alpha."
+	elif not unlocked:
 		var prereq: EcosystemData = era_system.get_ecosystem_prerequisite(eco.id) if era_system != null else null
 		if prereq != null:
 			desc.text = "Locked — complete %s first." % prereq.display_name
@@ -136,6 +151,7 @@ func _build_ecosystem_card(eco: EcosystemData) -> PanelContainer:
 	if unlocked:
 		var goal := Label.new()
 		goal.text = _goal_string(eco)
+		goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		goal.add_theme_color_override("font_color", Color(0.7, 0.85, 0.6))
 		vbox.add_child(goal)
 

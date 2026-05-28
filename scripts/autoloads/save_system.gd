@@ -5,7 +5,7 @@ extends Node
 ## Implementation in brief 03. Changes here MUST be reviewed by Claude.
 ##
 
-const SAVE_VERSION: int = 18
+const SAVE_VERSION: int = 19
 
 # Kingdom precedence for the v17 → v18 multi → single occupant flatten.
 # When a v17 tile had >1 kingdom slot, the migration keeps the species whose
@@ -310,6 +310,8 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 		_migrate_v16_to_v17(old)
 	if from_version < 18:
 		_migrate_v17_to_v18(old)
+	if from_version < 19:
+		_migrate_v18_to_v19(old)
 	return old
 
 
@@ -318,21 +320,21 @@ func _build_default_save() -> Dictionary:
 		"save_version": SAVE_VERSION,
 		"saved_at_unix": Time.get_unix_time_from_system(),
 		"meta": {
-			"unlocked_kingdoms": ["plantae", "fungi"],
+			"unlocked_kingdoms": ["plantae", "fungi", "animals"],
 			"evolution_tree": {"unlock_fungi": true},
 			"discovery_log": {},
 			"kingdoms_played": [],
-			"species_unlocked": ["pioneer_grass", "mycelium_thread"],
+			"species_unlocked": ["calamites", "tree_fern_psaronius", "mycorrhizal_network", "arthropleura", "dwarf_willow", "steppe_sedge", "cushion_moss", "reindeer_lichen", "permafrost_yeast"],
 			"species_played": [],
 			"lineages_played": [],
 			"structures_discovered": [],
-			"current_era_id": "cryogenian",
-			"current_ecosystem_id": "cryo_volcanic_vent",
+			"current_era_id": "carboniferous",
+			"current_ecosystem_id": "carbo_coal_swamp",
+			"eras_unlocked": ["carboniferous"],
 			"ecosystem_completions": {},
-			"eras_unlocked": ["cryogenian"],
 			"post_extinction": {},
 			"first_run_in_era_completed": [],
-			"first_era_seen": "cryogenian",
+			"first_era_seen": "carboniferous",
 			"statistics": {
 				"prestige_count": 0,
 				"evolution_points_balance": 0,
@@ -798,3 +800,74 @@ func _pick_species_for_kingdom(starter_species: StringName, kingdom_id: StringNa
 			if sp.id == starter_species and sp.kingdom_id == kingdom_id:
 				return starter_species
 	return _KINGDOM_DEFAULT_STARTERS.get(kingdom_id, &"")
+
+
+# v18 → v19: alpha-content reset. The era/biome/species catalogue was rebuilt
+# around Carboniferous + Pleistocene as the canonical starter pair. Legacy
+# Cryogenian/Devonian eras + their ecosystems are retired, so any save still
+# pointing at them gets redirected into Coal Swamp. Legacy species are
+# gated by era_requires = "deferred" — they stay in species_unlocked so the
+# player doesn't visibly lose unlocks, but they won't appear in the picker
+# until/unless we ship a "Deep Time" era.
+const _ALPHA_DEFAULT_SPECIES_UNLOCKS: Array = [
+	"calamites", "tree_fern_psaronius", "mycorrhizal_network", "arthropleura",
+	"dwarf_willow", "steppe_sedge", "cushion_moss", "reindeer_lichen", "permafrost_yeast"
+]
+const _LEGACY_ERA_IDS: Array = ["cryogenian", "devonian"]
+
+func _migrate_v18_to_v19(save: Dictionary) -> void:
+	var meta: Dictionary = save.get("meta", {}) as Dictionary
+	# Era + ecosystem pointers. Anyone in Cryo/Devonian lands in Coal Swamp.
+	var current_era: String = String(meta.get("current_era_id", ""))
+	if current_era == "" or _LEGACY_ERA_IDS.has(current_era):
+		meta["current_era_id"] = "carboniferous"
+		meta["current_ecosystem_id"] = "carbo_coal_swamp"
+	# eras_unlocked: drop legacy ids, ensure "carboniferous" is present.
+	var eras_unlocked: Array = meta.get("eras_unlocked", []) as Array
+	var pruned_eras: Array = []
+	for era in eras_unlocked:
+		if not _LEGACY_ERA_IDS.has(String(era)):
+			pruned_eras.append(era)
+	if not pruned_eras.has("carboniferous"):
+		pruned_eras.append("carboniferous")
+	meta["eras_unlocked"] = pruned_eras
+	# first_era_seen: rewrite if it was a legacy era.
+	if _LEGACY_ERA_IDS.has(String(meta.get("first_era_seen", ""))):
+		meta["first_era_seen"] = "carboniferous"
+	# ecosystem_completions: drop entries for retired ecosystem ids.
+	var completions: Dictionary = meta.get("ecosystem_completions", {}) as Dictionary
+	for key in completions.keys():
+		var sk := String(key)
+		if sk.begins_with("cryo_") or sk.begins_with("dev_"):
+			completions.erase(key)
+	meta["ecosystem_completions"] = completions
+	# post_extinction: if it points at a retired era, clear it (no debuff to apply).
+	var pe: Dictionary = meta.get("post_extinction", {}) as Dictionary
+	if _LEGACY_ERA_IDS.has(String(pe.get("to_era_id", ""))):
+		meta["post_extinction"] = {}
+	# first_run_in_era_completed: drop legacy era ids.
+	var frc: Array = meta.get("first_run_in_era_completed", []) as Array
+	var pruned_frc: Array = []
+	for entry in frc:
+		if not _LEGACY_ERA_IDS.has(String(entry)):
+			pruned_frc.append(entry)
+	meta["first_run_in_era_completed"] = pruned_frc
+	# species_unlocked: ensure the alpha starters are present so the picker
+	# always has something to show. Legacy ids stay in the list but are
+	# inert thanks to era_requires = "deferred".
+	var species_unlocked: Array = meta.get("species_unlocked", []) as Array
+	for alpha_id in _ALPHA_DEFAULT_SPECIES_UNLOCKS:
+		if not species_unlocked.has(alpha_id):
+			species_unlocked.append(alpha_id)
+	meta["species_unlocked"] = species_unlocked
+	# unlocked_kingdoms: ensure animals is present (alpha eras include animals).
+	var kingdoms: Array = meta.get("unlocked_kingdoms", []) as Array
+	for kingdom in ["plantae", "fungi", "animals"]:
+		if not kingdoms.has(kingdom):
+			kingdoms.append(kingdom)
+	meta["unlocked_kingdoms"] = kingdoms
+	# Re-show onboarding — the alpha-lock tutorial is a different script
+	# (Coal Swamp specific), so anyone migrating from a legacy save should
+	# see it once even if they had previously dismissed the old one.
+	meta["onboarding_step"] = 0
+	save["meta"] = meta

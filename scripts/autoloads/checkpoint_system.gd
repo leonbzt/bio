@@ -15,6 +15,17 @@ const CHECKPOINT_ORDER: Array[StringName] = [
 	CHECKPOINT_RUN_COMPLETE
 ]
 
+# Partial-order prereqs. Bottleneck checkpoints depend only on the matching
+# unlock checkpoint, not on each other or on the prior bottleneck — so the
+# happy path (no bottlenecks ever fire) doesn't block run_complete.
+const CHECKPOINT_PREREQS: Dictionary[StringName, Array] = {
+	CHECKPOINT_UNLOCK_MYCORRHIZAL: [CHECKPOINT_PLACE_HERO],
+	CHECKPOINT_UNLOCK_ARTHROPLEURA: [CHECKPOINT_UNLOCK_MYCORRHIZAL],
+	CHECKPOINT_BOTTLENECK_NUTRIENTS: [CHECKPOINT_UNLOCK_MYCORRHIZAL],
+	CHECKPOINT_BOTTLENECK_DETRITUS: [CHECKPOINT_UNLOCK_ARTHROPLEURA],
+	CHECKPOINT_RUN_COMPLETE: [CHECKPOINT_UNLOCK_ARTHROPLEURA]
+}
+
 var _fired: Dictionary[StringName, bool] = {}
 var _bottleneck_age_ticks: Dictionary[StringName, int] = {}
 
@@ -58,12 +69,9 @@ func _evaluate(id: StringName, ready: bool) -> void:
 
 
 func _can_consider(id: StringName) -> bool:
-	var idx: int = CHECKPOINT_ORDER.find(id)
-	if idx <= 0:
-		return true
-	for i in range(idx):
-		var prior: StringName = CHECKPOINT_ORDER[i]
-		if not _fired.get(prior, false):
+	var prereqs: Array = CHECKPOINT_PREREQS.get(id, [])
+	for prereq in prereqs:
+		if not _fired.get(prereq, false):
 			return false
 	return true
 

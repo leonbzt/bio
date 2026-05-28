@@ -44,6 +44,13 @@ func _ready() -> void:
 
 
 func _on_play_pressed() -> void:
+	# Resume an in-progress run instead of wiping it. PrestigeSystem.start_run
+	# calls _reset_run_state, so unconditionally starting from the menu would
+	# silently destroy hours of progress when the player just wanted to return
+	# to the world.
+	if _has_active_run():
+		get_tree().change_scene_to_file(WORLD_SCENE)
+		return
 	var species: SpeciesData = load(CALAMITES_PATH) as SpeciesData
 	if species == null:
 		return
@@ -51,6 +58,19 @@ func _on_play_pressed() -> void:
 	GameState.meta_save["current_era_id"] = "carboniferous"
 	PrestigeSystem.start_run(species)
 	get_tree().change_scene_to_file(WORLD_SCENE)
+
+
+func _has_active_run() -> bool:
+	var run: Dictionary = GameState.run_save
+	if not (run is Dictionary):
+		return false
+	if float(run.get("hero_biomass_lifetime_produced", 0.0)) > 0.0:
+		return true
+	if (run.get("tiles", []) as Array).size() > 0:
+		return true
+	if (run.get("organisms", []) as Array).size() > 0:
+		return true
+	return false
 
 
 func _on_reset_pressed() -> void:

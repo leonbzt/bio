@@ -68,15 +68,20 @@ func _on_checkpoint_triggered(id: StringName, _payload: Dictionary) -> void:
 func _on_tile_colonized(_coord: Vector2i, owner_id: StringName) -> void:
 	if owner_id == &"plantae":
 		_complete_checkpoint(&"place_hero")
+	elif owner_id == &"fungi":
+		# Only dismiss the bottleneck bubble if it's actually showing —
+		# don't pre-empt a future post-closure bottleneck just because the
+		# player placed fungi early.
+		_dismiss_if_queued(&"bottleneck_nutrients")
+	elif owner_id == &"animals":
+		_dismiss_if_queued(&"bottleneck_detritus")
 
 
 func _on_species_introduced(species_id: StringName) -> void:
 	if species_id == &"mycorrhizal_network":
 		_complete_checkpoint(&"unlock_mycorrhizal")
-		_complete_checkpoint(&"bottleneck_nutrients")
 	elif species_id == &"arthropleura":
 		_complete_checkpoint(&"unlock_arthropleura")
-		_complete_checkpoint(&"bottleneck_detritus")
 
 
 func _dismiss_current() -> void:
@@ -91,6 +96,17 @@ func _dismiss_current() -> void:
 func _complete_checkpoint(id: StringName) -> void:
 	if _queue.has(id):
 		_queue.erase(id)
+	_processed[id] = true
+	_refresh()
+
+
+func _dismiss_if_queued(id: StringName) -> void:
+	# Only acts when the bubble is currently in the queue. Used for bottleneck
+	# checkpoints so an early placement of fungi/animals doesn't pre-emptively
+	# suppress the post-closure bottleneck bubble.
+	if not _queue.has(id):
+		return
+	_queue.erase(id)
 	_processed[id] = true
 	_refresh()
 

@@ -38,7 +38,10 @@ func _ready() -> void:
 	EventBus.species_leveled.connect(func(_id, _level): _refresh())
 	AdaptationSystem.adaptation_changed.connect(func(_v): _refresh())
 	EventBus.placement_target_changed.connect(func(_id): _refresh())
-	EventBus.tick.connect(func(_delta): _refresh())
+	# Lightweight per-tick update: just refresh the Introduce buttons' disabled
+	# state. Full _refresh() rebuilt every species row each tick — expensive
+	# enough to cause UI hitching on web export.
+	EventBus.tick.connect(_update_available_affordability)
 	# HTML5 fix: parent (HUD) sometimes reports a stale size during _ready,
 	# so anchor_bottom=1 lands at the wrong y. Re-assert dock layout deferred
 	# and on viewport resize. grow_vertical=0 (from the scene) handles the
@@ -119,6 +122,20 @@ func _refresh() -> void:
 		if not _is_species_era_available(species):
 			continue
 		_available.add_child(_build_available_row(species))
+
+
+func _update_available_affordability(_delta: float) -> void:
+	for row in _available.get_children():
+		if not (row is Control):
+			continue
+		for child in (row as Control).get_children():
+			if not (child is Button):
+				continue
+			var button: Button = child
+			if not button.has_meta("biomass_cost"):
+				continue
+			var cost: float = float(button.get_meta("biomass_cost", 0.0))
+			button.disabled = not GameState.can_afford_hero_biomass(cost)
 
 
 func _kingdom_icon(kingdom_id: StringName) -> Texture2D:
@@ -262,7 +279,9 @@ func _build_available_row(species: SpeciesData) -> Control:
 	row.add_child(info)
 	var button := Button.new()
 	button.text = "Introduce"
-	button.disabled = not GameState.can_afford_hero_biomass(_get_biomass_cost(species))
+	var cost: float = _get_biomass_cost(species)
+	button.set_meta("biomass_cost", cost)
+	button.disabled = not GameState.can_afford_hero_biomass(cost)
 	button.pressed.connect(func() -> void:
 		_introduce_species(species)
 	)

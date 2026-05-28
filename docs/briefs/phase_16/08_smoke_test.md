@@ -14,21 +14,21 @@
 1. Launch the game from main menu.
 2. Click "Start Run".
 
-**Expect**: world.tscn loads. Calamites is the locked placement target. HUD shows starting biomass = 50 (seeded pool). EcosystemNameLabel shows "Coal Swamp".
+**Expect**: world.tscn loads. Calamites is the locked placement target. HUD shows starting biomass = 50 (seeded pool). EcosystemNameLabel shows "Coal Swamp". leon: biomass = 20
 
 ## Test 2 — First placement + biomass tick
 
 1. Place a single Calamites cluster on a wetland tile.
 2. Watch the HUD biomass counter for 30 seconds.
 
-**Expect**: Counter climbs by ~60 (~2/s × 30s). Rate label shows ~`+2.0/s`. Cluster status dot is green.
+**Expect**: Counter climbs by ~60 (~2/s × 30s). Rate label shows ~`+2.0/s`. Cluster status dot is green. no rate label is there, there is no cluster status dot.
 
 ## Test 3 — Nutrient bottleneck
 
 1. After test 2, keep playing without placing Mycorrhizal Network.
-2. Watch the nutrients pool deplete (initial 50 − 1/s × ~50s = empty).
+2. Watch the nutrients pool deplete (initial 50 − 1/s × ~50s = empty). 
 
-**Expect**: At ~50s mark, Calamites' status dot turns yellow then red. Counter rate drops toward 0. `unlock_mycorrhizal` checkpoint fires; onboarding bubble appears.
+**Expect**: At ~50s mark, Calamites' status dot turns yellow then red. Counter rate drops toward 0. `unlock_mycorrhizal` checkpoint fires; onboarding bubble appears. leon: it fired really eraly, no status dot, 
 
 ## Test 4 — First support + cycle bootstrap
 
@@ -38,20 +38,20 @@
 
 2. Continue playing until hero biomass ≥ 500.
 
-**Expect**: `unlock_arthropleura` checkpoint fires.
+**Expect**: `unlock_arthropleura` checkpoint fires. #it fired after a while before 500 biomass
 
 ## Test 5 — Cycle closure
 
 1. Place Arthropleura.
 
-**Expect**: Hero biomass dips by 50. All 3 species placed + feeding pools. After ~5 ticks of stable flow, `cycle_closed` fires — HUD pulses gold for 2s. Rate climbs ~50% (×1.5 multiplier).
+**Expect**: Hero biomass dips by 50. All 3 species placed + feeding pools. After ~5 ticks of stable flow, `cycle_closed` fires — HUD pulses gold for 2s. Rate climbs ~50% (×1.5 multiplier). # i didnt see gold pulses and cycle closed
 
 ## Test 6 — Run end
 
 1. Continue idle play (or active placement of more clusters).
 2. Wait until hero biomass reaches 100,000.
 
-**Expect**: `run_complete` checkpoint fires. Prestige screen appears showing biomass, reproductions, cycle closed (yes), evolution earned (1050).
+**Expect**: `run_complete` checkpoint fires. Prestige screen appears showing biomass, reproductions, cycle closed (yes), evolution earned (1050). #didn't fire on 100k
 
 3. Click "Begin next run".
 
@@ -62,7 +62,7 @@
 1. Mid-run (all 3 species placed), force-quit the app.
 2. Relaunch.
 
-**Expect**: Run resumes with same hero biomass, same placed clusters, same cycle_closed state. Checkpoint-fired states persisted.
+**Expect**: Run resumes with same hero biomass, same placed clusters, same cycle_closed state. Checkpoint-fired states persisted. leon: resumed correctly
 
 ## Test 8 — Idle test (offline progress)
 
@@ -80,7 +80,7 @@ All 8 tests pass without console errors. Any failed test → file an issue and b
 - [ ] No 5-resource row visible in HUD
 - [ ] No abilities bar visible
 - [ ] No event toast appears (events system unwired)
-- [ ] No Coal Gauge / goal banner visible (cut in step 7)
+- [ ] No Coal Gauge / goal banner visible (cut in step 7) still visible
 - [ ] No Recipe Book button in HUD (cut in step 2)
 - [ ] Evolution tree shows as flat list, not graph
 - [ ] No starting-species picker on main menu
@@ -103,3 +103,4 @@ If issues found:
 - File in a Phase 16 retro doc
 - Decide per-issue: hotfix in Phase 16, or defer to Phase 17
 - Don't let "minor polish" issues block the milestone — capture in a backlog instead
+

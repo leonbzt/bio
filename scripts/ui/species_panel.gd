@@ -37,7 +37,12 @@ func _ready() -> void:
 	# (~15+ per tick) was rebuilding every button each tick. Adaptation/leveling
 	# signals already cover the cases where rows actually change.
 	EventBus.species_leveled.connect(func(_id, _level): _refresh())
-	AdaptationSystem.adaptation_changed.connect(func(_v): _refresh())
+	# Previously connected to AdaptationSystem.adaptation_changed → _refresh.
+	# That signal fires every tick (continuous adaptation accumulation), and
+	# _refresh queue_frees every species row. The button under the cursor
+	# would be destroyed and recreated each tick, killing any tooltip mid-
+	# read. Evolve-ready badges now refresh on species_leveled and on
+	# placement target changes — close enough for the prototype.
 	EventBus.placement_target_changed.connect(func(_id): _refresh())
 	# Lightweight per-tick update: just refresh the Introduce buttons' disabled
 	# state. Full _refresh() rebuilt every species row each tick — expensive

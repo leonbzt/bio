@@ -16,7 +16,7 @@ anchor_right = 1.0
 offset_left = 4.0
 offset_top = 4.0
 offset_right = -4.0
-offset_bottom = 160.0
+offset_bottom = 180.0
 
 [node name="Margin" type="MarginContainer" parent="TopBar"]
 anchor_right = 1.0
@@ -45,10 +45,11 @@ theme_override_font_sizes/font_size = 48
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 
 [node name="RateLabel" type="Label" parent="TopBar/Margin/ColumnLayout"]
+custom_minimum_size = Vector2(0, 36)
 text = "0.0/s"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 20
-theme_override_colors/font_color = Color(0.533333, 0.866667, 0.533333, 1)
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(0.55, 0.95, 0.55, 1)
 
 [node name="PauseButton" type="Button" parent="."]
 anchor_left = 1.0

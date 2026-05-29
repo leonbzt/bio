@@ -88,24 +88,25 @@ func _fire(id: StringName) -> void:
 
 
 func _unlock_mycorrhizal_ready() -> bool:
-	var hero_biomass: float = GameState.get_hero_biomass()
-	var starvation: bool = _age_starvation(CHECKPOINT_UNLOCK_MYCORRHIZAL, ResourceLedger.NUTRIENTS, _short_grace_ticks())
-	# Tuned 2026-05-29: 300 was unreachable for many runs — Calamites'
-	# initial 50-nutrient buffer caps biomass around 100 before throttling,
-	# so we'd only ever fire via the starvation path. 100 lets the bubble
-	# fire via the biomass path while still feeling earned (~50 s of
-	# uninterrupted production).
-	return hero_biomass >= 100.0 or starvation
+	# Fire as soon as the player dismisses the place_hero bubble (i.e., placed
+	# their first Calamites). Earlier biomass thresholds either fired too
+	# instantly or never — chaining to the prior bubble's dismissal gives a
+	# clean "one hint at a time" cadence. Starvation kept as a fallback in
+	# case the player ignores the bubbles entirely.
+	if _prereq_dismissed(CHECKPOINT_PLACE_HERO):
+		return true
+	return _age_starvation(CHECKPOINT_UNLOCK_MYCORRHIZAL, ResourceLedger.NUTRIENTS, _short_grace_ticks())
 
 
 func _unlock_arthropleura_ready() -> bool:
-	var hero_biomass: float = GameState.get_hero_biomass()
-	var starvation: bool = _age_starvation(CHECKPOINT_UNLOCK_ARTHROPLEURA, ResourceLedger.DECAY, _short_grace_ticks())
-	# Tuned 2026-05-29: 1500 unreachable without arthropleura already in the
-	# loop (D pool stalls Mycorrhizal once Calamites' litter is the only
-	# source). 300 is achievable after Mycorrhizal lets Calamites resume
-	# full throughput for a stretch.
-	return hero_biomass >= 300.0 or starvation
+	if _prereq_dismissed(CHECKPOINT_UNLOCK_MYCORRHIZAL):
+		return true
+	return _age_starvation(CHECKPOINT_UNLOCK_ARTHROPLEURA, ResourceLedger.DECAY, _short_grace_ticks())
+
+
+func _prereq_dismissed(id: StringName) -> bool:
+	var dismissed: Dictionary = GameState.run_save.get("checkpoints_dismissed", {}) as Dictionary
+	return bool(dismissed.get(String(id), false))
 
 
 func _bottleneck_nutrients_ready() -> bool:

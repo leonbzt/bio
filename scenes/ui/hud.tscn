@@ -16,7 +16,7 @@ anchor_right = 1.0
 offset_left = 4.0
 offset_top = 4.0
 offset_right = -4.0
-offset_bottom = 110.0
+offset_bottom = 96.0
 
 [node name="Margin" type="MarginContainer" parent="TopBar"]
 anchor_right = 1.0
@@ -39,21 +39,21 @@ theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
 
 [node name="BiomassCounter" type="Label" parent="TopBar/Margin/ColumnLayout"]
-text = "0"
+text = "Biomass: 0"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 
 [node name="RateLabel" type="Label" parent="TopBar/Margin/ColumnLayout"]
 text = "0.0/s"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.55, 0.95, 0.55, 1)
 
 [node name="PoolsLabel" type="Label" parent="TopBar/Margin/ColumnLayout"]
-text = "N: 0  ·  B: 0  ·  D: 0"
+text = "Nutrients: 0  ·  B: 0  ·  Detritus: 0"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 11
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 
 [node name="PauseButton" type="Button" parent="."]

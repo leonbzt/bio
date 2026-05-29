@@ -147,6 +147,82 @@ class _StatusOverlay extends Node2D:
 		return COLOR_STARVING
 
 
+class _FlowOverlay extends Node2D:
+	# Per-resource directional arrows: producer → consumer, colored by the
+	# resource flowing along the edge. One arrow per (consumer species,
+	# input resource) pair — uses each species' first occupied tile as the
+	# representative anchor so the canvas doesn't get cluttered.
+	var tile_grid
+	const COLOR_NUTRIENTS: Color = Color(1.0, 0.85, 0.35, 0.7)
+	const COLOR_BIOMASS: Color = Color(0.55, 0.85, 0.40, 0.7)
+	const COLOR_DETRITUS: Color = Color(0.65, 0.45, 0.28, 0.7)
+	const ARROW_HEAD_PX: float = 7.0
+	const LINE_WIDTH: float = 2.0
+
+	func _draw() -> void:
+		if tile_grid == null:
+			return
+		var species_index: Dictionary = tile_grid._species_by_id
+		var rep: Dictionary[StringName, Vector2i] = {}
+		for coord in tile_grid._tile_occupants.keys():
+			var occupants: Dictionary = tile_grid._tile_occupants[coord]
+			for species_id in occupants.values():
+				var sid: StringName = species_id
+				if not rep.has(sid):
+					rep[sid] = coord
+		for consumer_id in rep.keys():
+			var consumer: SpeciesData = species_index.get(consumer_id, null)
+			if consumer == null or consumer.consume_input.is_empty():
+				continue
+			for input_v in consumer.consume_input.keys():
+				var input_rid: StringName = StringName(input_v)
+				for producer_id in rep.keys():
+					if producer_id == consumer_id:
+						continue
+					var producer: SpeciesData = species_index.get(producer_id, null)
+					if producer == null:
+						continue
+					if not _produces(producer, input_rid):
+						continue
+					_draw_arrow(
+						tile_grid.map_to_local(rep[producer_id]),
+						tile_grid.map_to_local(rep[consumer_id]),
+						_resource_color(input_rid)
+					)
+					break
+
+	func _produces(species: SpeciesData, rid: StringName) -> bool:
+		for k in species.tick_yield.keys():
+			if StringName(k) == rid:
+				return true
+		return false
+
+	func _resource_color(rid: StringName) -> Color:
+		if rid == &"nutrients":
+			return COLOR_NUTRIENTS
+		if rid == &"biomass":
+			return COLOR_BIOMASS
+		if rid == &"decay":
+			return COLOR_DETRITUS
+		return Color(0.7, 0.7, 0.7, 0.6)
+
+	func _draw_arrow(from: Vector2, to: Vector2, color: Color) -> void:
+		var dir: Vector2 = (to - from)
+		if dir.length_squared() < 4.0:
+			return
+		dir = dir.normalized()
+		var inset: float = tile_grid.TILE_SIZE * 0.38
+		var start: Vector2 = from + dir * inset
+		var end: Vector2 = to - dir * inset
+		draw_line(start, end, Color(0, 0, 0, 0.4), LINE_WIDTH + 1.5)
+		draw_line(start, end, color, LINE_WIDTH)
+		var perp: Vector2 = Vector2(-dir.y, dir.x)
+		var p1: Vector2 = end
+		var p2: Vector2 = end - dir * ARROW_HEAD_PX + perp * (ARROW_HEAD_PX * 0.55)
+		var p3: Vector2 = end - dir * ARROW_HEAD_PX - perp * (ARROW_HEAD_PX * 0.55)
+		draw_colored_polygon([p1, p2, p3], color)
+
+
 class _HaloOverlay extends Node2D:
 	var tile_grid
 
@@ -437,6 +513,7 @@ var _fog_overlay: _FogOverlay
 var _halo_overlay: _HaloOverlay
 var _bond_overlay: _BondOverlay
 var _status_overlay: _StatusOverlay
+var _flow_overlay: _FlowOverlay
 # VM-B1.5: single overlay drawing all organisms across the grid in world
 # coords with side-view sprites. Replaces per-tile cluster Node2Ds.
 var _organism_overlay: _OrganismScatterOverlay
@@ -512,6 +589,17 @@ func _ready() -> void:
 	# tiles that fall in the fog overlay's draw set.
 	_status_overlay.z_index = 5
 	_overlay_layer.add_child(_status_overlay)
+
+	_flow_overlay = _FlowOverlay.new()
+	_flow_overlay.name = "FlowOverlay"
+	_flow_overlay.tile_grid = self
+	# Same layer as the status dots; arrows draw below the dots so the
+	# throttle indicator stays the strongest read.
+	_flow_overlay.z_index = 5
+	_overlay_layer.add_child(_flow_overlay)
+	# Ensure the status overlay is drawn AFTER the flow overlay within the
+	# same z so dots overlap arrowheads, not the other way around.
+	_overlay_layer.move_child(_status_overlay, -1)
 
 	_fusion_overlay = _StructureFusionOverlay.new()
 	_fusion_overlay.name = "StructureFusion"
@@ -789,6 +877,8 @@ func _request_scatter_redraw() -> void:
 		_organism_overlay.queue_redraw()
 	if _status_overlay != null:
 		_status_overlay.queue_redraw()
+	if _flow_overlay != null:
+		_flow_overlay.queue_redraw()
 
 
 func _species_color(species_id: StringName) -> Color:
@@ -919,6 +1009,8 @@ func _on_tick_status_overlay(_delta: float) -> void:
 	_status_redraw_tick = 0
 	if _status_overlay != null:
 		_status_overlay.queue_redraw()
+	if _flow_overlay != null:
+		_flow_overlay.queue_redraw()
 
 
 func _get_growth_system() -> Node:

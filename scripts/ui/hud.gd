@@ -30,20 +30,21 @@ func _ready() -> void:
 
 
 func _install_resource_tooltips() -> void:
-	# Tooltips for the HUD labels. Labels default to MOUSE_FILTER_STOP in
-	# Godot 4 so tooltip_text is enough to wire them up.
+	# Short tooltips — long single-line text gets cut off by Godot's default
+	# tooltip width. Each line is wrapped manually so the popup stays
+	# readable.
 	if _biomass_label != null:
 		_biomass_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		_biomass_label.tooltip_text = "Hero biomass — your run's progress.\nGoal: 100,000. Drops when you place new species (placement cost). Cycle closure boosts production ×1.5."
+		_biomass_label.tooltip_text = "Lifetime hero biomass.\nGoal: 100,000.\nDrops when you place species."
 	if _rate_label != null:
 		_rate_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		_rate_label.tooltip_text = "Production per second.\nRises as the trophic web closes. Stalls when an input pool is empty."
+		_rate_label.tooltip_text = "Biomass per second.\nStalls when an input pool empties."
 	if _ecosystem_label != null:
 		_ecosystem_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		_ecosystem_label.tooltip_text = "Coal Swamp — a Carboniferous wetland.\nYour starting ecosystem."
+		_ecosystem_label.tooltip_text = "Coal Swamp\nCarboniferous wetland."
 	if _pools_label != null:
 		_pools_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		_pools_label.tooltip_text = "Internal trophic pools.\nN = nutrients (fungi produce, plants consume). B = biomass (plants produce, animals consume). D = detritus (animals/plant litter produce, fungi consume). Closing the cycle keeps all three flowing."
+		_pools_label.tooltip_text = "Trophic pools.\nNutrients: fungi → plants\nB: plants → animals\n   (the global biomass pool,\n    separate from hero biomass above)\nDetritus: waste → fungi"
 
 
 func _on_pause_pressed() -> void:
@@ -77,13 +78,13 @@ func _on_tick(_delta: float) -> void:
 		per_tick_avg += d
 	per_tick_avg /= float(maxi(1, _rate_history.size()))
 	var per_sec: float = per_tick_avg * TickClock.tick_hz
-	_biomass_label.text = FormatUtils.abbreviate(current)
+	_biomass_label.text = "Biomass: %s" % FormatUtils.abbreviate(current)
 	_rate_label.text = "+%.1f/s" % per_sec if per_sec > 0.0 else "0.0/s"
 	if _pools_label != null:
 		var n: float = ResourceLedger.get_amount(ResourceLedger.NUTRIENTS)
 		var b: float = ResourceLedger.get_amount(ResourceLedger.BIOMASS)
 		var d: float = ResourceLedger.get_amount(ResourceLedger.DECAY)
-		_pools_label.text = "N: %s  ·  B: %s  ·  D: %s" % [
+		_pools_label.text = "Nutrients: %s  ·  B: %s  ·  Detritus: %s" % [
 			FormatUtils.abbreviate(n), FormatUtils.abbreviate(b), FormatUtils.abbreviate(d)
 		]
 	_tick_flash = not _tick_flash

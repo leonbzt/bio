@@ -30,8 +30,6 @@ func evaluate(coord: Vector2i, species: SpeciesData) -> Dictionary:
 			return _rule_diagonal_only(coord, species)
 		&"gap_jumper":
 			return _rule_gap_jumper(coord, species)
-		&"corpse_only":
-			return _rule_corpse_only(coord, species)
 		&"recipe":
 			return _rule_recipe(coord, species)
 		_:
@@ -126,9 +124,6 @@ func _rule_fungi_substrate(coord: Vector2i, species: SpeciesData) -> Dictionary:
 
 	if territory.get_occupant(coord, &"plantae") != &"":
 		return _single(coord, species, _scaled_cost_with_traits(species), {})
-	if _is_corpse_at(coord):
-		return _single(coord, species, _scaled_cost_with_traits(species), {})
-
 	var owned_set: Dictionary = {}
 	for c in owned:
 		owned_set[c] = true
@@ -277,19 +272,6 @@ func _rule_gap_jumper(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	return _single(coord, species, cost, {})
 
 
-func _rule_corpse_only(coord: Vector2i, species: SpeciesData) -> Dictionary:
-	var territory: Node = _get_territory()
-	if territory == null:
-		return _invalid()
-	var kingdom_id: StringName = species.kingdom_id
-	if territory.get_occupant(coord, kingdom_id) != &"":
-		return _invalid()
-	if not _is_corpse_at(coord):
-		return _invalid()
-	var cost: Dictionary = _scaled_cost(species)
-	return _single(coord, species, cost, {})
-
-
 func _rule_recipe(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	if species.recipe_components.is_empty():
 		push_warning("Recipe species %s has no components" % String(species.id))
@@ -363,18 +345,6 @@ func _get_obstacle_system() -> Node:
 		return null
 	return tree.root.get_node_or_null("World/Systems/ObstacleSystem")
 
-
-func _get_corpses() -> Node:
-	return get_tree().root.get_node_or_null("World/Systems/CorpseSystem")
-
-
-func _is_corpse_at(coord: Vector2i) -> bool:
-	var corpses: Node = _get_corpses()
-	if corpses == null:
-		return false
-	if corpses.has_method("is_corpse_at"):
-		return corpses.is_corpse_at(coord)
-	return false
 
 
 func _apply_trait_cost_modifiers(cost: Dictionary, species: SpeciesData) -> Dictionary:

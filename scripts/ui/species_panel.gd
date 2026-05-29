@@ -162,9 +162,6 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 	# shows full info + Latin + level + cost. Selected = bright outer border.
 	# ▲ corner badge if evolvable.
 	var btn := Button.new()
-	var current_level: int = AdaptationSystem.get_level(species.id)
-	var can_evolve: bool = AdaptationSystem.can_level_up(species.id)
-	var next_cost: float = AdaptationSystem.get_next_level_cost(species.id)
 	var is_active: bool = (GameState.placement_target_species_id == species.id)
 
 	var kingdom_tex: Texture2D = _kingdom_icon(species.kingdom_id)
@@ -172,18 +169,12 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 		btn.text = species.display_name.substr(0, 1) if species.display_name != "" else "?"
 	else:
 		btn.text = ""
-	# 48×48 instead of 36×36 — wider hit zone so the cursor doesn't fall off
-	# the button while the user is still reading the tooltip.
 	btn.custom_minimum_size = Vector2(48, 48)
-	btn.tooltip_text = "%s\n%s\n\n%s\n\nLvl %d/3 (+%d%% yield)" % [
+	btn.tooltip_text = "%s\n%s\n\n%s" % [
 		species.display_name,
 		species.latin_name if species.latin_name != "" else "",
-		species.description if species.description != "" else "",
-		current_level,
-		int((current_level - 1) * 10)
+		species.description if species.description != "" else ""
 	]
-	if next_cost >= 0.0:
-		btn.tooltip_text += "\nLong-press to evolve (%.0f Adaptation)" % next_cost
 
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = species.tile_marker_color.darkened(0.30 if not is_active else 0.05)
@@ -213,54 +204,11 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		btn.add_child(icon)
 
-	# Evolve-ready ▲ corner badge. Lives as a child so it survives both the
-	# icon and the letter-glyph paths.
-	if can_evolve:
-		var badge := Label.new()
-		badge.text = "▲"
-		badge.add_theme_color_override("font_color", Color(1.0, 1.0, 0.6))
-		badge.add_theme_font_size_override("font_size", 10)
-		badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		badge.offset_left = -12
-		badge.offset_top = -2
-		badge.offset_right = -2
-		badge.offset_bottom = 12
-		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		btn.add_child(badge)
-
-	# Tap = select as placement target. Double-tap or right-click = evolve.
 	btn.pressed.connect(func() -> void:
-		# If already active AND evolvable, treat the tap as an evolve action.
-		# Otherwise, just select.
-		if is_active and can_evolve:
-			_open_evolve_modal(species)
-			return
 		GameState.placement_target_species_id = species.id
 		EventBus.placement_target_changed.emit(String(species.id))
-		# _refresh() runs via the placement_target_changed subscription.
-	)
-	# Right-click as evolve shortcut on desktop.
-	btn.gui_input.connect(func(event: InputEvent) -> void:
-		if event is InputEventMouseButton:
-			var mb: InputEventMouseButton = event
-			if mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT and can_evolve:
-				_open_evolve_modal(species)
 	)
 	return btn
-
-
-func _open_evolve_modal(species: SpeciesData) -> void:
-	var scene: PackedScene = load("res://scenes/ui/evolve_modal.tscn") as PackedScene
-	if scene == null:
-		return
-	var modal: Node = scene.instantiate()
-	if modal.has_method("setup"):
-		modal.setup(species)
-	var parent: Node = get_parent()
-	if parent != null:
-		parent.add_child(modal)
-	else:
-		add_child(modal)
 
 
 func _build_available_row(species: SpeciesData) -> Control:

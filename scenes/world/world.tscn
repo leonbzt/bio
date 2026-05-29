@@ -11,14 +11,8 @@
 [ext_resource type="Script" path="res://scripts/systems/growth_system.gd" id="7"]
 [ext_resource type="Script" path="res://scripts/systems/structure_registry.gd" id="18"]
 [ext_resource type="Script" path="res://scripts/systems/offline_progress.gd" id="8"]
-[ext_resource type="Script" path="res://scripts/systems/ecological_pressure.gd" id="9"]
-[ext_resource type="Script" path="res://scripts/systems/herbivore_manager.gd" id="10"]
-[ext_resource type="PackedScene" path="res://scenes/organisms/herbivore.tscn" id="11"]
-[ext_resource type="Script" path="res://scripts/systems/ability_system.gd" id="12"]
 [ext_resource type="Script" path="res://scripts/systems/run_stats_tracker.gd" id="13"]
 [ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="15"]
-[ext_resource type="Script" path="res://scripts/systems/corpse_system.gd" id="17"]
-[ext_resource type="Script" path="res://scripts/systems/spore_infection_handler.gd" id="19"]
 [ext_resource type="Script" path="res://scripts/systems/ambient_modifier_system.gd" id="20"]
 [ext_resource type="Script" path="res://scripts/ui/era_background_tint.gd" id="21"]
 [ext_resource type="Script" path="res://scripts/systems/cluster_income_tracker.gd" id="22"]
@@ -60,24 +54,8 @@ script = ExtResource("7")
 [node name="StructureRegistry" type="Node" parent="Systems"]
 script = ExtResource("18")
 
-[node name="EcologicalPressure" type="Node" parent="Systems"]
-script = ExtResource("9")
-
-[node name="HerbivoreManager" type="Node" parent="Systems"]
-script = ExtResource("10")
-herbivore_scene = ExtResource("11")
-
-[node name="CorpseSystem" type="Node" parent="Systems"]
-script = ExtResource("17")
-
-[node name="SporeInfectionHandler" type="Node" parent="Systems"]
-script = ExtResource("19")
-
 [node name="AmbientModifierSystem" type="Node" parent="Systems"]
 script = ExtResource("20")
-
-[node name="AbilitySystem" type="Node" parent="Systems"]
-script = ExtResource("12")
 
 [node name="OfflineProgress" type="Node" parent="Systems"]
 script = ExtResource("8")

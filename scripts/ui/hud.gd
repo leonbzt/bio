@@ -22,6 +22,7 @@ func _ready() -> void:
 	EventBus.run_started.connect(_on_run_started)
 	EventBus.run_loaded.connect(_on_run_loaded)
 	EventBus.cycle_closed.connect(_on_cycle_closed)
+	EventBus.goal_met.connect(_on_goal_met)
 	_install_resource_tooltips()
 	_refresh_ecosystem_name()
 	_last_lifetime_biomass = GameState.get_hero_biomass()
@@ -94,10 +95,34 @@ func _on_tick(_delta: float) -> void:
 
 
 func _on_cycle_closed() -> void:
+	var top_bar: Control = $TopBar
 	var tween: Tween = create_tween()
-	tween.tween_property(_biomass_label, "modulate", Color(1.3, 1.15, 0.6), 0.3)
-	tween.tween_interval(1.4)
-	tween.tween_property(_biomass_label, "modulate", Color(1.0, 1.0, 1.0), 0.3)
+	tween.tween_property(top_bar, "modulate", Color(1.5, 1.3, 0.4), 0.15)
+	tween.tween_property(top_bar, "modulate", Color(1.0, 1.0, 0.85), 0.15)
+	tween.tween_property(top_bar, "modulate", Color(1.5, 1.3, 0.4), 0.15)
+	tween.tween_interval(1.2)
+	tween.tween_property(top_bar, "modulate", Color(1.0, 1.0, 1.0), 0.4)
+
+
+func _on_goal_met() -> void:
+	TickClock.pause()
+	var tween: Tween = create_tween()
+	tween.tween_interval(2.0)
+	tween.tween_callback(_open_prestige_screen)
+
+
+func _open_prestige_screen() -> void:
+	const PRESTIGE_SCENE_PATH: String = "res://scenes/ui/prestige_screen.tscn"
+	var packed: PackedScene = load(PRESTIGE_SCENE_PATH) as PackedScene
+	if packed == null:
+		return
+	var screen: Control = packed.instantiate() as Control
+	var prestige_system: Node = get_tree().get_first_node_in_group("prestige_system")
+	if prestige_system == null:
+		prestige_system = get_node_or_null("/root/PrestigeSystem")
+	if screen.has_method("setup") and prestige_system != null:
+		screen.setup(prestige_system)
+	get_parent().add_child(screen)
 
 
 func _refresh_ecosystem_name() -> void:

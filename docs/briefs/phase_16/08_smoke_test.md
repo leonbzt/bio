@@ -21,14 +21,14 @@
 1. Place a single Calamites cluster on a wetland tile.
 2. Watch the HUD biomass counter for 30 seconds.
 
-**Expect**: Counter climbs by ~60 (~2/s × 30s). Rate label shows ~`+2.0/s`. Cluster status dot is green. no rate label is there, there is no cluster status dot.
+**Expect**: Counter climbs by ~60 (~2/s × 30s). Rate label shows ~`+2.0/s`. Cluster status dot is green.
 
 ## Test 3 — Nutrient bottleneck
 
 1. After test 2, keep playing without placing Mycorrhizal Network.
 2. Watch the nutrients pool deplete (initial 50 − 1/s × ~50s = empty). 
 
-**Expect**: At ~50s mark, Calamites' status dot turns yellow then red. Counter rate drops toward 0. `unlock_mycorrhizal` checkpoint fires; onboarding bubble appears. leon: it fired really eraly, no status dot, 
+**Expect**: At ~50s mark, Calamites' status dot turns yellow then red. Counter rate drops toward 0. `unlock_mycorrhizal` checkpoint fires; onboarding bubble appears.
 
 ## Test 4 — First support + cycle bootstrap
 
@@ -44,14 +44,14 @@
 
 1. Place Arthropleura.
 
-**Expect**: Hero biomass dips by 50. All 3 species placed + feeding pools. After ~5 ticks of stable flow, `cycle_closed` fires — HUD pulses gold for 2s. Rate climbs ~50% (×1.5 multiplier). # i didnt see gold pulses and cycle closed
+**Expect**: Hero biomass dips by 50. All 3 species placed + feeding pools. After ~5 ticks of stable flow, `cycle_closed` fires — HUD top bar double-flashes gold for 2s. Rate climbs ~50% (×1.5 multiplier). # FIXED: gold pulse was too subtle (only biomass label modulate); now flashes entire top bar twice
 
 ## Test 6 — Run end
 
 1. Continue idle play (or active placement of more clusters).
 2. Wait until hero biomass reaches 100,000.
 
-**Expect**: `run_complete` checkpoint fires. Prestige screen appears showing biomass, reproductions, cycle closed (yes), evolution earned (1050). #didn't fire on 100k
+**Expect**: `run_complete` checkpoint fires. Game pauses, then prestige screen auto-opens after 2s showing biomass, reproductions, cycle closed (yes), evolution earned (1050). # FIXED: prestige screen now auto-opens on goal_met
 
 3. Click "Begin next run".
 

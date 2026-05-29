@@ -339,9 +339,7 @@ func _match_area_on_biome(params: Dictionary) -> Array:
 	var h: int = int(params.get("height", 2))
 	var kingdom_id: StringName = StringName(params.get("kingdom_id", ""))
 	var biome_id: StringName = StringName(params.get("biome_id", ""))
-	var require_corpse_adj: bool = bool(params.get("require_adjacent_corpse", false))
 	var nutrients: Node = get_node_or_null("../NutrientSystem")
-	var corpses: Node = get_node_or_null("../CorpseSystem")
 	var out: Array = []
 	for y in range(_tile_grid.GRID_HEIGHT - h + 1):
 		for x in range(_tile_grid.GRID_WIDTH - w + 1):
@@ -369,27 +367,11 @@ func _match_area_on_biome(params: Dictionary) -> Array:
 					coords.append(c)
 				if not ok:
 					break
-			if ok and require_corpse_adj:
-				ok = _has_adjacent_corpse(coords, corpses)
 			if ok:
 				out.append({"anchor": anchor, "tiles": coords})
 	return out
 
 
-func _has_adjacent_corpse(coords: Array[Vector2i], corpses: Node) -> bool:
-	if corpses == null or not corpses.has_method("is_corpse_at"):
-		return false
-	var coord_set: Dictionary = {}
-	for c in coords:
-		coord_set[c] = true
-	for c in coords:
-		for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			var n: Vector2i = c + offset
-			if coord_set.has(n):
-				continue
-			if corpses.is_corpse_at(n):
-				return true
-	return false
 
 
 func _bonus_mycorrhizal_hub(entry: Dictionary, apply: bool) -> void:

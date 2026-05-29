@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
 [ext_resource type="Theme" path="res://assets/ui/theme.tres" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/ui/species_panel.tscn" id="3"]
+[ext_resource type="Script" path="res://scripts/ui/tooltip_label.gd" id="4"]
 
 [node name="HUD" type="Control"]
 anchor_right = 1.0
@@ -23,7 +24,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 theme_override_constants/margin_left = 8
 theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 8
+theme_override_constants/margin_right = 64
 theme_override_constants/margin_bottom = 8
 
 [node name="ColumnLayout" type="VBoxContainer" parent="TopBar/Margin"]
@@ -43,18 +44,21 @@ text = "Biomass: 0"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(1, 1, 1, 1)
+script = ExtResource("4")
 
 [node name="RateLabel" type="Label" parent="TopBar/Margin/ColumnLayout"]
 text = "0.0/s"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.55, 0.95, 0.55, 1)
+script = ExtResource("4")
 
 [node name="PoolsLabel" type="Label" parent="TopBar/Margin/ColumnLayout"]
-text = "Nutrients: 0  ·  B: 0  ·  Detritus: 0"
+text = "N: 0  ·  B: 0  ·  D: 0"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 11
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+script = ExtResource("4")
 
 [node name="PauseButton" type="Button" parent="."]
 anchor_left = 1.0

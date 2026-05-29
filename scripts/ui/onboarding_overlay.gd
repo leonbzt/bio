@@ -144,7 +144,10 @@ func _dismiss_if_queued(id: StringName) -> void:
 
 
 func _hide_overlay() -> void:
-	queue_free()
+	# Don't queue_free — the next checkpoint_triggered would have nowhere
+	# to land. Hide and stay alive; _refresh will flip us visible again
+	# when a new bubble joins the queue.
+	visible = false
 
 
 func _refresh() -> void:

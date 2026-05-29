@@ -87,19 +87,22 @@ func _fire(id: StringName) -> void:
 	SaveSystem.save_now()
 
 
+const MIN_BIOMASS_MYCORRHIZAL: float = 36.0  # 30 introduce + 6 colonize
+const MIN_BIOMASS_ARTHROPLEURA: float = 58.0  # 50 introduce + 8 colonize
+
+
 func _unlock_mycorrhizal_ready() -> bool:
-	# Fire as soon as the player dismisses the place_hero bubble (i.e., placed
-	# their first Calamites). Earlier biomass thresholds either fired too
-	# instantly or never — chaining to the prior bubble's dismissal gives a
-	# clean "one hint at a time" cadence. Starvation kept as a fallback in
-	# case the player ignores the bubbles entirely.
-	if _prereq_dismissed(CHECKPOINT_PLACE_HERO):
+	# Fire after the player dismissed the place_hero bubble AND has enough
+	# biomass to actually introduce + place mycorrhizal. Earlier rounds
+	# fired the bubble before the player could act on it, which felt
+	# broken. Starvation fallback covers players who ignore prompts.
+	if _prereq_dismissed(CHECKPOINT_PLACE_HERO) and GameState.get_hero_biomass() >= MIN_BIOMASS_MYCORRHIZAL:
 		return true
 	return _age_starvation(CHECKPOINT_UNLOCK_MYCORRHIZAL, ResourceLedger.NUTRIENTS, _short_grace_ticks())
 
 
 func _unlock_arthropleura_ready() -> bool:
-	if _prereq_dismissed(CHECKPOINT_UNLOCK_MYCORRHIZAL):
+	if _prereq_dismissed(CHECKPOINT_UNLOCK_MYCORRHIZAL) and GameState.get_hero_biomass() >= MIN_BIOMASS_ARTHROPLEURA:
 		return true
 	return _age_starvation(CHECKPOINT_UNLOCK_ARTHROPLEURA, ResourceLedger.DECAY, _short_grace_ticks())
 

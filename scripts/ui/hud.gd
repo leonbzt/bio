@@ -44,7 +44,7 @@ func _install_resource_tooltips() -> void:
 		_ecosystem_label.tooltip_text = "Coal Swamp\nCarboniferous wetland."
 	if _pools_label != null:
 		_pools_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		_pools_label.tooltip_text = "Trophic pools.\nNutrients: fungi → plants\nB: plants → animals\n   (the global biomass pool,\n    separate from hero biomass above)\nDetritus: waste → fungi"
+		_pools_label.tooltip_text = "Trophic pools. N = Nutrients (fungi feed plants). B = Biomass pool (plants feed animals — distinct from the hero Biomass counter above). D = Detritus (waste feeds fungi)."
 
 
 func _on_pause_pressed() -> void:
@@ -84,7 +84,9 @@ func _on_tick(_delta: float) -> void:
 		var n: float = ResourceLedger.get_amount(ResourceLedger.NUTRIENTS)
 		var b: float = ResourceLedger.get_amount(ResourceLedger.BIOMASS)
 		var d: float = ResourceLedger.get_amount(ResourceLedger.DECAY)
-		_pools_label.text = "Nutrients: %s  ·  B: %s  ·  Detritus: %s" % [
+		# Abbreviated labels keep the row from clipping on narrow viewports.
+		# Full names live in the tooltip.
+		_pools_label.text = "N: %s  ·  B: %s  ·  D: %s" % [
 			FormatUtils.abbreviate(n), FormatUtils.abbreviate(b), FormatUtils.abbreviate(d)
 		]
 	_tick_flash = not _tick_flash

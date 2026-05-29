@@ -27,6 +27,21 @@ var _queue: Array[StringName] = []
 var _processed: Dictionary[StringName, bool] = {}
 
 
+func _load_dismissed() -> Dictionary:
+	# Persistent record of bubbles the player has dismissed. Distinct from
+	# CheckpointSystem's "fired" set: a checkpoint can be fired (the system
+	# recorded it) without having been seen yet (overlay loaded later in
+	# the frame). Only re-show on reload if NOT in dismissed.
+	return GameState.run_save.get("checkpoints_dismissed", {}) as Dictionary
+
+
+func _mark_dismissed(id: StringName) -> void:
+	var dismissed: Dictionary = _load_dismissed()
+	dismissed[String(id)] = true
+	GameState.run_save["checkpoints_dismissed"] = dismissed
+	SaveSystem.save_now()
+
+
 static func should_show() -> bool:
 	return true
 
@@ -51,14 +66,20 @@ func _ready() -> void:
 		_processed[&"unlock_mycorrhizal"] = true
 	if in_run.has("arthropleura"):
 		_processed[&"unlock_arthropleura"] = true
-	# Mark previously-fired checkpoints as processed instead of re-queuing
-	# them. If the player saw and dismissed the bubble in a prior session,
-	# loading the save shouldn't re-show the same hint. Live checkpoint_triggered
-	# signals fired this session still bubble normally.
+	# Replay fired-but-not-dismissed checkpoints. CheckpointSystem may fire a
+	# checkpoint (e.g. place_hero on run_started) before this overlay is even
+	# instantiated, so the live signal is missed. Loading from save here is
+	# the catch-up path. Already-dismissed checkpoints are marked processed
+	# instead, so they don't re-show across sessions.
 	var fired: Dictionary = GameState.run_save.get("checkpoints_fired", {}) as Dictionary
+	var dismissed: Dictionary = _load_dismissed()
 	for id in CHECKPOINT_ORDER:
-		if bool(fired.get(String(id), false)):
+		if not bool(fired.get(String(id), false)):
+			continue
+		if bool(dismissed.get(String(id), false)):
 			_processed[id] = true
+		else:
+			_on_checkpoint_triggered(id, {})
 	_refresh()
 
 
@@ -94,6 +115,7 @@ func _dismiss_current() -> void:
 		return
 	var id: StringName = _queue.pop_front()
 	_processed[id] = true
+	_mark_dismissed(id)
 	_refresh()
 
 
@@ -101,6 +123,7 @@ func _complete_checkpoint(id: StringName) -> void:
 	if _queue.has(id):
 		_queue.erase(id)
 	_processed[id] = true
+	_mark_dismissed(id)
 	_refresh()
 
 
@@ -112,6 +135,7 @@ func _dismiss_if_queued(id: StringName) -> void:
 		return
 	_queue.erase(id)
 	_processed[id] = true
+	_mark_dismissed(id)
 	_refresh()
 
 

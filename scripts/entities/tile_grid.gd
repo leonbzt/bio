@@ -132,11 +132,11 @@ class _StatusOverlay extends Node2D:
 			var species_id: StringName = species_ids[0]
 			var throttle: float = float(growth.get_species_throttle(species_id))
 			var color: Color = _status_color(throttle)
-			# Big, central, high-contrast dot. Earlier "tiny corner pip" was
-			# easy to miss on a busy biome. Sits above species sprite + fog.
-			var radius: float = 11.0 if species_id == &"calamites" else 9.0
-			var center: Vector2 = tile_grid.map_to_local(coord) + Vector2(0.0, -tile_grid.TILE_SIZE * 0.28)
-			draw_circle(center, radius + 3.0, OUTLINE)
+			# Discreet dot above the species sprite. Dialed back from round-2
+			# size (radius 11/9) after the dots dominated the tile.
+			var radius: float = 5.0 if species_id == &"calamites" else 4.0
+			var center: Vector2 = tile_grid.map_to_local(coord) + Vector2(0.0, -tile_grid.TILE_SIZE * 0.34)
+			draw_circle(center, radius + 1.5, OUTLINE)
 			draw_circle(center, radius, color)
 
 	func _status_color(throttle: float) -> Color:

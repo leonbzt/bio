@@ -103,10 +103,14 @@ func _on_tile_colonized(_coord: Vector2i, owner_id: StringName) -> void:
 
 
 func _on_species_introduced(species_id: StringName) -> void:
+	# Only complete the unlock checkpoint if the bubble is currently visible.
+	# Earlier we'd pre-empt it when the species was introduced manually,
+	# but that meant a player exploring the species panel before the
+	# checkpoint fired would permanently suppress the future bubble.
 	if species_id == &"mycorrhizal_network":
-		_complete_checkpoint(&"unlock_mycorrhizal")
+		_dismiss_if_queued(&"unlock_mycorrhizal")
 	elif species_id == &"arthropleura":
-		_complete_checkpoint(&"unlock_arthropleura")
+		_dismiss_if_queued(&"unlock_arthropleura")
 
 
 func _dismiss_current() -> void:

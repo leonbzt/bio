@@ -5,6 +5,7 @@ const RATE_WINDOW_TICKS: int = 10
 @onready var _ecosystem_label: Label = $TopBar/Margin/ColumnLayout/EcosystemNameLabel
 @onready var _biomass_label: Label = $TopBar/Margin/ColumnLayout/BiomassCounter
 @onready var _rate_label: Label = $TopBar/Margin/ColumnLayout/RateLabel
+@onready var _pools_label: Label = $TopBar/Margin/ColumnLayout/PoolsLabel
 @onready var _pause_button: Button = $PauseButton
 @onready var _tick_indicator: ColorRect = $TickIndicator
 @onready var _pause_menu: Control = get_node("../PauseMenu")
@@ -40,6 +41,9 @@ func _install_resource_tooltips() -> void:
 	if _ecosystem_label != null:
 		_ecosystem_label.mouse_filter = Control.MOUSE_FILTER_STOP
 		_ecosystem_label.tooltip_text = "Coal Swamp — a Carboniferous wetland.\nYour starting ecosystem."
+	if _pools_label != null:
+		_pools_label.mouse_filter = Control.MOUSE_FILTER_STOP
+		_pools_label.tooltip_text = "Internal trophic pools.\nN = nutrients (fungi produce, plants consume). B = biomass (plants produce, animals consume). D = detritus (animals/plant litter produce, fungi consume). Closing the cycle keeps all three flowing."
 
 
 func _on_pause_pressed() -> void:
@@ -75,6 +79,13 @@ func _on_tick(_delta: float) -> void:
 	var per_sec: float = per_tick_avg * TickClock.tick_hz
 	_biomass_label.text = FormatUtils.abbreviate(current)
 	_rate_label.text = "+%.1f/s" % per_sec if per_sec > 0.0 else "0.0/s"
+	if _pools_label != null:
+		var n: float = ResourceLedger.get_amount(ResourceLedger.NUTRIENTS)
+		var b: float = ResourceLedger.get_amount(ResourceLedger.BIOMASS)
+		var d: float = ResourceLedger.get_amount(ResourceLedger.DECAY)
+		_pools_label.text = "N: %s  ·  B: %s  ·  D: %s" % [
+			FormatUtils.abbreviate(n), FormatUtils.abbreviate(b), FormatUtils.abbreviate(d)
+		]
 	_tick_flash = not _tick_flash
 	_tick_indicator.color = Color(0.9, 0.9, 0.9, 1.0) if _tick_flash else Color(0.45, 0.45, 0.45, 1.0)
 

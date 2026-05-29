@@ -90,16 +90,22 @@ func _fire(id: StringName) -> void:
 func _unlock_mycorrhizal_ready() -> bool:
 	var hero_biomass: float = GameState.get_hero_biomass()
 	var starvation: bool = _age_starvation(CHECKPOINT_UNLOCK_MYCORRHIZAL, ResourceLedger.NUTRIENTS, _short_grace_ticks())
-	# Threshold tuned 2026-05-28: 50 fired in ~25s and felt instant; 150
-	# still fired before the player had absorbed the first bubble. 300 ≈
-	# 2.5 min at base 2.0 B/s throughput.
-	return hero_biomass >= 300.0 or starvation
+	# Tuned 2026-05-29: 300 was unreachable for many runs — Calamites'
+	# initial 50-nutrient buffer caps biomass around 100 before throttling,
+	# so we'd only ever fire via the starvation path. 100 lets the bubble
+	# fire via the biomass path while still feeling earned (~50 s of
+	# uninterrupted production).
+	return hero_biomass >= 100.0 or starvation
 
 
 func _unlock_arthropleura_ready() -> bool:
 	var hero_biomass: float = GameState.get_hero_biomass()
 	var starvation: bool = _age_starvation(CHECKPOINT_UNLOCK_ARTHROPLEURA, ResourceLedger.DECAY, _short_grace_ticks())
-	return hero_biomass >= 1500.0 or starvation
+	# Tuned 2026-05-29: 1500 unreachable without arthropleura already in the
+	# loop (D pool stalls Mycorrhizal once Calamites' litter is the only
+	# source). 300 is achievable after Mycorrhizal lets Calamites resume
+	# full throughput for a stretch.
+	return hero_biomass >= 300.0 or starvation
 
 
 func _bottleneck_nutrients_ready() -> bool:

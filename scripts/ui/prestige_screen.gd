@@ -8,10 +8,6 @@ extends Control
 @onready var _starter_label: Label = $Content/SummarySection/StarterLabel
 @onready var _confirm_button: Button = $Content/SummarySection/ConfirmPrestigeButton
 @onready var _tree_canvas: Control = $Content/TreeSection/TreeScroll/TreeCanvas
-@onready var _legacy_balance: Control = get_node_or_null("Content/TreeSection/BalanceLabel") as Control
-@onready var _legacy_tabs: Control = get_node_or_null("Content/TreeSection/WingTabs") as Control
-@onready var _legacy_close: Control = get_node_or_null("Content/TreeSection/CloseButton") as Control
-@onready var _summary_title: Label = get_node_or_null("Content/SummarySection/SummaryTitle") as Label
 
 var _prestige_system: Node = null
 
@@ -22,14 +18,6 @@ func _ready() -> void:
 	_confirm_button.text = "Begin next run"
 	_confirm_button.pressed.connect(_on_begin_next_run_pressed)
 	_tree_section.visible = true
-	if _summary_title != null:
-		_summary_title.text = "Run complete"
-	if _legacy_balance != null:
-		_legacy_balance.visible = false
-	if _legacy_tabs != null:
-		_legacy_tabs.visible = false
-	if _legacy_close != null:
-		_legacy_close.visible = false
 	_refresh_summary()
 	_refresh_history()
 
@@ -44,7 +32,6 @@ func _on_begin_next_run_pressed() -> void:
 	if _prestige_system.has_method("trigger_prestige"):
 		_prestige_system.trigger_prestige()
 	GameState.auto_start_run = true
-	TickClock.resume()
 	get_tree().change_scene_to_file("res://scenes/main/main_menu.tscn")
 
 

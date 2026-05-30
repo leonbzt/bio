@@ -50,12 +50,8 @@ func _rule_adjacent_empty(coord: Vector2i, species: SpeciesData) -> Dictionary:
 		return _invalid()
 
 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
-	# Phase 14a: pioneer-tagged species can start and spread without adjacency.
 	if species.tags.has(&"pioneer"):
 		var pioneer_cost: Dictionary = _scaled_cost(species) if not owned.is_empty() else species.colonize_cost.duplicate()
-		if MetaModifiers.is_unlocked(&"thrifty_growth"):
-			for k in pioneer_cost.keys():
-				pioneer_cost[k] = maxf(0.0, float(pioneer_cost[k]) - 1.0)
 		if owned.is_empty():
 			pioneer_cost = {}
 		return {
@@ -85,9 +81,6 @@ func _rule_adjacent_empty(coord: Vector2i, species: SpeciesData) -> Dictionary:
 			return _invalid()
 
 	var cost: Dictionary = _scaled_cost(species) if not owned.is_empty() else species.colonize_cost.duplicate()
-	if MetaModifiers.is_unlocked(&"thrifty_growth"):
-		for k in cost.keys():
-			cost[k] = maxf(0.0, float(cost[k]) - 1.0)
 	if owned.is_empty():
 		cost = {}
 	return {
@@ -131,12 +124,6 @@ func _rule_fungi_substrate(coord: Vector2i, species: SpeciesData) -> Dictionary:
 		if owned_set.has(offset):
 			return _single(coord, species, _scaled_cost_with_traits(species), {})
 
-	if MetaModifiers.is_unlocked(&"spore_distribution"):
-		var charges: int = _get_spore_distribution_charges()
-		if charges > 0 and _has_line_of_sight(coord, owned):
-			_set_spore_distribution_charges(charges - 1)
-			return _single(coord, species, _scaled_cost_with_traits(species), {})
-
 	return _invalid()
 
 
@@ -160,9 +147,6 @@ func _rule_parasitic_plantae(coord: Vector2i, species: SpeciesData) -> Dictionar
 	if not has_neighbor:
 		return _invalid()
 	var cost: Dictionary = _scaled_cost(species)
-	if MetaModifiers.is_unlocked(&"thrifty_growth"):
-		for k in cost.keys():
-			cost[k] = maxf(0.0, float(cost[k]) - 1.0)
 	return _single(coord, species, cost, {"parasite_decay_ticks": 30})
 
 
@@ -231,9 +215,6 @@ func _rule_diagonal_only(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	if not has_diag:
 		return _invalid()
 	var cost: Dictionary = _scaled_cost(species)
-	if MetaModifiers.is_unlocked(&"thrifty_growth"):
-		for k in cost.keys():
-			cost[k] = maxf(0.0, float(cost[k]) - 1.0)
 	return _single(coord, species, cost, {})
 
 
@@ -358,24 +339,6 @@ func _apply_trait_cost_modifiers(cost: Dictionary, species: SpeciesData) -> Dict
 	for key in cost.keys():
 		cost[key] = maxf(0.0, float(cost[key]) * (1.0 + total_modifier))
 	return cost
-
-
-func _get_spore_distribution_charges() -> int:
-	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
-	return int(run.get("spore_distribution_charges", 0))
-
-
-func _set_spore_distribution_charges(value: int) -> void:
-	if GameState.run_save is Dictionary:
-		GameState.run_save["spore_distribution_charges"] = maxi(0, value)
-		SaveSystem.save_now()
-
-
-func _has_line_of_sight(coord: Vector2i, owned: Array[Vector2i]) -> bool:
-	for c in owned:
-		if c.x == coord.x or c.y == coord.y:
-			return true
-	return false
 
 
 func _species_lookup(species_id: StringName) -> SpeciesData:

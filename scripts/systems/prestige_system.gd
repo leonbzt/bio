@@ -92,7 +92,6 @@ func start_run(species: SpeciesData) -> void:
 	run["starting_species_id"] = String(species.id)
 	run["unlocked_species_in_run"] = [String(species.id)]
 	run["starting_species_kingdom_id"] = String(species.kingdom_id)
-	run["spore_distribution_charges"] = 3 if MetaModifiers.is_unlocked(&"spore_distribution") else 0
 	GameState.run_save = run
 	GameState.run_seed = randi()
 	GameState.is_run_active = true

@@ -26,7 +26,6 @@ var _closure_ticks_held: int = 0
 func _ready() -> void:
 	_load_species_index()
 	EventBus.tick.connect(_on_tick)
-	EventBus.ability_used.connect(_on_ability_used)
 	EventBus.run_started.connect(_on_run_started)
 
 
@@ -78,13 +77,7 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 		base_mult *= 1.5
 	var kingdom_id: StringName = species.kingdom_id
 	var trait_mods: Dictionary = _compute_trait_modifiers(species)
-	var meta_mult: float = _get_meta_growth_multiplier() if kingdom_id == &"plantae" else 1.0
-	var extra_biomass: float = 0.0
 	var produced_hero_biomass: float = 0.0
-	if MetaModifiers.is_unlocked(&"endophytic_bridge"):
-		for coord in coords:
-			if _is_endophytic_partner(coord, kingdom_id):
-				extra_biomass += 0.2
 
 	for resource_id in species.tick_yield.keys():
 		var resource_key: StringName = StringName(resource_id)
@@ -113,28 +106,16 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 					per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
 					if biome.chemosynthesis_per_tick > 0.0:
 						per_tile *= (1.0 + biome.chemosynthesis_per_tick)
-						if MetaModifiers.is_unlocked(&"chemosynthetic_pathway"):
-							per_tile *= 1.5
 					if _is_tile_mycorrhizal_bonded(coord):
 						per_tile *= 1.20
 					affinity_mult = float(species.biome_affinity.get(biome.id, 1.0))
 					affinity_biome_id = biome.id
 					per_tile *= affinity_mult
 				else:
-					var local_sun_mult := sun_mult
-					if _is_tile_warmed(coord) and _ambient.has_method("get_event_multiplier"):
-						var cool_mult: float = float(_ambient.get_event_multiplier(&"cool_spell", &"sunlight_multiplier"))
-						if cool_mult > 0.0:
-							local_sun_mult = sun_mult / cool_mult
-					per_tile *= biome.sunlight_per_tick * local_sun_mult
+					per_tile *= biome.sunlight_per_tick * sun_mult
 					if biome.chemosynthesis_per_tick > 0.0:
 						per_tile += base_yield * base_mult * biome.chemosynthesis_per_tick * 0.5
 					per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
-					per_tile *= meta_mult
-					if MetaModifiers.is_unlocked(&"vascular_network") and _count_adjacent_owned_by_kingdom(coord, &"plantae") >= 4:
-						per_tile *= 1.25
-					if kingdom_id == &"plantae" and MetaModifiers.is_unlocked(&"soil_memory"):
-						per_tile *= 1.15
 					if _is_tile_mycorrhizal_bonded(coord):
 						per_tile *= 1.20
 					affinity_mult = float(species.biome_affinity.get(biome.id, 1.0))
@@ -147,8 +128,6 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 					if bool(_territory.get_tile_data(coord, "structure_fern_grove", false)):
 						per_tile *= 1.30
 				per_tile *= biomass_mult
-				if MetaModifiers.is_unlocked(&"extinction_survivor"):
-					per_tile *= 1.10
 			elif resource_key == &"decay":
 				per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
 				if _is_tile_mycorrhizal_bonded(coord):
@@ -159,9 +138,7 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 			if resource_key == &"biomass" and _has_ancient_neighbor_of_same_kingdom(coord, kingdom_id):
 				per_tile *= 1.05
 			if _is_tile_symbiotic(coord):
-				per_tile *= (1.0 + _get_symbiosis_bonus())
-			elif MetaModifiers.is_unlocked(&"wood_wide_web") and _is_adjacent_to_symbiotic(coord):
-				per_tile *= 1.15
+				per_tile *= 1.30
 			if DEBUG_BIOME_AFFINITY and resource_key == &"biomass" and affinity_biome_id != &"" and affinity_mult != 1.0:
 				print("[GrowthSystem] %s on %s: affinity=%.2f per_tile=%.3f" % [species.id, affinity_biome_id, affinity_mult, per_tile])
 			# Phase 15c: per-run species evolution level multiplier.
@@ -173,10 +150,6 @@ func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: flo
 			ResourceLedger.add(resource_key, total)
 			if kingdom_id == &"plantae" and resource_key == ResourceLedger.BIOMASS:
 				produced_hero_biomass += total
-	if extra_biomass > 0.0:
-		ResourceLedger.add(ResourceLedger.BIOMASS, extra_biomass)
-		if kingdom_id == &"plantae":
-			produced_hero_biomass += extra_biomass
 	if produced_hero_biomass > 0.0:
 		_add_hero_lifetime_biomass(produced_hero_biomass)
 
@@ -264,57 +237,9 @@ func _effect_mycorrhizal_bond_apply(_species: SpeciesData, coords: Array[Vector2
 				_territory.set_tile_data(neighbor, "mycorrhizal_bond", true)
 
 
-func _on_ability_used(id: StringName, payload: Dictionary) -> void:
-	if id != &"bundle":
-		return
-	var coord: Vector2i = payload.get("coord", Vector2i.ZERO)
-	var duration: float = float(payload.get("magnitude", 0.0))
-	if duration <= 0.0:
-		return
-	var until: int = int(Time.get_unix_time_from_system() + duration)
-	for offset in [Vector2i.ZERO, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		_territory.set_tile_data(coord + offset, "warmed_until_unix", until)
-
-
 func _is_tile_symbiotic(coord: Vector2i) -> bool:
 	var occ: Dictionary = _territory.peek_occupants(coord)
 	return occ.has(&"plantae") and occ.has(&"fungi")
-
-
-func _is_adjacent_to_symbiotic(coord: Vector2i) -> bool:
-	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		if _is_tile_symbiotic(coord + offset):
-			return true
-	return false
-
-
-func _is_endophytic_partner(coord: Vector2i, kingdom_id: StringName) -> bool:
-	if kingdom_id == &"plantae":
-		return _is_adjacent_to_fungi(coord)
-	if kingdom_id == &"fungi":
-		return _is_adjacent_to_plantae(coord)
-	return false
-
-
-func _is_adjacent_to_fungi(coord: Vector2i) -> bool:
-	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		var occ: Dictionary = _territory.peek_occupants(coord + offset)
-		if occ.has(&"fungi"):
-			return true
-	return false
-
-
-func _is_adjacent_to_plantae(coord: Vector2i) -> bool:
-	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		var occ: Dictionary = _territory.peek_occupants(coord + offset)
-		if occ.has(&"plantae"):
-			return true
-	return false
-
-
-func _is_tile_warmed(coord: Vector2i) -> bool:
-	var until: int = int(_territory.get_tile_data(coord, "warmed_until_unix", 0))
-	return until > int(Time.get_unix_time_from_system())
 
 
 func _compute_trait_modifiers(species: SpeciesData) -> Dictionary:
@@ -328,29 +253,10 @@ func _compute_trait_modifiers(species: SpeciesData) -> Dictionary:
 	return mods
 
 
-func _get_meta_growth_multiplier() -> float:
-	if MetaModifiers.is_unlocked(&"efficient_photosynthesis"):
-		return 1.2
-	return 1.0
-
-
-func _get_symbiosis_bonus() -> float:
-	if MetaModifiers.is_unlocked(&"mutualism"):
-		return 0.50
-	return 0.30
-
-
 func _is_tile_mycorrhizal_bonded(coord: Vector2i) -> bool:
 	return bool(_territory.get_tile_data(coord, "mycorrhizal_bond", false))
 
 
-func _count_adjacent_owned_by_kingdom(coord: Vector2i, kingdom_id: StringName) -> int:
-	var count: int = 0
-	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		var occ: Dictionary = _territory.peek_occupants(coord + offset)
-		if occ.has(kingdom_id):
-			count += 1
-	return count
 
 
 # Phase 15a: maturation yield multiplier

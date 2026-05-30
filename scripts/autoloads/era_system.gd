@@ -19,8 +19,6 @@ func _ready() -> void:
 	EventBus.run_started.connect(_on_run_started_for_extinction_debuff, CONNECT_DEFERRED)
 	EventBus.tile_colonized.connect(_on_tile_colonized)
 	EventBus.event_resolved.connect(_on_event_resolved)
-	EventBus.organism_died.connect(_on_organism_died)
-	EventBus.evolution_node_unlocked.connect(_on_evolution_node_unlocked)
 	EventBus.prestige_triggered.connect(_on_prestige_triggered)
 	EventBus.tick.connect(_on_tick)
 	EventBus.run_loaded.connect(_on_run_loaded_initial_emit)
@@ -194,22 +192,6 @@ func _on_tile_colonized(_coord: Vector2i, _owner: StringName) -> void:
 func _on_event_resolved(_event_id: StringName, _outcome: StringName) -> void:
 	var eco := get_current_ecosystem()
 	if eco == null or eco.completion_criterion != &"events_survived":
-		return
-	_criterion_progress += 1.0
-
-
-func _on_organism_died(_id: int, cause: StringName) -> void:
-	var eco := get_current_ecosystem()
-	if eco == null or eco.completion_criterion != &"herbivores_defeated":
-		return
-	if cause != &"toxin_bloom":
-		return
-	_criterion_progress += 1.0
-
-
-func _on_evolution_node_unlocked(_node_id: StringName) -> void:
-	var eco := get_current_ecosystem()
-	if eco == null or eco.completion_criterion != &"node_purchased":
 		return
 	_criterion_progress += 1.0
 

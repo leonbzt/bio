@@ -13,6 +13,7 @@ const RATE_WINDOW_TICKS: int = 10
 var _rate_history: Array[float] = []
 var _last_lifetime_biomass: float = 0.0
 var _tick_flash: bool = false
+var _goal_screen_opened: bool = false
 
 
 func _ready() -> void:
@@ -45,7 +46,7 @@ func _install_resource_tooltips() -> void:
 		_ecosystem_label.tooltip_text = "Coal Swamp\nCarboniferous wetland."
 	if _pools_label != null:
 		_pools_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		_pools_label.tooltip_text = "Trophic pools. N = Nutrients (fungi feed plants). B = Biomass pool (plants feed animals — distinct from the hero Biomass counter above). D = Detritus (waste feeds fungi)."
+		_pools_label.tooltip_text = "N = Nutrients · B = Biomass pool · D = Detritus\nPlants eat N, animals eat B, fungi eat D.\nDistinct from the hero Biomass counter above."
 
 
 func _on_pause_pressed() -> void:
@@ -56,6 +57,7 @@ func _on_pause_pressed() -> void:
 func _on_run_started(_kingdom_id: StringName) -> void:
 	_rate_history.clear()
 	_last_lifetime_biomass = GameState.get_hero_biomass()
+	_goal_screen_opened = false
 	_refresh_ecosystem_name()
 	_maybe_show_onboarding()
 
@@ -105,6 +107,9 @@ func _on_cycle_closed() -> void:
 
 
 func _on_goal_met() -> void:
+	if _goal_screen_opened:
+		return
+	_goal_screen_opened = true
 	TickClock.pause()
 	var tween: Tween = create_tween()
 	tween.tween_interval(2.0)

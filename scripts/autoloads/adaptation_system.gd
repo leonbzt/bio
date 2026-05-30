@@ -22,7 +22,8 @@ const LEVEL_UP_COSTS: Array[float] = [
 
 
 func _ready() -> void:
-	EventBus.tick.connect(_on_tick)
+	# Tick disconnected: no UI to spend adaptation until leveling returns.
+	pass
 
 
 func get_amount() -> float:

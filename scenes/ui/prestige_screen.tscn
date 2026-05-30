@@ -29,9 +29,6 @@ alignment = 1
 
 [node name="SummarySection" type="VBoxContainer" parent="Content"]
 
-[node name="SummaryTitle" type="Label" parent="Content/SummarySection"]
-text = "Prestige"
-
 [node name="RewardLabel" type="Label" parent="Content/SummarySection"]
 text = "This run earned: 0 EP"
 
@@ -50,12 +47,6 @@ text = "Confirm Prestige"
 [node name="TreeSection" type="VBoxContainer" parent="Content"]
 visible = false
 
-[node name="BalanceLabel" type="Label" parent="Content/TreeSection"]
-text = "Balance: 0 EP"
-
-[node name="WingTabs" type="HBoxContainer" parent="Content/TreeSection"]
-alignment = 1
-
 [node name="TreeScroll" type="ScrollContainer" parent="Content/TreeSection"]
 horizontal_scroll_mode = 2
 vertical_scroll_mode = 2
@@ -65,5 +56,3 @@ custom_minimum_size = Vector2(360, 420)
 [node name="TreeCanvas" type="Control" parent="Content/TreeSection/TreeScroll"]
 script = ExtResource("2")
 
-[node name="CloseButton" type="Button" parent="Content/TreeSection"]
-text = "Close"

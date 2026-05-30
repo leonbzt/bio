@@ -9,13 +9,10 @@ var _post_extinction_total_ticks: int = 120
 func _ready() -> void:
 	EventBus.event_started.connect(_on_event_started)
 	EventBus.event_resolved.connect(_on_event_resolved)
-	EventBus.ability_used.connect(_on_ability_used)
 	EventBus.tick.connect(_on_tick)
 
 
 func _on_event_started(event_id: StringName, payload: Dictionary) -> void:
-	if event_id == &"drought" and MetaModifiers.is_unlocked(&"drought_resilience"):
-		return
 	var mods: Dictionary = {}
 	var payload_mods: Dictionary = payload.get("modifiers", {}) as Dictionary
 	if payload_mods.has("nutrient_multiplier"):
@@ -39,26 +36,6 @@ func _on_event_resolved(event_id: StringName, _outcome: StringName) -> void:
 	_active.erase(event_id)
 
 
-func _on_ability_used(id: StringName, payload: Dictionary) -> void:
-	if id != &"irrigate":
-		return
-	var coord: Vector2i = payload.get("coord", Vector2i.ZERO)
-	var radius: int = int(payload.get("radius_tiles", 0))
-	var per_tile_nutrients: float = float(payload.get("magnitude", 0.0))
-	if radius <= 0 or per_tile_nutrients <= 0.0:
-		return
-	var territory: Node = get_node_or_null("../TerritorySystem")
-	if territory == null:
-		return
-	var owned: Array[Vector2i] = territory.get_surface_owned_coords()
-	var total: float = 0.0
-	for c in owned:
-		if abs(c.x - coord.x) + abs(c.y - coord.y) <= radius:
-			total += per_tile_nutrients
-	if total > 0.0:
-		ResourceLedger.add(ResourceLedger.NUTRIENTS, total)
-
-
 func get_multiplier(key: StringName) -> float:
 	var base: float = _compute_base_multiplier(key)
 	if _post_extinction_ticks_remaining > 0:
@@ -75,8 +52,6 @@ func is_event_active(event_id: StringName) -> bool:
 
 func get_event_multiplier(event_id: StringName, key: StringName) -> float:
 	var raw: float = _raw_event_multiplier(event_id, key)
-	if (event_id == &"cold_snap" or event_id == &"cool_spell") and MetaModifiers.is_unlocked(&"cryotolerance"):
-		return 1.0 + (raw - 1.0) * 0.85
 	return raw
 
 

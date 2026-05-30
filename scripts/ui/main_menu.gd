@@ -49,6 +49,7 @@ func _on_play_pressed() -> void:
 	# silently destroy hours of progress when the player just wanted to return
 	# to the world.
 	if _has_active_run():
+		TickClock.resume()
 		get_tree().change_scene_to_file(WORLD_SCENE)
 		return
 	var species: SpeciesData = load(CALAMITES_PATH) as SpeciesData
@@ -57,6 +58,7 @@ func _on_play_pressed() -> void:
 	GameState.meta_save["current_ecosystem_id"] = "carbo_coal_swamp"
 	GameState.meta_save["current_era_id"] = "carboniferous"
 	PrestigeSystem.start_run(species)
+	TickClock.resume()
 	get_tree().change_scene_to_file(WORLD_SCENE)
 
 

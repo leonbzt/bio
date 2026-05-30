@@ -2,8 +2,6 @@ extends Node
 ##
 ## EventBus — singleton signal hub.
 ## Systems do not import each other; they emit and listen here.
-## Signals listed in docs/ARCHITECTURE.md section 3. Do not add new ones without
-## updating that document first.
 ##
 
 # Tick / time
@@ -22,23 +20,16 @@ signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
 # Structures
 signal structure_promoted(structure_id: StringName, anchor: Vector2i)
 
-# Organisms
-signal organism_spawned(organism_id: int, species_id: StringName, coord: Vector2i)
-signal organism_died(organism_id: int, cause: StringName)
-
 # Evolution
-signal trait_unlocked(trait_id: StringName)
 signal evolution_node_unlocked(node_id: StringName)
 signal discovery_unlocked(entry_id: StringName)
 signal species_leveled(species_id: StringName, new_level: int)
 
-# Ecological pressure
+# Ambient events (era transitions, cold snaps)
 signal event_started(event_id: StringName, payload: Dictionary)
 signal event_resolved(event_id: StringName, outcome: StringName)
 
-# Input mode and abilities
-signal input_mode_changed(mode: StringName)
-signal ability_used(ability_id: StringName, payload: Dictionary)
+# Placement
 signal placement_target_changed(target_species_id: StringName)
 
 # Run lifecycle
@@ -51,7 +42,7 @@ signal goal_met()
 signal checkpoint_triggered(id: StringName, payload: Dictionary)
 signal cycle_closed()
 
-# Era + ecosystem (Phase 12)
+# Era + ecosystem
 signal era_transition_started(from_era: StringName, to_era: StringName)
 signal ecosystem_completed(ecosystem_id: StringName)
 signal era_changed(era_id: StringName)

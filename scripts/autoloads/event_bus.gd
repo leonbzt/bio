@@ -16,6 +16,7 @@ signal resource_multiplier_changed(resource_id: StringName, new_multiplier: floa
 signal tile_tapped(coord: Vector2i)
 signal tile_colonized(coord: Vector2i, owner_id: StringName)
 signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
+signal tile_harvested(coord: Vector2i, amounts: Dictionary)
 
 # Structures
 signal structure_promoted(structure_id: StringName, anchor: Vector2i)

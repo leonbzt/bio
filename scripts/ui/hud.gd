@@ -5,7 +5,6 @@ const RATE_WINDOW_TICKS: int = 10
 @onready var _ecosystem_label: Label = $TopBar/Margin/ColumnLayout/EcosystemNameLabel
 @onready var _biomass_label: Label = $TopBar/Margin/ColumnLayout/BiomassCounter
 @onready var _rate_label: Label = $TopBar/Margin/ColumnLayout/RateLabel
-@onready var _pools_label: Label = $TopBar/Margin/ColumnLayout/PoolsLabel
 @onready var _pause_button: Button = $PauseButton
 @onready var _tick_indicator: ColorRect = $TickIndicator
 @onready var _pause_menu: Control = get_node("../PauseMenu")
@@ -37,16 +36,13 @@ func _install_resource_tooltips() -> void:
 	# readable.
 	if _biomass_label != null:
 		_biomass_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		_biomass_label.tooltip_text = "Lifetime hero biomass.\nGoal: 100,000.\nDrops when you place species."
+		_biomass_label.tooltip_text = "Hero biomass.\nGoal: 15,000.\nHarvest tiles or let animals auto-collect."
 	if _rate_label != null:
 		_rate_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		_rate_label.tooltip_text = "Biomass per second.\nStalls when an input pool empties."
+		_rate_label.tooltip_text = "Biomass gained per second.\nHarvest or place animals to increase."
 	if _ecosystem_label != null:
 		_ecosystem_label.mouse_filter = Control.MOUSE_FILTER_STOP
 		_ecosystem_label.tooltip_text = "Coal Swamp\nCarboniferous wetland."
-	if _pools_label != null:
-		_pools_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		_pools_label.tooltip_text = "N = Nutrients · B = Biomass pool · D = Detritus\nPlants eat N, animals eat B, fungi eat D.\nDistinct from the hero Biomass counter above."
 
 
 func _on_pause_pressed() -> void:
@@ -83,15 +79,6 @@ func _on_tick(_delta: float) -> void:
 	var per_sec: float = per_tick_avg * TickClock.tick_hz
 	_biomass_label.text = "Biomass: %s" % FormatUtils.abbreviate(current)
 	_rate_label.text = "+%.1f/s" % per_sec if per_sec > 0.0 else "0.0/s"
-	if _pools_label != null:
-		var n: float = ResourceLedger.get_amount(ResourceLedger.NUTRIENTS)
-		var b: float = ResourceLedger.get_amount(ResourceLedger.BIOMASS)
-		var d: float = ResourceLedger.get_amount(ResourceLedger.DECAY)
-		# Abbreviated labels keep the row from clipping on narrow viewports.
-		# Full names live in the tooltip.
-		_pools_label.text = "N: %s  ·  B: %s  ·  D: %s" % [
-			FormatUtils.abbreviate(n), FormatUtils.abbreviate(b), FormatUtils.abbreviate(d)
-		]
 	_tick_flash = not _tick_flash
 	_tick_indicator.color = Color(0.9, 0.9, 0.9, 1.0) if _tick_flash else Color(0.45, 0.45, 0.45, 1.0)
 

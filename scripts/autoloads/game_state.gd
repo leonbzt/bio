@@ -12,6 +12,7 @@ var last_save_unix: int = 0
 
 const INPUT_MODE_COLONIZE: StringName = &"colonize"
 const INPUT_MODE_TARGET: StringName = &"target_ability"
+const INPUT_MODE_HARVEST: StringName = &"harvest"
 var input_mode: StringName = INPUT_MODE_COLONIZE
 
 # Active species to place on tile taps during a run.

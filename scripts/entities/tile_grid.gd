@@ -122,19 +122,15 @@ class _StatusOverlay extends Node2D:
 		if tile_grid == null:
 			return
 		var growth: Node = tile_grid._get_growth_system()
-		if growth == null or not growth.has_method("get_species_throttle"):
+		if growth == null or not growth.has_method("get_tile_input_satisfaction"):
 			return
 		for coord in tile_grid._tile_occupants.keys():
 			var occupants: Dictionary = tile_grid._tile_occupants[coord]
-			var species_ids: Array = occupants.values()
-			if species_ids.is_empty():
+			if occupants.is_empty():
 				continue
-			var species_id: StringName = species_ids[0]
-			var throttle: float = float(growth.get_species_throttle(species_id))
+			var throttle: float = float(growth.get_tile_input_satisfaction(coord))
 			var color: Color = _status_color(throttle)
-			# Discreet dot above the species sprite. Dialed back from round-2
-			# size (radius 11/9) after the dots dominated the tile.
-			var radius: float = 5.0 if species_id == &"calamites" else 4.0
+			var radius: float = 4.0
 			var center: Vector2 = tile_grid.map_to_local(coord) + Vector2(0.0, -tile_grid.TILE_SIZE * 0.34)
 			draw_circle(center, radius + 1.5, OUTLINE)
 			draw_circle(center, radius, color)
@@ -148,48 +144,53 @@ class _StatusOverlay extends Node2D:
 
 
 class _FlowOverlay extends Node2D:
-	# Per-resource directional arrows: producer → consumer, colored by the
-	# resource flowing along the edge. One arrow per (consumer species,
-	# input resource) pair — uses each species' first occupied tile as the
-	# representative anchor so the canvas doesn't get cluttered.
 	var tile_grid
 	const COLOR_NUTRIENTS: Color = Color(1.0, 0.85, 0.35, 0.7)
 	const COLOR_BIOMASS: Color = Color(0.55, 0.85, 0.40, 0.7)
 	const COLOR_DETRITUS: Color = Color(0.65, 0.45, 0.28, 0.7)
 	const ARROW_HEAD_PX: float = 7.0
 	const LINE_WIDTH: float = 2.0
+	const _OFFSETS: Array[Vector2i] = [
+		Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN
+	]
 
 	func _draw() -> void:
 		if tile_grid == null:
 			return
 		var species_index: Dictionary = tile_grid._species_by_id
-		var rep: Dictionary[StringName, Vector2i] = {}
+		var drawn: Dictionary = {}
 		for coord in tile_grid._tile_occupants.keys():
 			var occupants: Dictionary = tile_grid._tile_occupants[coord]
-			for species_id in occupants.values():
-				var sid: StringName = species_id
-				if not rep.has(sid):
-					rep[sid] = coord
-		for consumer_id in rep.keys():
-			var consumer: SpeciesData = species_index.get(consumer_id, null)
+			if occupants.is_empty():
+				continue
+			var species_id: StringName = occupants.values()[0]
+			var consumer: SpeciesData = species_index.get(species_id, null)
 			if consumer == null or consumer.consume_input.is_empty():
 				continue
-			for input_v in consumer.consume_input.keys():
-				var input_rid: StringName = StringName(input_v)
-				for producer_id in rep.keys():
-					if producer_id == consumer_id:
+			for offset in _OFFSETS:
+				var neighbor: Vector2i = coord + offset
+				if not tile_grid._tile_occupants.has(neighbor):
+					continue
+				var nocc: Dictionary = tile_grid._tile_occupants[neighbor]
+				if nocc.is_empty():
+					continue
+				var nsid: StringName = nocc.values()[0]
+				var producer: SpeciesData = species_index.get(nsid, null)
+				if producer == null:
+					continue
+				for input_v in consumer.consume_input.keys():
+					var rid: StringName = StringName(input_v)
+					if not _produces(producer, rid):
 						continue
-					var producer: SpeciesData = species_index.get(producer_id, null)
-					if producer == null:
+					var key: int = coord.x * 100000 + coord.y * 1000 + neighbor.x * 10 + neighbor.y + rid.hash()
+					if drawn.has(key):
 						continue
-					if not _produces(producer, input_rid):
-						continue
+					drawn[key] = true
 					_draw_arrow(
-						tile_grid.map_to_local(rep[producer_id]),
-						tile_grid.map_to_local(rep[consumer_id]),
-						_resource_color(input_rid)
+						tile_grid.map_to_local(neighbor),
+						tile_grid.map_to_local(coord),
+						_resource_color(rid)
 					)
-					break
 
 	func _produces(species: SpeciesData, rid: StringName) -> bool:
 		for k in species.tick_yield.keys():
@@ -503,6 +504,69 @@ class _OrganismScatterOverlay extends Node2D:
 		return h & 0x7FFFFFFF
 
 
+class _SpeciesOutlineOverlay extends Node2D:
+	var tile_grid
+
+	func _draw() -> void:
+		if tile_grid == null:
+			return
+		var ts: float = float(tile_grid.TILE_SIZE)
+		for coord in tile_grid._tile_occupants.keys():
+			var occupants: Dictionary = tile_grid._tile_occupants[coord]
+			if occupants.is_empty():
+				continue
+			var species_id: StringName = occupants.values()[0]
+			var species: SpeciesData = tile_grid._species_by_id.get(species_id, null)
+			if species == null:
+				continue
+			var color: Color = species.tile_marker_color
+			color.a = 0.55
+			var origin: Vector2 = tile_grid.map_to_local(coord) - Vector2(ts * 0.5, ts * 0.5)
+			draw_rect(Rect2(origin, Vector2(ts, ts)), color, false, 1.5)
+
+
+class _BufferBarOverlay extends Node2D:
+	var tile_grid
+	const BAR_HEIGHT: float = 3.0
+	const BAR_INSET: float = 4.0
+	const COLOR_LOW: Color = Color(0.55, 0.85, 0.40, 0.8)
+	const COLOR_MID: Color = Color(0.92, 0.78, 0.30, 0.8)
+	const COLOR_FULL: Color = Color(0.86, 0.30, 0.30, 0.9)
+	const BG_COLOR: Color = Color(0.08, 0.08, 0.10, 0.6)
+	var _pulse_time: float = 0.0
+
+	func _process(delta: float) -> void:
+		_pulse_time += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		if tile_grid == null:
+			return
+		var growth: Node = tile_grid._get_growth_system()
+		if growth == null or not growth.has_method("get_tile_buffer_fill"):
+			return
+		var ts: float = float(tile_grid.TILE_SIZE)
+		var bar_width: float = ts - BAR_INSET * 2.0
+		for coord in tile_grid._tile_occupants.keys():
+			var fill: float = float(growth.get_tile_buffer_fill(coord))
+			if fill <= 0.0:
+				continue
+			var origin: Vector2 = tile_grid.map_to_local(coord)
+			var bar_origin: Vector2 = origin + Vector2(-bar_width * 0.5, ts * 0.5 - BAR_HEIGHT - 2.0)
+			draw_rect(Rect2(bar_origin, Vector2(bar_width, BAR_HEIGHT)), BG_COLOR, true)
+			var color: Color = _fill_color(fill)
+			if fill >= 1.0:
+				color.a = 0.5 + 0.4 * abs(sin(_pulse_time * 3.0))
+			draw_rect(Rect2(bar_origin, Vector2(bar_width * fill, BAR_HEIGHT)), color, true)
+
+	func _fill_color(fill: float) -> Color:
+		if fill >= 0.9:
+			return COLOR_FULL
+		if fill >= 0.5:
+			return COLOR_MID
+		return COLOR_LOW
+
+
 var _tile_occupants: Dictionary[Vector2i, Dictionary] = {}
 var _species_by_id: Dictionary[StringName, SpeciesData] = {}
 var _biome_textures: Dictionary[StringName, Texture2D] = {}
@@ -530,6 +594,8 @@ var _fusion_kinds: Dictionary[String, StringName] = {}
 var _fusion_anchors: Dictionary[String, Vector2i] = {}
 var _fusion_footprints: Dictionary[String, Array] = {}
 var _fusion_overlay: _StructureFusionOverlay
+var _outline_overlay: _SpeciesOutlineOverlay
+var _buffer_bar_overlay: _BufferBarOverlay
 
 # Structures that fuse their constituent tiles (hide individual species
 # composites within the footprint and draw as one). Pilot: fairy_ring only.
@@ -607,6 +673,18 @@ func _ready() -> void:
 	_fusion_overlay.z_index = 3
 	_overlay_layer.add_child(_fusion_overlay)
 
+	_outline_overlay = _SpeciesOutlineOverlay.new()
+	_outline_overlay.name = "SpeciesOutline"
+	_outline_overlay.tile_grid = self
+	_outline_overlay.z_index = 1
+	_overlay_layer.add_child(_outline_overlay)
+
+	_buffer_bar_overlay = _BufferBarOverlay.new()
+	_buffer_bar_overlay.name = "BufferBar"
+	_buffer_bar_overlay.tile_grid = self
+	_buffer_bar_overlay.z_index = 5
+	_overlay_layer.add_child(_buffer_bar_overlay)
+
 	_fog_overlay = _FogOverlay.new()
 	_fog_overlay.name = "FogOverlay"
 	_fog_overlay.tile_grid = self
@@ -617,6 +695,7 @@ func _ready() -> void:
 	EventBus.run_loaded.connect(_on_run_loaded)
 	EventBus.tick.connect(_on_tick_pulse)
 	EventBus.tick.connect(_on_tick_status_overlay)
+	EventBus.tile_harvested.connect(_on_tile_harvested)
 	_pulse_rng.randomize()
 
 	call_deferred("_populate")
@@ -879,6 +958,10 @@ func _request_scatter_redraw() -> void:
 		_status_overlay.queue_redraw()
 	if _flow_overlay != null:
 		_flow_overlay.queue_redraw()
+	if _outline_overlay != null:
+		_outline_overlay.queue_redraw()
+	if _buffer_bar_overlay != null:
+		_buffer_bar_overlay.queue_redraw()
 
 
 func _species_color(species_id: StringName) -> Color:
@@ -1055,6 +1138,40 @@ func _on_tick_pulse(_delta: float) -> void:
 
 
 func _pulse_tile(_coord: Vector2i) -> void:
-	# Slime-mold pulse parked. Reintroduce as a flow effect (cluster centroid
-	# outward) rather than per-tile sampling once design re-locked.
 	return
+
+
+func _on_tile_harvested(coord: Vector2i, amounts: Dictionary) -> void:
+	var center: Vector2 = map_to_local(coord)
+	var biomass: float = float(amounts.get(&"biomass", 0.0))
+	var total: float = 0.0
+	for v in amounts.values():
+		total += float(v)
+	if total <= 0.0:
+		return
+
+	# Flash the biome sprite white briefly
+	var sprite: Sprite2D = _biome_sprites.get(coord, null)
+	if sprite != null:
+		var tween: Tween = create_tween()
+		tween.tween_property(sprite, "modulate", Color(2.0, 2.0, 2.0, 1.0), 0.08)
+		tween.tween_property(sprite, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.2)
+
+	# Floating "+X" label
+	if biomass > 0.0:
+		_spawn_harvest_float(center, biomass)
+
+
+func _spawn_harvest_float(pos: Vector2, amount: float) -> void:
+	var label := Label.new()
+	label.text = "+%s" % FormatUtils.abbreviate(amount)
+	label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.40))
+	label.add_theme_font_size_override("font_size", 14)
+	label.position = pos - Vector2(20, 10)
+	label.z_index = 10
+	add_child(label)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "position:y", pos.y - 30.0, 0.6)
+	tween.tween_property(label, "modulate:a", 0.0, 0.6)
+	tween.chain().tween_callback(label.queue_free)

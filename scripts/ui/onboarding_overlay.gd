@@ -1,11 +1,11 @@
 extends Control
 
 const CHECKPOINT_TEXT: Dictionary[StringName, String] = {
-	&"place_hero": "Place your first Calamites on a wetland tile (dark green-brown). It thrives in wet ground.",
-	&"unlock_mycorrhizal": "Soil nutrients run thin. Mycorrhizal Network turns dead litter into nutrients. Place it adjacent to your Calamites.",
-	&"unlock_arthropleura": "Dead matter piling up. Arthropleura eats litter and feeds the fungi. Place it nearby.",
-	&"bottleneck_nutrients": "Your nutrients pool is depleted. Place another Mycorrhizal Network.",
-	&"bottleneck_detritus": "Your detritus pool is depleted. Place another Arthropleura.",
+	&"place_hero": "Place your first Calamites on a wetland tile. Tap it to harvest biomass once it grows.",
+	&"unlock_mycorrhizal": "Soil nutrients are thinning. Place Mycorrhizal Network adjacent to your plant — it converts decay into nutrients automatically.",
+	&"unlock_arthropleura": "Place Arthropleura next to your plants. It auto-harvests biomass and feeds the cycle.",
+	&"bottleneck_nutrients": "Your tiles are starving for nutrients. Place more fungi adjacent to your plants.",
+	&"bottleneck_detritus": "Decay is piling up with nowhere to go. Place another Arthropleura nearby.",
 	&"run_complete": "The forest is self-sustaining. Run complete."
 }
 const CHECKPOINT_ORDER: Array[StringName] = [

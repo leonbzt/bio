@@ -23,7 +23,10 @@ var _biomass_per_tile_by_species: Dictionary[StringName, float] = {}
 
 func _ready() -> void:
 	_cache_species_yields()
-	EventBus.tick.connect(_on_tick)
+	# Disabled in Phase 18: production fills local buffers, not hero biomass.
+	# Floating labels were showing misleading "income" when actual gain
+	# requires harvesting. Revisit once buffer-aware floats are designed.
+	#EventBus.tick.connect(_on_tick)
 	EventBus.run_loaded.connect(func(_v): _accumulated.clear())
 
 

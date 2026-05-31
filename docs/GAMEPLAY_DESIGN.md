@@ -2,7 +2,7 @@
 
 > **You play life, optimizing for one species' reproduction by building the trophic web around it.** Each run is one map, one starter species, one closed cycle. The lineage tree records who you played, across runs.
 
-Authoritative v1 spec. Locked 2026-05-27.
+Authoritative v1 spec. Locked 2026-05-27. Updated 2026-05-31 (Phase 18: local flow + tap-to-harvest).
 
 This doc supersedes the 2026-05-22 Hero / Pressure / two-clock design in its entirety after Reddit playtest feedback (2026-05-27) showed the god-curator UI was confusing players within 60 seconds. v1 narrows agency to one species per run, anchors the player on a single biomass number, and adopts a Factorio-style nutrient-web build loop. See § 8 for the full list of what changed vs the prior design.
 
@@ -15,7 +15,9 @@ Pick a starter species (from Lineage Tree)
   ↓
 Place it on one home tile on a fresh map
   ↓
-Build the trophic web around it (place supporting species)
+Build the trophic web around it (place supporting species adjacently)
+  ↓
+Tap tiles to harvest biomass; animals auto-harvest adjacent tiles
   ↓
 Biomass throughput rises → reproduction events tick silently
   ↓
@@ -37,7 +39,7 @@ Each run is **idle-capable** — biomass accumulates while AFK. Runs span roughl
 | **Biomass** | In-run | Hero species' accumulating mass; throughput rate is the game's main optimization target | **Huge number, top of screen — the ONLY HUD number** |
 | **Reproduction events** | In-run, silent | Tallied when hero biomass crosses population thresholds | Visual feedback on canvas only (cluster grows); not numeric |
 | **Evolution points** | Between-run | Run-end yield = reproduction events × tier multiplier + milestone bonuses | Spent on Lineage Tree progression: new starter species, tier-list unlocks |
-| **Web inputs** (sun, water, soil nutrients, litter) | World-side | Implied flows between species | Icons on tiles; never numeric HUD counters |
+| **Web inputs** (sun, water, soil nutrients, litter) | World-side | Implied flows between species | Buffer fill bars on tiles, flow arrows between adjacent tiles; never numeric HUD counters |
 
 **One number on screen.** Population is internal. Reproduction is silent until run-end totals. Web inputs live in the world.
 
@@ -50,10 +52,12 @@ Biomass is hero-species-only. Supporting species have their own internal biomass
 The moment-to-moment satisfaction during a run is **building the web**, not population growth. Specifically:
 
 1. Placing a new species (a new node in your factory) → immediate visual change on the canvas
-2. Seeing biomass throughput jump after closing a bottleneck
-3. Unlocking a new placeable species at a biomass milestone
-4. Discovering a symbiosis combo (visual glow when it triggers, never announced in advance)
-5. Closing the cycle — the climactic event of the run
+2. Tapping tiles to harvest biomass → direct feedback (flash + floating "+X")
+3. Watching animals auto-harvest adjacent tiles → hero biomass ticking up passively
+4. Seeing biomass throughput jump after closing a bottleneck
+5. Unlocking a new placeable species at a biomass milestone
+6. Discovering a symbiosis combo (visual glow when it triggers, never announced in advance)
+7. Closing the cycle — the climactic event of the run
 
 Reproduction events themselves stay quiet so they don't compete for attention with the build verbs. The big payoff is end-of-run Evolution.
 
@@ -67,7 +71,8 @@ Reproduction events themselves stay quiet so they don't compete for attention wi
 
 ### Build — close the cycle
 - Player places adjacent species to feed the web (producer → consumer → decomposer).
-- Each placed species draws inputs from neighbors and produces outputs.
+- Each placed species draws inputs from **adjacent tiles** and produces outputs into its own buffer.
+- Player switches to Harvest mode to tap tiles and extract biomass. Animals auto-harvest adjacent buffers each tick.
 - Hero biomass throughput rises as bottlenecks are filled.
 
 ### Unlock — progressive reveal
@@ -119,6 +124,9 @@ The 48 px cluster-in-biome canvas locked 2026-05-22 is preserved. The hero speci
 - Lineage Tree: bare list / graph of completed runs
 - Species unlock by biomass threshold (placeholder placement mechanic)
 - One starter species per run
+- Per-tile local resource flow (buffers, adjacency, soil depletion)
+- Visual web overlay (flow arrows between adjacent tiles, buffer fill bars, species color outlines)
+- Tap-to-harvest / Place-Harvest mode toggle
 
 **Out — deferred to v2+:**
 - Era forks within a run
@@ -131,7 +139,6 @@ The 48 px cluster-in-biome canvas locked 2026-05-22 is preserved. The hero speci
 - Pressure / scarcity systems
 - RPG stats (no Mass / Speed / etc — biomass is the only meaningful stat)
 - Within-run species death from neglect
-- Visual web overlay (arrows between species clusters)
 - In-run upgrades / decisions beyond placing species
 
 ---
@@ -161,8 +168,8 @@ This doc replaces the 2026-05-22 Hero + Pressure + two-clock design. The followi
 
 ## 9. Open questions deferred from this lock
 
-1. **Web visibility** — explicit arrows / flow overlays between species clusters, or implicit through colocation? Decided per first playable.
-2. **Species placement mechanic** — biomass-threshold unlock is the placeholder. Full placement design (cost? adjacency rules? hand-of-cards draft?) deferred.
+1. ~~**Web visibility**~~ — **Resolved (Phase 18):** explicit flow arrows between adjacent tiles, buffer fill bars, species color outlines.
+2. ~~**Species placement mechanic**~~ — **Resolved (Phase 18):** hero biomass cost for placement + adjacency-based local flow.
 3. **In-run upgrades** — Leon flagged that some in-run decisions / upgrades could land later. Scope TBD post-v1.
 4. **Run-end trigger** — closed cycle vs population target vs both. Set by first playable.
 5. **Idle pacing** — biomass / sec rates, population thresholds, run length. Resolved during recipe-table design.

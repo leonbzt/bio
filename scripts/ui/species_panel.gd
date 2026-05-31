@@ -17,9 +17,8 @@ const KINGDOM_ICON_PATHS: Dictionary = {
 
 var _species_by_id: Dictionary[StringName, SpeciesData] = {}
 var _kingdom_icon_cache: Dictionary[StringName, Texture2D] = {}
-# Available section is collapsed by default — bottom bar stays minimal
-# until the player opens it to introduce more species.
 var _available_collapsed: bool = true
+var _mode_toggle: Button
 
 @onready var _introduced: HBoxContainer = $Margin/VBox/BottomBar/IntroducedScroll/IntroducedList
 @onready var _available: VBoxContainer = $Margin/VBox/AvailableList
@@ -28,29 +27,14 @@ var _available_collapsed: bool = true
 
 func _ready() -> void:
 	_build_species_index()
+	_create_mode_toggle()
 	_available_header.pressed.connect(_on_available_header_pressed)
 	EventBus.run_started.connect(func(_k): _refresh_all())
 	EventBus.run_loaded.connect(func(_v): _refresh_all())
-	# Perf: species rows don't read resource values — they read adaptation level,
-	# placement target, and tile color. Refreshing on every resource_changed
-	# (~15+ per tick) was rebuilding every button each tick. Adaptation/leveling
-	# signals already cover the cases where rows actually change.
 	EventBus.species_leveled.connect(func(_id, _level): _refresh())
-	# Previously connected to AdaptationSystem.adaptation_changed → _refresh.
-	# That signal fires every tick (continuous adaptation accumulation), and
-	# _refresh queue_frees every species row. The button under the cursor
-	# would be destroyed and recreated each tick, killing any tooltip mid-
-	# read. Evolve-ready badges now refresh on species_leveled and on
-	# placement target changes — close enough for the prototype.
 	EventBus.placement_target_changed.connect(func(_id): _refresh())
-	# Lightweight per-tick update: just refresh the Introduce buttons' disabled
-	# state. Full _refresh() rebuilt every species row each tick — expensive
-	# enough to cause UI hitching on web export.
 	EventBus.tick.connect(_update_available_affordability)
-	# HTML5 fix: parent (HUD) sometimes reports a stale size during _ready,
-	# so anchor_bottom=1 lands at the wrong y. Re-assert dock layout deferred
-	# and on viewport resize. grow_vertical=0 (from the scene) handles the
-	# upward expansion when AvailableList is toggled visible.
+	EventBus.tick.connect(_update_mode_toggle)
 	_apply_dock_layout()
 	call_deferred("_apply_dock_layout")
 	get_viewport().size_changed.connect(_apply_dock_layout)
@@ -288,3 +272,49 @@ func _is_species_era_available(species: SpeciesData) -> bool:
 	if era.available_kingdoms.is_empty():
 		return true
 	return era.available_kingdoms.has(species.kingdom_id)
+
+
+func _create_mode_toggle() -> void:
+	_mode_toggle = Button.new()
+	_mode_toggle.custom_minimum_size = Vector2(80, 36)
+	_mode_toggle.pressed.connect(_on_mode_toggle_pressed)
+	var bottom_bar: HBoxContainer = $Margin/VBox/BottomBar
+	bottom_bar.add_child(_mode_toggle)
+	bottom_bar.move_child(_mode_toggle, 0)
+	_apply_mode_toggle_style()
+
+
+func _on_mode_toggle_pressed() -> void:
+	if GameState.input_mode == GameState.INPUT_MODE_HARVEST:
+		GameState.input_mode = GameState.INPUT_MODE_COLONIZE
+	else:
+		GameState.input_mode = GameState.INPUT_MODE_HARVEST
+	_apply_mode_toggle_style()
+
+
+func _update_mode_toggle(_delta: float) -> void:
+	_apply_mode_toggle_style()
+
+
+func _apply_mode_toggle_style() -> void:
+	if _mode_toggle == null:
+		return
+	var harvesting: bool = GameState.input_mode == GameState.INPUT_MODE_HARVEST
+	_mode_toggle.text = "Place" if harvesting else "Harvest"
+	var sb := StyleBoxFlat.new()
+	sb.set_corner_radius_all(3)
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	if harvesting:
+		sb.bg_color = Color(0.85, 0.65, 0.15)
+		sb.border_color = Color(1.0, 0.85, 0.3)
+	else:
+		sb.bg_color = Color(0.25, 0.25, 0.25)
+		sb.border_color = Color(0.4, 0.4, 0.4)
+	sb.set_border_width_all(1)
+	_mode_toggle.add_theme_stylebox_override("normal", sb)
+	_mode_toggle.add_theme_stylebox_override("hover", sb)
+	_mode_toggle.add_theme_stylebox_override("pressed", sb)
+	_mode_toggle.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))

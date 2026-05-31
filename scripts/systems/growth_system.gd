@@ -1,32 +1,48 @@
 extends Node
+##
+## GrowthSystem — Phase 18: local flow production.
+## Each tile has an output buffer. Production fills the buffer. Buffers
+## drain via player harvest (species panel button) or animal auto-harvest.
+## Hero biomass increases ONLY on extraction.
+##
 
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
-const DEBUG_BIOME_AFFINITY: bool = false
 const _TICK_EFFECT_HANDLERS: Dictionary = {
 	&"parasite_steal": "_effect_parasite_steal",
 	&"corpse_decay": "_effect_corpse_decay",
 	&"mycorrhizal_bond_apply": "_effect_mycorrhizal_bond_apply"
 }
 
-# Phase 15a: tile maturation constants
 const SPROUTING_DURATION: int = 15
 const MATURE_DURATION: int = 45
 const CYCLE_CLOSURE_CONFIRM_TICKS: int = 5
 
+const BUFFER_CAP_BASE: float = 20.0
+const SOIL_START: float = 60.0
+const AMBIENT_FLOOR: float = 0.20
+
+const _CARDINAL: Array[Vector2i] = [
+	Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN
+]
+
 var _all_species: Dictionary[StringName, SpeciesData] = {}
 var _cached_tick: int = 0
-var _species_throttle_cache: Dictionary[StringName, float] = {}
 var _closure_ticks_held: int = 0
+
+var _output_buffers: Dictionary = {}
+var _soil_nutrients: Dictionary = {}
+var _input_satisfaction: Dictionary = {}
 
 @onready var _territory: Node = get_node("../TerritorySystem")
 @onready var _nutrients: Node = get_node("../NutrientSystem")
-@onready var _ambient: Node = get_node("../AmbientModifierSystem")
 
 
 func _ready() -> void:
 	_load_species_index()
 	EventBus.tick.connect(_on_tick)
 	EventBus.run_started.connect(_on_run_started)
+	EventBus.tile_colonized.connect(_on_tile_colonized)
+	EventBus.tile_lost.connect(_on_tile_lost)
 
 
 func _load_species_index() -> void:
@@ -41,125 +57,286 @@ func _load_species_index() -> void:
 		_all_species[species.id] = species
 
 
+func _on_tile_colonized(coord: Vector2i, _owner_id: StringName) -> void:
+	_output_buffers[coord] = {}
+	_soil_nutrients[coord] = SOIL_START
+	_input_satisfaction[coord] = 1.0
+
+
+func _on_tile_lost(coord: Vector2i, _prev_owner_id: StringName) -> void:
+	_output_buffers.erase(coord)
+	_soil_nutrients.erase(coord)
+	_input_satisfaction.erase(coord)
+
+
+func get_tile_buffer(coord: Vector2i) -> Dictionary:
+	return _output_buffers.get(coord, {})
+
+
+func get_tile_input_satisfaction(coord: Vector2i) -> float:
+	return float(_input_satisfaction.get(coord, 1.0))
+
+
+func get_buffer_cap(_coord: Vector2i) -> float:
+	return BUFFER_CAP_BASE
+
+
+func get_tile_buffer_fill(coord: Vector2i) -> float:
+	var buf: Dictionary = _output_buffers.get(coord, {})
+	var total: float = 0.0
+	for v in buf.values():
+		total += float(v)
+	if BUFFER_CAP_BASE <= 0.0:
+		return 0.0
+	return minf(total / BUFFER_CAP_BASE, 1.0)
+
+
+func drain_tile_buffer(coord: Vector2i) -> Dictionary:
+	var buf: Dictionary = _output_buffers.get(coord, {})
+	if buf.is_empty():
+		return {}
+	var drained: Dictionary = buf.duplicate()
+	buf.clear()
+	_output_buffers[coord] = buf
+	return drained
+
+
 func _on_tick(_delta_seconds: float) -> void:
 	if _all_species.is_empty():
 		return
-	var unlocked: Array = GameState.run_save.get("unlocked_species_in_run", []) as Array
-	if unlocked.is_empty():
-		return
-	# Perf (Tier 2): pin the current tick once per tick instead of re-reading
-	# GameState.run_save["statistics"] inside every per-tile maturation check.
 	_cached_tick = _read_current_tick()
+
+	var all_coords: Array = _territory.get_all_owned_coords() if _territory != null else []
+	if all_coords.is_empty():
+		_check_cycle_closure()
+		return
+
+	for coord in all_coords:
+		_tick_tile(coord)
+
+	_symbiotic_auto_transfer(all_coords)
+
+	var unlocked: Array = GameState.run_save.get("unlocked_species_in_run", []) as Array
 	for species_id_str in unlocked:
 		var species: SpeciesData = _all_species.get(StringName(species_id_str), null)
-		if species == null:
+		if species == null or species.placement_rule == &"recipe":
 			continue
-		if species.placement_rule == &"recipe":
-			continue
-		var coords: Array[Vector2i] = _territory.get_species_occupied_coords(species.id)
-		if coords.is_empty():
-			continue
-		_apply_yields(species, coords, 1.0)
-		_apply_tick_effects(species, coords)
+		var species_coords: Array[Vector2i] = _territory.get_species_occupied_coords(species.id)
+		if not species_coords.is_empty():
+			_apply_tick_effects(species, species_coords)
+
 	_check_cycle_closure()
 
 
-func _apply_yields(species: SpeciesData, coords: Array[Vector2i], base_mult: float) -> void:
-	if species == null or coords.is_empty():
+func _tick_tile(coord: Vector2i) -> void:
+	var occ: Dictionary = _territory.peek_occupants(coord)
+	if occ.is_empty():
 		return
-	var input_throttle: float = _compute_input_throttle(species, coords.size())
-	_species_throttle_cache[species.id] = input_throttle
-	if input_throttle <= 0.0:
+	var kingdom_id: StringName = occ.keys()[0]
+	var species_id: StringName = occ[kingdom_id]
+	var species: SpeciesData = _all_species.get(species_id, null)
+	if species == null or species.placement_rule == &"recipe":
 		return
-	_spend_inputs(species, coords.size(), input_throttle)
-	base_mult *= input_throttle
+
+	if not _output_buffers.has(coord):
+		_output_buffers[coord] = {}
+		_soil_nutrients[coord] = SOIL_START
+
+	var throttle: float = _compute_local_throttle(coord, species)
+	_input_satisfaction[coord] = throttle
+
+	if throttle <= 0.0:
+		return
+
+	var consumed: Dictionary = _consume_local_inputs(coord, species, throttle)
+	_produce_to_buffer(coord, species, kingdom_id, throttle)
+
+	if kingdom_id == &"animals":
+		var b_consumed: float = float(consumed.get(&"biomass", 0.0))
+		if b_consumed > 0.0:
+			_add_hero_lifetime_biomass(b_consumed)
+
+
+func _compute_local_throttle(coord: Vector2i, species: SpeciesData) -> float:
+	if species.consume_input.is_empty():
+		return 1.0
+
+	var throttle: float = 1.0
+	var soil: float = float(_soil_nutrients.get(coord, 0.0))
+
+	for resource_id in species.consume_input.keys():
+		var rid: StringName = StringName(resource_id)
+		var needed: float = float(species.consume_input[resource_id])
+		if needed <= 0.0:
+			continue
+		var available: float = 0.0
+
+		for offset in _CARDINAL:
+			var neighbor: Vector2i = coord + offset
+			var nbuf: Dictionary = _output_buffers.get(neighbor, {})
+			available += float(nbuf.get(rid, 0.0))
+
+		if rid == &"nutrients" and soil > 0.0:
+			available += minf(soil, needed)
+
+		if available < needed:
+			throttle = minf(throttle, available / needed)
+
+	if soil <= 0.0 and throttle < AMBIENT_FLOOR:
+		throttle = AMBIENT_FLOOR
+
+	return throttle
+
+
+func _consume_local_inputs(coord: Vector2i, species: SpeciesData, throttle: float) -> Dictionary:
+	var consumed: Dictionary = {}
+	if species.consume_input.is_empty() or throttle <= 0.0:
+		return consumed
+
+	for resource_id in species.consume_input.keys():
+		var rid: StringName = StringName(resource_id)
+		var needed: float = float(species.consume_input[resource_id]) * throttle
+		if needed <= 0.0:
+			continue
+
+		var total_taken: float = 0.0
+
+		if rid == &"nutrients":
+			var soil: float = float(_soil_nutrients.get(coord, 0.0))
+			var from_soil: float = minf(soil, needed)
+			if from_soil > 0.0:
+				_soil_nutrients[coord] = maxf(0.0, soil - from_soil)
+				needed -= from_soil
+				total_taken += from_soil
+
+		if needed > 0.0:
+			var sources: Array = []
+			var total_available: float = 0.0
+			for offset in _CARDINAL:
+				var neighbor: Vector2i = coord + offset
+				var nbuf: Dictionary = _output_buffers.get(neighbor, {})
+				var avail: float = float(nbuf.get(rid, 0.0))
+				if avail > 0.0:
+					sources.append([neighbor, avail])
+					total_available += avail
+
+			if total_available > 0.0:
+				for source in sources:
+					var neighbor: Vector2i = source[0]
+					var avail: float = source[1]
+					var fraction: float = avail / total_available
+					var take: float = minf(needed * fraction, avail)
+					_output_buffers[neighbor][rid] = maxf(0.0, float(_output_buffers[neighbor].get(rid, 0.0)) - take)
+					total_taken += take
+
+		if total_taken > 0.0:
+			consumed[rid] = total_taken
+
+	return consumed
+
+
+func _produce_to_buffer(coord: Vector2i, species: SpeciesData, kingdom_id: StringName, throttle: float) -> void:
+	var buf: Dictionary = _output_buffers.get(coord, {})
+	var cap: float = get_buffer_cap(coord)
+
+	var buf_total: float = 0.0
+	for v in buf.values():
+		buf_total += float(v)
+
+	if buf_total >= cap:
+		return
+
+	var base_mult: float = throttle
 	if bool(GameState.run_save.get("cycle_closed", false)):
 		base_mult *= 1.5
-	var kingdom_id: StringName = species.kingdom_id
+
+	var age_ticks: int = _cached_tick - _territory.get_tile_placed_tick(coord)
+	var maturation_mult: float = _maturation_yield_multiplier(age_ticks)
 	var trait_mods: Dictionary = _compute_trait_modifiers(species)
-	var produced_hero_biomass: float = 0.0
+	var level_mult: float = AdaptationSystem.species_level_multiplier(species.id)
 
 	for resource_id in species.tick_yield.keys():
 		var resource_key: StringName = StringName(resource_id)
 		var base_yield: float = float(species.tick_yield[resource_id])
 		if base_yield == 0.0:
 			continue
-		var total: float = 0.0
-		var sun_mult: float = 1.0
-		var biomass_mult: float = 1.0
-		if _ambient.has_method("get_multiplier"):
-			sun_mult = float(_ambient.get_multiplier(&"sunlight_multiplier"))
-			biomass_mult = float(_ambient.get_multiplier(&"biomass_multiplier"))
-		for coord in coords:
-			var per_tile: float = base_yield * base_mult
-			# Phase 15a: tile maturation multiplier.
-			var age_ticks: int = _cached_tick - _territory.get_tile_placed_tick(coord)
-			var maturation_mult: float = _maturation_yield_multiplier(age_ticks)
-			per_tile *= maturation_mult
-			var affinity_mult: float = 1.0
-			var affinity_biome_id: StringName = &""
-			if resource_key == &"biomass":
-				var biome: BiomeData = _nutrients.get_biome_at(coord)
-				if biome == null:
-					continue
-				if kingdom_id == &"fungi":
-					per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
-					if biome.chemosynthesis_per_tick > 0.0:
-						per_tile *= (1.0 + biome.chemosynthesis_per_tick)
-					if _is_tile_mycorrhizal_bonded(coord):
-						per_tile *= 1.20
-					affinity_mult = float(species.biome_affinity.get(biome.id, 1.0))
-					affinity_biome_id = biome.id
-					per_tile *= affinity_mult
-				else:
-					per_tile *= biome.sunlight_per_tick * sun_mult
-					if biome.chemosynthesis_per_tick > 0.0:
-						per_tile += base_yield * base_mult * biome.chemosynthesis_per_tick * 0.5
-					per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
-					if _is_tile_mycorrhizal_bonded(coord):
-						per_tile *= 1.20
-					affinity_mult = float(species.biome_affinity.get(biome.id, 1.0))
-					affinity_biome_id = biome.id
-					per_tile *= affinity_mult
-					if bool(_territory.get_tile_data(coord, "structure_mycorrhizal_hub", false)):
-						per_tile *= 1.50
-					if bool(_territory.get_tile_data(coord, "structure_old_growth", false)):
-						per_tile *= 2.00
-					if bool(_territory.get_tile_data(coord, "structure_fern_grove", false)):
-						per_tile *= 1.30
-				per_tile *= biomass_mult
-			elif resource_key == &"decay":
-				per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
-				if _is_tile_mycorrhizal_bonded(coord):
-					per_tile *= 1.20
-			elif resource_key == &"spores":
-				per_tile *= (1.0 + float(trait_mods.get(&"spore_per_tile", 0.0)))
-			# Phase 15a: ancient fertilizer aura
-			if resource_key == &"biomass" and _has_ancient_neighbor_of_same_kingdom(coord, kingdom_id):
-				per_tile *= 1.05
-			if _is_tile_symbiotic(coord):
+
+		var per_tile: float = base_yield * base_mult * maturation_mult * level_mult
+
+		var biome: BiomeData = _nutrients.get_biome_at(coord) if _nutrients != null else null
+		if biome != null:
+			per_tile *= float(species.biome_affinity.get(biome.id, 1.0))
+			if resource_key == &"biomass" and kingdom_id != &"fungi":
+				per_tile *= biome.sunlight_per_tick
+
+		if resource_key == &"biomass":
+			per_tile *= (1.0 + float(trait_mods.get(&"biomass_per_tile", 0.0)))
+		elif resource_key == &"decay":
+			per_tile *= (1.0 + float(trait_mods.get(&"decay_per_tile", 0.0)))
+		elif resource_key == &"spores":
+			per_tile *= (1.0 + float(trait_mods.get(&"spore_per_tile", 0.0)))
+
+		if _is_tile_mycorrhizal_bonded(coord):
+			per_tile *= 1.20
+
+		if resource_key == &"biomass" and kingdom_id != &"fungi":
+			if bool(_territory.get_tile_data(coord, "structure_mycorrhizal_hub", false)):
+				per_tile *= 1.50
+			if bool(_territory.get_tile_data(coord, "structure_old_growth", false)):
+				per_tile *= 2.00
+			if bool(_territory.get_tile_data(coord, "structure_fern_grove", false)):
 				per_tile *= 1.30
-			if DEBUG_BIOME_AFFINITY and resource_key == &"biomass" and affinity_biome_id != &"" and affinity_mult != 1.0:
-				print("[GrowthSystem] %s on %s: affinity=%.2f per_tile=%.3f" % [species.id, affinity_biome_id, affinity_mult, per_tile])
-			# Phase 15c: per-run species evolution level multiplier.
-			per_tile *= AdaptationSystem.species_level_multiplier(species.id)
-			# Phase 15a: apply per-resource multiplier from the registry.
-			per_tile *= ResourceLedger.get_multiplier(resource_key)
-			total += per_tile
-		if total > 0.0:
-			ResourceLedger.add(resource_key, total)
-			if kingdom_id == &"plantae" and resource_key == ResourceLedger.BIOMASS:
-				produced_hero_biomass += total
-	if produced_hero_biomass > 0.0:
-		_add_hero_lifetime_biomass(produced_hero_biomass)
+
+		if resource_key == &"biomass" and _has_ancient_neighbor_of_same_kingdom(coord, kingdom_id):
+			per_tile *= 1.05
+
+		var room: float = cap - buf_total
+		if room <= 0.0:
+			break
+		var added: float = minf(per_tile, room)
+		buf[resource_key] = float(buf.get(resource_key, 0.0)) + added
+		buf_total += added
+
+	_output_buffers[coord] = buf
 
 
-func get_species_throttle(species_id: StringName) -> float:
-	return float(_species_throttle_cache.get(species_id, 1.0))
+func _symbiotic_auto_transfer(all_coords: Array) -> void:
+	for coord in all_coords:
+		var occ: Dictionary = _territory.peek_occupants(coord)
+		if not occ.has(&"fungi"):
+			continue
+		var species_id: StringName = occ[&"fungi"]
+		var species: SpeciesData = _all_species.get(species_id, null)
+		if species == null:
+			continue
+		if not species.tick_effects.has(&"mycorrhizal_bond_apply"):
+			continue
+
+		var buf: Dictionary = _output_buffers.get(coord, {})
+		var n_avail: float = float(buf.get(&"nutrients", 0.0))
+		if n_avail <= 0.0:
+			continue
+
+		var plant_neighbors: Array[Vector2i] = []
+		for offset in _CARDINAL:
+			var neighbor: Vector2i = coord + offset
+			var nocc: Dictionary = _territory.peek_occupants(neighbor)
+			if nocc.has(&"plantae"):
+				plant_neighbors.append(neighbor)
+
+		if plant_neighbors.is_empty():
+			continue
+
+		var per_plant: float = n_avail / float(plant_neighbors.size())
+		for plant_coord in plant_neighbors:
+			_soil_nutrients[plant_coord] = float(_soil_nutrients.get(plant_coord, 0.0)) + per_plant
+		buf[&"nutrients"] = 0.0
 
 
 func _on_run_started(_kingdom_id: StringName) -> void:
-	_species_throttle_cache.clear()
+	_output_buffers.clear()
+	_soil_nutrients.clear()
+	_input_satisfaction.clear()
 	_closure_ticks_held = 0
 
 
@@ -179,10 +356,6 @@ func _check_cycle_closure() -> void:
 	if not (has_plant and has_fungus and has_animal):
 		_closure_ticks_held = 0
 		return
-	# Earlier draft required all three pools > 0 each tick. In steady-state
-	# closure the pools dip to ~0 when consumption catches production, which
-	# was resetting the 5-tick confirm and preventing the event from firing.
-	# Trust the placement signal: 3 kingdoms placed + 5 ticks = closed.
 	_closure_ticks_held += 1
 	if _closure_ticks_held >= CYCLE_CLOSURE_CONFIRM_TICKS:
 		GameState.run_save["cycle_closed"] = true
@@ -204,20 +377,29 @@ func _effect_parasite_steal(species: SpeciesData, coords: Array[Vector2i]) -> vo
 	var targets: Array[StringName] = species.placement_targets
 	if targets.is_empty():
 		return
-	var total_bonus: float = 0.0
 	for coord in coords:
-		var neighbor_count: int = 0
-		for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var buf: Dictionary = _output_buffers.get(coord, {})
+		var cap: float = get_buffer_cap(coord)
+		var buf_total: float = 0.0
+		for v in buf.values():
+			buf_total += float(v)
+		for offset in _CARDINAL:
 			var neighbor: Vector2i = coord + offset
 			var occ: Dictionary = _territory.peek_occupants(neighbor)
+			var is_target: bool = false
 			for kingdom_id in targets:
 				if occ.has(kingdom_id):
-					neighbor_count += 1
+					is_target = true
 					break
-		if neighbor_count > 0:
-			total_bonus += 0.2 * float(neighbor_count)
-	if total_bonus > 0.0:
-		ResourceLedger.add(ResourceLedger.BIOMASS, total_bonus)
+			if not is_target:
+				continue
+			var nbuf: Dictionary = _output_buffers.get(neighbor, {})
+			var steal: float = minf(0.2, float(nbuf.get(&"biomass", 0.0)))
+			if steal > 0.0 and buf_total < cap:
+				nbuf[&"biomass"] = maxf(0.0, float(nbuf.get(&"biomass", 0.0)) - steal)
+				buf[&"biomass"] = float(buf.get(&"biomass", 0.0)) + steal
+				buf_total += steal
+		_output_buffers[coord] = buf
 
 
 func _effect_corpse_decay(_species: SpeciesData, _coords: Array[Vector2i]) -> void:
@@ -225,21 +407,12 @@ func _effect_corpse_decay(_species: SpeciesData, _coords: Array[Vector2i]) -> vo
 
 
 func _effect_mycorrhizal_bond_apply(_species: SpeciesData, coords: Array[Vector2i]) -> void:
-	# Single-species-per-tile means plants and fungi can't co-occupy a tile.
-	# The bond fires on adjacency: for each mycorrhizal tile, tag any cardinal
-	# plant neighbor so GrowthSystem can apply the +20% yield and the bond
-	# overlay can draw the golden link.
 	for coord in coords:
-		for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		for offset in _CARDINAL:
 			var neighbor: Vector2i = coord + offset
 			var occ: Dictionary = _territory.peek_occupants(neighbor)
 			if occ.has(&"plantae") and not bool(_territory.get_tile_data(neighbor, "mycorrhizal_bond", false)):
 				_territory.set_tile_data(neighbor, "mycorrhizal_bond", true)
-
-
-func _is_tile_symbiotic(coord: Vector2i) -> bool:
-	var occ: Dictionary = _territory.peek_occupants(coord)
-	return occ.has(&"plantae") and occ.has(&"fungi")
 
 
 func _compute_trait_modifiers(species: SpeciesData) -> Dictionary:
@@ -257,9 +430,6 @@ func _is_tile_mycorrhizal_bonded(coord: Vector2i) -> bool:
 	return bool(_territory.get_tile_data(coord, "mycorrhizal_bond", false))
 
 
-
-
-# Phase 15a: maturation yield multiplier
 func _maturation_yield_multiplier(age_ticks: int) -> float:
 	if age_ticks < SPROUTING_DURATION:
 		return 0.5
@@ -268,9 +438,8 @@ func _maturation_yield_multiplier(age_ticks: int) -> float:
 	return 1.3
 
 
-# Phase 15a: check if neighbor has ancient tile of same kingdom
 func _has_ancient_neighbor_of_same_kingdom(coord: Vector2i, kingdom_id: StringName) -> bool:
-	for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+	for offset in _CARDINAL:
 		var neighbor: Vector2i = coord + offset
 		var occ: Dictionary = _territory.peek_occupants(neighbor)
 		if not occ.has(kingdom_id):
@@ -284,30 +453,3 @@ func _has_ancient_neighbor_of_same_kingdom(coord: Vector2i, kingdom_id: StringNa
 func _read_current_tick() -> int:
 	var stats: Dictionary = GameState.run_save.get("statistics", {}) as Dictionary
 	return int(stats.get("tick_count", 0))
-
-
-func _compute_input_throttle(species: SpeciesData, num_tiles: int) -> float:
-	if species.consume_input.is_empty() or num_tiles <= 0:
-		return 1.0
-	var throttle: float = 1.0
-	for resource_id in species.consume_input.keys():
-		var rate: float = float(species.consume_input[resource_id])
-		if rate <= 0.0:
-			continue
-		var needed: float = rate * float(num_tiles)
-		var available: float = ResourceLedger.get_amount(StringName(resource_id))
-		if available < needed:
-			throttle = minf(throttle, available / needed)
-	return throttle
-
-
-func _spend_inputs(species: SpeciesData, num_tiles: int, throttle: float) -> void:
-	if species.consume_input.is_empty() or throttle <= 0.0 or num_tiles <= 0:
-		return
-	for resource_id in species.consume_input.keys():
-		var rate: float = float(species.consume_input[resource_id])
-		if rate <= 0.0:
-			continue
-		var spent: float = rate * float(num_tiles) * throttle
-		if spent > 0.0:
-			ResourceLedger.add(StringName(resource_id), -spent)

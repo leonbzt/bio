@@ -1,6 +1,6 @@
 extends Node
 
-const TARGET_BIOMASS: float = 100000.0
+const TARGET_BIOMASS: float = 15000.0
 
 
 func _ready() -> void:

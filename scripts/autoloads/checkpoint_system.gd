@@ -129,16 +129,45 @@ func _bottleneck_detritus_ready() -> bool:
 func _run_complete_ready() -> bool:
 	var hero_biomass: float = GameState.get_hero_biomass()
 	var cycle_closed: bool = bool(GameState.run_save.get("cycle_closed", false))
-	return hero_biomass >= 100000.0 and cycle_closed
+	return hero_biomass >= 15000.0 and cycle_closed
 
 
-func _age_starvation(id: StringName, resource_id: StringName, grace_ticks: int) -> bool:
-	var amount: float = ResourceLedger.get_amount(resource_id)
-	if amount <= 5.0:
+func _age_starvation(id: StringName, _resource_id: StringName, grace_ticks: int) -> bool:
+	var starving: bool = _any_tile_starving()
+	if starving:
 		_bottleneck_age_ticks[id] = int(_bottleneck_age_ticks.get(id, 0)) + 1
 	else:
 		_bottleneck_age_ticks[id] = 0
 	return int(_bottleneck_age_ticks.get(id, 0)) >= grace_ticks
+
+
+func _any_tile_starving() -> bool:
+	var growth: Node = _get_growth_system()
+	if growth == null or not growth.has_method("get_tile_input_satisfaction"):
+		return false
+	var territory: Node = _get_territory_system()
+	if territory == null:
+		return false
+	var all_coords: Array = territory.get_all_owned_coords()
+	var starving_count: int = 0
+	for coord in all_coords:
+		if float(growth.get_tile_input_satisfaction(coord)) < 0.3:
+			starving_count += 1
+	return starving_count >= 3
+
+
+func _get_growth_system() -> Node:
+	var tree := get_tree()
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("World/Systems/GrowthSystem")
+
+
+func _get_territory_system() -> Node:
+	var tree := get_tree()
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("World/Systems/TerritorySystem")
 
 
 func _short_grace_ticks() -> int:

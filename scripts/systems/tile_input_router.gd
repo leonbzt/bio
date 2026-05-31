@@ -13,6 +13,7 @@ var _species_by_id: Dictionary[StringName, SpeciesData] = {}
 @onready var _tile_grid: Node2D = get_node("../../TileGrid")
 @onready var _rules: Node = get_node("/root/ColonizationRulesRegistry")
 @onready var _territory: Node = get_node("../TerritorySystem")
+@onready var _growth: Node = get_node("../GrowthSystem")
 
 
 func _ready() -> void:
@@ -79,8 +80,13 @@ func _emit_tap(screen_pos: Vector2) -> void:
 	if coord.y < 0 or coord.y >= _tile_grid.GRID_HEIGHT:
 		return
 	EventBus.tile_tapped.emit(coord)
-	if GameState.input_mode != GameState.INPUT_MODE_COLONIZE:
-		return
+	if GameState.input_mode == GameState.INPUT_MODE_COLONIZE:
+		_try_colonize(coord)
+	elif GameState.input_mode == GameState.INPUT_MODE_HARVEST:
+		_try_harvest(coord)
+
+
+func _try_colonize(coord: Vector2i) -> void:
 	var species: SpeciesData = _resolve_active_placement_species()
 	if species == null:
 		return
@@ -88,9 +94,9 @@ func _emit_tap(screen_pos: Vector2) -> void:
 	if not result.get("valid", false):
 		return
 	var cost: Dictionary = result.get("cost", {})
-	if not ResourceLedger.can_afford(cost):
+	var biomass_cost: float = float(cost.get("biomass", 0.0))
+	if biomass_cost > 0.0 and not GameState.spend_hero_biomass(biomass_cost):
 		return
-	ResourceLedger.spend_bundle(cost)
 	for placement in result.get("placements", []):
 		_territory.add_occupant(placement["coord"], placement["kingdom_id"], placement["species_id"])
 		for key in placement.get("data", {}).keys():
@@ -98,6 +104,22 @@ func _emit_tap(screen_pos: Vector2) -> void:
 	for key in result.get("data", {}).keys():
 		_territory.set_tile_data(coord, key, result["data"][key])
 	SaveSystem.save_now()
+
+
+func _try_harvest(coord: Vector2i) -> void:
+	if _growth == null or _territory == null:
+		return
+	var occupants: Array = _territory.get_occupants(coord)
+	if occupants.is_empty():
+		return
+	var drained: Dictionary = _growth.drain_tile_buffer(coord)
+	var total: float = 0.0
+	for amount in drained.values():
+		total += float(amount)
+	if total <= 0.0:
+		return
+	GameState.run_save["hero_biomass_lifetime_produced"] = GameState.get_hero_biomass() + total
+	EventBus.tile_harvested.emit(coord, drained)
 
 
 func _resolve_active_placement_species() -> SpeciesData:

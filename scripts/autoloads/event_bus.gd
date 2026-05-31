@@ -8,10 +8,6 @@ extends Node
 signal tick(delta_seconds: float)
 signal paused_changed(is_paused: bool)
 
-# Resources
-signal resource_changed(resource_id: StringName, new_amount: float)
-signal resource_multiplier_changed(resource_id: StringName, new_multiplier: float)
-
 # Territory
 signal tile_tapped(coord: Vector2i)
 signal tile_colonized(coord: Vector2i, owner_id: StringName)

@@ -101,7 +101,7 @@ func _compute_cluster_biomass_this_tick(species_id: StringName, coords: Array[Ve
 	var biomass_per_tile: float = _biomass_per_tile_by_species.get(species_id, 0.0)
 	if biomass_per_tile == 0.0:
 		return 0.0
-	return biomass_per_tile * float(coords.size()) * ResourceLedger.get_multiplier(&"biomass")
+	return biomass_per_tile * float(coords.size())
 
 
 func _spawn_float(coords: Array[Vector2i], amount: float) -> void:

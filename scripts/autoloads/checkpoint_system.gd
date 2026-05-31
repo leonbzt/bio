@@ -98,13 +98,13 @@ func _unlock_mycorrhizal_ready() -> bool:
 	# broken. Starvation fallback covers players who ignore prompts.
 	if _prereq_dismissed(CHECKPOINT_PLACE_HERO) and GameState.get_hero_biomass() >= MIN_BIOMASS_MYCORRHIZAL:
 		return true
-	return _age_starvation(CHECKPOINT_UNLOCK_MYCORRHIZAL, ResourceLedger.NUTRIENTS, _short_grace_ticks())
+	return _age_starvation(CHECKPOINT_UNLOCK_MYCORRHIZAL, _short_grace_ticks())
 
 
 func _unlock_arthropleura_ready() -> bool:
 	if _prereq_dismissed(CHECKPOINT_UNLOCK_MYCORRHIZAL) and GameState.get_hero_biomass() >= MIN_BIOMASS_ARTHROPLEURA:
 		return true
-	return _age_starvation(CHECKPOINT_UNLOCK_ARTHROPLEURA, ResourceLedger.DECAY, _short_grace_ticks())
+	return _age_starvation(CHECKPOINT_UNLOCK_ARTHROPLEURA, _short_grace_ticks())
 
 
 func _prereq_dismissed(id: StringName) -> bool:
@@ -116,14 +116,14 @@ func _bottleneck_nutrients_ready() -> bool:
 	if not bool(GameState.run_save.get("cycle_closed", false)):
 		_bottleneck_age_ticks[CHECKPOINT_BOTTLENECK_NUTRIENTS] = 0
 		return false
-	return _age_starvation(CHECKPOINT_BOTTLENECK_NUTRIENTS, ResourceLedger.NUTRIENTS, _long_grace_ticks())
+	return _age_starvation(CHECKPOINT_BOTTLENECK_NUTRIENTS, _long_grace_ticks())
 
 
 func _bottleneck_detritus_ready() -> bool:
 	if not bool(GameState.run_save.get("cycle_closed", false)):
 		_bottleneck_age_ticks[CHECKPOINT_BOTTLENECK_DETRITUS] = 0
 		return false
-	return _age_starvation(CHECKPOINT_BOTTLENECK_DETRITUS, ResourceLedger.DECAY, _long_grace_ticks())
+	return _age_starvation(CHECKPOINT_BOTTLENECK_DETRITUS, _long_grace_ticks())
 
 
 func _run_complete_ready() -> bool:
@@ -132,7 +132,7 @@ func _run_complete_ready() -> bool:
 	return hero_biomass >= 15000.0 and cycle_closed
 
 
-func _age_starvation(id: StringName, _resource_id: StringName, grace_ticks: int) -> bool:
+func _age_starvation(id: StringName, grace_ticks: int) -> bool:
 	var starving: bool = _any_tile_starving()
 	if starving:
 		_bottleneck_age_ticks[id] = int(_bottleneck_age_ticks.get(id, 0)) + 1

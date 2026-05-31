@@ -99,9 +99,6 @@ func start_run(species: SpeciesData) -> void:
 	EventBus.placement_target_changed.emit(String(species.id))
 	EventBus.run_started.emit(species.kingdom_id)
 	EventBus.species_introduced.emit(species.id)
-	ResourceLedger.add(ResourceLedger.BIOMASS, 50.0)
-	ResourceLedger.add(ResourceLedger.NUTRIENTS, 50.0)
-	ResourceLedger.add(ResourceLedger.DECAY, 50.0)
 	SaveSystem.save_now()
 
 
@@ -262,19 +259,6 @@ func _reset_run_state() -> void:
 		"tick_count": 0,
 		"adaptation": 0.0,
 		"species_levels": {},
-		"resources": {
-			"biomass": 0.0,
-			"nutrients": 0.0,
-			"sunlight": 0.0,
-			"decay": 0.0,
-			"spores": 0.0,
-			"population_pressure": 0.0,
-			"protein": 0.0,
-			"lifeforce": 0.0,
-			"blood_cohesion": 0.0,
-			"gray_matter": 0.0,
-			"mycelial_stability": 0.0
-		},
 		"biome_map": {},
 		"tiles": [],
 		"organisms": [],
@@ -297,7 +281,7 @@ func _reset_run_state() -> void:
 	GameState.is_run_active = false
 	GameState.current_kingdom_id = &""
 	GameState.placement_target_species_id = &""
-	ResourceLedger.reset_run()
+	GameState.input_mode = GameState.INPUT_MODE_COLONIZE
 	EventBus.run_loaded.emit(SaveSystem.SAVE_VERSION)
 
 

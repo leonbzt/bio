@@ -5,7 +5,7 @@ var _stats: Dictionary = {}
 
 
 func _ready() -> void:
-	EventBus.resource_changed.connect(_on_resource_changed)
+	EventBus.tick.connect(_on_tick)
 	EventBus.tile_colonized.connect(_on_tile_colonized)
 	EventBus.event_resolved.connect(_on_event_resolved)
 	EventBus.run_loaded.connect(_on_run_loaded)
@@ -21,14 +21,13 @@ func _has_save_state() -> bool:
 
 func _on_run_loaded(_save_version: int) -> void:
 	_stats = _get_run_stats()
-	_last_biomass = ResourceLedger.get_amount(ResourceLedger.BIOMASS)
+	_last_biomass = GameState.get_hero_biomass()
 
 
-func _on_resource_changed(resource_id: StringName, new_amount: float) -> void:
-	if resource_id != ResourceLedger.BIOMASS:
-		return
-	var delta: float = new_amount - _last_biomass
-	_last_biomass = new_amount
+func _on_tick(_delta: float) -> void:
+	var current: float = GameState.get_hero_biomass()
+	var delta: float = current - _last_biomass
+	_last_biomass = current
 	if delta <= 0.0:
 		return
 	_stats["total_biomass_earned"] = float(_stats.get("total_biomass_earned", 0.0)) + delta
@@ -54,7 +53,7 @@ func reset_run() -> void:
 		"waves_defeated": 0
 	}
 	_sync_run_save()
-	_last_biomass = ResourceLedger.get_amount(ResourceLedger.BIOMASS)
+	_last_biomass = GameState.get_hero_biomass()
 
 
 func _get_run_stats() -> Dictionary:

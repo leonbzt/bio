@@ -7,13 +7,11 @@ var _biomes: Array[BiomeData] = []
 
 @onready var _tile_grid: Node = get_node("../../TileGrid")
 @onready var _territory: Node = get_node("../TerritorySystem")
-@onready var _ambient: Node = get_node("../AmbientModifierSystem")
 
 
 func _ready() -> void:
 	_load_biomes()
 	EventBus.run_loaded.connect(_on_run_loaded)
-	EventBus.tick.connect(_on_tick)
 	if not GameState.run_save.is_empty():
 		_on_run_loaded(SaveSystem.SAVE_VERSION)
 
@@ -75,20 +73,6 @@ func _on_run_loaded(_save_version: int) -> void:
 		if biome != null:
 			_biome_by_coord[coord] = biome
 
-
-func _on_tick(_delta_seconds: float) -> void:
-	if not _territory.has_method("get_surface_owned_coords"):
-		return
-	var sun_mult: float = 1.0
-	if _ambient.has_method("get_multiplier"):
-		sun_mult = float(_ambient.get_multiplier(&"sunlight_multiplier"))
-	var coords: Array[Vector2i] = _territory.get_surface_owned_coords()
-	for coord in coords:
-		var biome: BiomeData = _biome_by_coord.get(coord, null)
-		if biome == null:
-			continue
-		if biome.sunlight_per_tick != 0.0:
-			ResourceLedger.add(ResourceLedger.SUNLIGHT, biome.sunlight_per_tick * sun_mult)
 
 
 func get_biome_at(coord: Vector2i) -> BiomeData:

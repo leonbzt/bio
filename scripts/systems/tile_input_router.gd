@@ -80,10 +80,8 @@ func _emit_tap(screen_pos: Vector2) -> void:
 	if coord.y < 0 or coord.y >= _tile_grid.GRID_HEIGHT:
 		return
 	EventBus.tile_tapped.emit(coord)
-	if GameState.input_mode == GameState.INPUT_MODE_COLONIZE:
+	if not _try_harvest(coord):
 		_try_colonize(coord)
-	elif GameState.input_mode == GameState.INPUT_MODE_HARVEST:
-		_try_harvest(coord)
 
 
 func _try_colonize(coord: Vector2i) -> void:
@@ -106,20 +104,21 @@ func _try_colonize(coord: Vector2i) -> void:
 	SaveSystem.save_now()
 
 
-func _try_harvest(coord: Vector2i) -> void:
+func _try_harvest(coord: Vector2i) -> bool:
 	if _growth == null or _territory == null:
-		return
-	var occupants: Array = _territory.get_occupants(coord)
+		return false
+	var occupants: Dictionary = _territory.get_occupants(coord)
 	if occupants.is_empty():
-		return
+		return false
 	var drained: Dictionary = _growth.drain_tile_buffer(coord)
 	var total: float = 0.0
 	for amount in drained.values():
 		total += float(amount)
 	if total <= 0.0:
-		return
+		return false
 	GameState.run_save["hero_biomass_lifetime_produced"] = GameState.get_hero_biomass() + total
 	EventBus.tile_harvested.emit(coord, drained)
+	return true
 
 
 func _resolve_active_placement_species() -> SpeciesData:

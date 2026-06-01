@@ -10,11 +10,6 @@ var run_seed: int = 0
 var is_run_active: bool = false
 var last_save_unix: int = 0
 
-const INPUT_MODE_COLONIZE: StringName = &"colonize"
-const INPUT_MODE_TARGET: StringName = &"target_ability"
-const INPUT_MODE_HARVEST: StringName = &"harvest"
-var input_mode: StringName = INPUT_MODE_COLONIZE
-
 # Active species to place on tile taps during a run.
 var placement_target_species_id: StringName = &""
 

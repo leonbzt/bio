@@ -281,7 +281,6 @@ func _reset_run_state() -> void:
 	GameState.is_run_active = false
 	GameState.current_kingdom_id = &""
 	GameState.placement_target_species_id = &""
-	GameState.input_mode = GameState.INPUT_MODE_COLONIZE
 	EventBus.run_loaded.emit(SaveSystem.SAVE_VERSION)
 
 

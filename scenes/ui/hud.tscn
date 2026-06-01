@@ -53,13 +53,6 @@ theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.55, 0.95, 0.55, 1)
 script = ExtResource("4")
 
-[node name="PoolsLabel" type="Label" parent="TopBar/Margin/ColumnLayout"]
-text = "N: 0  ·  B: 0  ·  D: 0"
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
-script = ExtResource("4")
-
 [node name="PauseButton" type="Button" parent="."]
 anchor_left = 1.0
 anchor_right = 1.0

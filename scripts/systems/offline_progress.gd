@@ -24,6 +24,7 @@ func _on_run_loaded(_save_version: int) -> void:
 	if total_ticks <= 0:
 		return
 
+	var before: float = GameState.get_hero_biomass()
 	EventBus.replay_started.emit(total_ticks)
 
 	var sim_ticks: int = mini(total_ticks, MAX_SIM_TICKS)
@@ -34,6 +35,9 @@ func _on_run_loaded(_save_version: int) -> void:
 		_extrapolate(remaining)
 
 	EventBus.replay_finished.emit()
+	var gained: float = GameState.get_hero_biomass() - before
+	if gained > 0.0:
+		EventBus.offline_summary.emit(gained)
 
 
 func _extrapolate(remaining_ticks: int) -> void:

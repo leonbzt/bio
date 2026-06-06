@@ -2,7 +2,7 @@ extends Node
 ##
 ## Adaptation — per-run strategic currency. Accumulates passively from
 ## cluster size, biome diversity, and active species. Spent on per-run
-## species evolution levels.
+## stat-choice species leveling.
 ##
 
 signal adaptation_changed(new_amount: float)
@@ -13,17 +13,18 @@ const MIN_CLUSTER_SIZE: int = 5
 const RATE_PER_BIOME: float = 0.5
 const RATE_PER_SPECIES: float = 0.25
 const MAX_LEVEL: int = 3
-const LEVEL_YIELD_BONUS: float = 0.10
 const LEVEL_UP_COSTS: Array[float] = [
 	0.0,
 	5.0,
 	15.0
 ]
+const STAT_NAMES: Array[StringName] = [
+	&"production", &"efficiency", &"resistance", &"spread"
+]
 
 
 func _ready() -> void:
-	# Tick disconnected: no UI to spend adaptation until leveling returns.
-	pass
+	EventBus.tick.connect(_on_tick)
 
 
 func get_amount() -> float:
@@ -47,8 +48,12 @@ func spend(amount: float) -> bool:
 
 func get_level(species_id: StringName) -> int:
 	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
-	var levels: Dictionary = run.get("species_levels", {}) as Dictionary
-	return int(levels.get(String(species_id), 1))
+	var boosts: Dictionary = run.get("species_stat_boosts", {}) as Dictionary
+	var sp_boosts: Dictionary = boosts.get(String(species_id), {}) as Dictionary
+	var total: int = 0
+	for v in sp_boosts.values():
+		total += int(v)
+	return 1 + total
 
 
 func get_next_level_cost(species_id: StringName) -> float:
@@ -65,26 +70,41 @@ func can_level_up(species_id: StringName) -> bool:
 	return can_afford(cost)
 
 
-func level_up(species_id: StringName) -> bool:
+func level_up_stat(species_id: StringName, stat_name: StringName) -> bool:
+	if not STAT_NAMES.has(stat_name):
+		return false
 	var cost: float = get_next_level_cost(species_id)
 	if cost < 0.0:
 		return false
 	if not spend(cost):
 		return false
 	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
-	var levels: Dictionary = run.get("species_levels", {}) as Dictionary
+	var boosts: Dictionary = run.get("species_stat_boosts", {}) as Dictionary
 	var sp_key: String = String(species_id)
-	levels[sp_key] = int(levels.get(sp_key, 1)) + 1
-	run["species_levels"] = levels
+	var sp_boosts: Dictionary = boosts.get(sp_key, {}) as Dictionary
+	sp_boosts[String(stat_name)] = int(sp_boosts.get(String(stat_name), 0)) + 1
+	boosts[sp_key] = sp_boosts
+	run["species_stat_boosts"] = boosts
 	GameState.run_save = run
-	EventBus.species_leveled.emit(species_id, levels[sp_key])
+	EventBus.species_leveled.emit(species_id, get_level(species_id))
 	SaveSystem.save_now()
 	return true
 
 
+func level_up(species_id: StringName) -> bool:
+	return level_up_stat(species_id, &"production")
+
+
+func get_stat_boost(species_id: StringName, stat_name: StringName) -> int:
+	var run: Dictionary = GameState.run_save if GameState.run_save is Dictionary else {}
+	var boosts: Dictionary = run.get("species_stat_boosts", {}) as Dictionary
+	var sp_boosts: Dictionary = boosts.get(String(species_id), {}) as Dictionary
+	return int(sp_boosts.get(String(stat_name), 0))
+
+
 func species_level_multiplier(species_id: StringName) -> float:
-	var level: int = get_level(species_id)
-	return 1.0 + (LEVEL_YIELD_BONUS * float(level - 1))
+	var prod_boost: int = get_stat_boost(species_id, &"production")
+	return 1.0 + (0.10 * float(prod_boost))
 
 
 func _on_tick(_delta: float) -> void:

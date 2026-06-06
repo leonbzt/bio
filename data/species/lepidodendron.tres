@@ -8,6 +8,7 @@ id = &"lepidodendron"
 display_name = "Lepidodendron"
 description = "Diamond-bark scale trees. Thirty meters tall. The signature crown of the coal age."
 kingdom_id = &"plantae"
+role = &"producer"
 sprite = null
 base_traits = Array[Resource]([])
 introduce_cost = {
@@ -17,7 +18,11 @@ colonize_cost = {
 "biomass": 15.0
 }
 tick_yield = {
-"biomass": 1.0
+"biomass": 1.8,
+"decay": 0.25
+}
+consume_input = {
+"nutrients": 1.2
 }
 placement_rule = &"adjacent_empty"
 placement_targets = Array[StringName]([])

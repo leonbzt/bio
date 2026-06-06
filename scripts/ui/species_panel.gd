@@ -31,6 +31,7 @@ func _ready() -> void:
 	EventBus.run_loaded.connect(func(_v): _refresh_all())
 	EventBus.species_leveled.connect(func(_id, _level): _refresh())
 	EventBus.placement_target_changed.connect(func(_id): _refresh())
+	AdaptationSystem.adaptation_changed.connect(func(_a): _update_levelup_buttons())
 	EventBus.tick.connect(_update_available_affordability)
 	_apply_dock_layout()
 	call_deferred("_apply_dock_layout")
@@ -110,6 +111,20 @@ func _refresh() -> void:
 		_available.add_child(_build_available_row(species))
 
 
+func _update_levelup_buttons() -> void:
+	for row in _introduced.get_children():
+		if not (row is VBoxContainer):
+			continue
+		for child in (row as VBoxContainer).get_children():
+			if not (child is Button):
+				continue
+			var button: Button = child
+			if not button.has_meta("species_id"):
+				continue
+			var sid: StringName = StringName(button.get_meta("species_id"))
+			button.disabled = not AdaptationSystem.can_level_up(sid)
+
+
 func _update_available_affordability(_delta: float) -> void:
 	for row in _available.get_children():
 		if not (row is Control):
@@ -137,11 +152,9 @@ func _kingdom_icon(kingdom_id: StringName) -> Texture2D:
 
 
 func _build_introduced_row(species: SpeciesData) -> Control:
-	# Compact 36x36 icon button. Tile_marker_color is the background; the
-	# kingdom icon (if commissioned for this kingdom) overlays it. Kingdoms
-	# without a PNG fall back to the species name's first letter. Long tooltip
-	# shows full info + Latin + level + cost. Selected = bright outer border.
-	# ▲ corner badge if evolvable.
+	var container := VBoxContainer.new()
+	container.alignment = BoxContainer.ALIGNMENT_CENTER
+
 	var btn := Button.new()
 	var is_active: bool = (GameState.placement_target_species_id == species.id)
 
@@ -151,9 +164,21 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 	else:
 		btn.text = ""
 	btn.custom_minimum_size = Vector2(48, 48)
-	btn.tooltip_text = "%s\n%s\n\n%s" % [
+
+	var level: int = AdaptationSystem.get_level(species.id)
+	var next_cost: float = AdaptationSystem.get_next_level_cost(species.id)
+	var level_tip: String = "Lv.%d" % level
+	if next_cost >= 0.0:
+		level_tip += " | Next: %.0f adapt" % next_cost
+	else:
+		level_tip += " (max)"
+	var stats_tip: String = SpeciesStats.stat_summary(species)
+	btn.tooltip_text = "%s [%s]\n%s\n%s\n%s\n\n%s" % [
 		species.display_name,
+		SpeciesStats.role_label(species.role),
 		species.latin_name if species.latin_name != "" else "",
+		level_tip,
+		stats_tip,
 		species.description if species.description != "" else ""
 	]
 
@@ -173,9 +198,6 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 	btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 	btn.add_theme_color_override("font_disabled_color", Color(1.0, 1.0, 0.85))
 
-	# Kingdom-icon overlay (when a PNG exists for this kingdom). Sits on top
-	# of the tile_marker_color background, mouse-transparent so the button
-	# still receives clicks. Nearest filter keeps pixel art crisp.
 	if kingdom_tex != null:
 		var icon := TextureRect.new()
 		icon.texture = kingdom_tex
@@ -185,11 +207,44 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		btn.add_child(icon)
 
+	# Level badge — bottom-right corner of the icon button
+	var level_label := Label.new()
+	level_label.text = "%d" % level
+	level_label.add_theme_font_size_override("font_size", 10)
+	level_label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.7))
+	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	level_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	level_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(level_label)
+
 	btn.pressed.connect(func() -> void:
 		GameState.placement_target_species_id = species.id
 		EventBus.placement_target_changed.emit(String(species.id))
 	)
-	return btn
+	container.add_child(btn)
+
+	var role_lbl := Label.new()
+	role_lbl.text = SpeciesStats.role_label(species.role)
+	role_lbl.add_theme_font_size_override("font_size", 9)
+	role_lbl.add_theme_color_override("font_color", SpeciesStats.role_color(species.role))
+	role_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	container.add_child(role_lbl)
+
+	if next_cost >= 0.0:
+		var up_btn := Button.new()
+		up_btn.text = "+"
+		up_btn.custom_minimum_size = Vector2(48, 20)
+		up_btn.tooltip_text = "Level up: %.0f adaptation" % next_cost
+		up_btn.disabled = not AdaptationSystem.can_level_up(species.id)
+		up_btn.set_meta("species_id", species.id)
+		up_btn.add_theme_font_size_override("font_size", 12)
+		up_btn.pressed.connect(func() -> void:
+			_show_stat_choice_popup(species)
+		)
+		container.add_child(up_btn)
+
+	return container
 
 
 func _build_available_row(species: SpeciesData) -> Control:
@@ -198,30 +253,36 @@ func _build_available_row(species: SpeciesData) -> Control:
 	# Tooltip on the whole row so the hover zone is wide enough to read on.
 	row.mouse_filter = Control.MOUSE_FILTER_STOP
 	var cost: float = _get_biomass_cost(species)
-	row.tooltip_text = "%s\n%s\n\n%s\n\nCost: %.0f biomass" % [
+	row.tooltip_text = "%s [%s]\n%s\n%s\n\n%s\n\nCost: %.0f biomass" % [
 		species.display_name,
+		SpeciesStats.role_label(species.role),
 		species.latin_name if species.latin_name != "" else "",
+		SpeciesStats.stat_summary(species),
 		species.description if species.description != "" else "",
 		cost
 	]
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var name_row := HBoxContainer.new()
 	var label := Label.new()
 	label.text = species.display_name
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.add_theme_font_size_override("font_size", 16)
 	label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.95))
-	info.add_child(label)
-	if species.latin_name != "":
-		var lat := Label.new()
-		lat.text = species.latin_name
-		lat.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		lat.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
-		lat.add_theme_font_override("font", KingdomTheme.SMALL_FONT)
-		lat.add_theme_font_size_override("font_size", KingdomTheme.SMALL_FONT_SIZE)
-		lat.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		info.add_child(lat)
+	name_row.add_child(label)
+	var role_tag := Label.new()
+	role_tag.text = SpeciesStats.role_label(species.role)
+	role_tag.add_theme_font_size_override("font_size", 11)
+	role_tag.add_theme_color_override("font_color", SpeciesStats.role_color(species.role))
+	name_row.add_child(role_tag)
+	info.add_child(name_row)
+	var derived: Dictionary = SpeciesStats.derive(species)
+	var stat_lbl := Label.new()
+	stat_lbl.text = "P:%d C:%d" % [derived["production"], derived["consumption"]]
+	stat_lbl.add_theme_font_size_override("font_size", 11)
+	stat_lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.55))
+	info.add_child(stat_lbl)
 	row.add_child(info)
 	var button := Button.new()
 	button.text = "Introduce"
@@ -252,7 +313,9 @@ func _introduce_species(species: SpeciesData) -> void:
 func _get_biomass_cost(species: SpeciesData) -> float:
 	if species == null:
 		return 0.0
-	return float(species.introduce_cost.get("biomass", 0.0))
+	var base: float = float(species.introduce_cost.get("biomass", 0.0))
+	var spread_boost: int = AdaptationSystem.get_stat_boost(species.id, &"spread")
+	return base * (1.0 - 0.10 * float(spread_boost))
 
 
 func _is_species_era_available(species: SpeciesData) -> bool:
@@ -271,3 +334,72 @@ func _is_species_era_available(species: SpeciesData) -> bool:
 	return era.available_kingdoms.has(species.kingdom_id)
 
 
+func _show_stat_choice_popup(species: SpeciesData) -> void:
+	var existing: Node = get_node_or_null("StatChoicePopup")
+	if existing != null:
+		existing.queue_free()
+
+	var popup := PanelContainer.new()
+	popup.name = "StatChoicePopup"
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.12, 0.12, 0.15, 0.95)
+	sb.border_color = Color(0.5, 0.5, 0.5)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(4)
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
+	popup.add_theme_stylebox_override("panel", sb)
+	popup.set_anchors_preset(Control.PRESET_CENTER)
+	popup.offset_left = -80
+	popup.offset_right = 80
+	popup.offset_top = -90
+	popup.offset_bottom = 90
+
+	var vbox := VBoxContainer.new()
+	var title_lbl := Label.new()
+	title_lbl.text = "Level up %s" % species.display_name
+	title_lbl.add_theme_font_size_override("font_size", 14)
+	title_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 0.9))
+	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title_lbl)
+
+	var stat_labels: Dictionary = {
+		&"production": "Production",
+		&"efficiency": "Efficiency",
+		&"resistance": "Resistance",
+		&"spread": "Spread",
+	}
+	var derived: Dictionary = SpeciesStats.derive(species)
+	var stat_base_map: Dictionary = {
+		&"production": derived["production"],
+		&"efficiency": 10 - derived["consumption"],
+		&"resistance": derived["resistance"],
+		&"spread": derived["spread"],
+	}
+
+	for stat_name in AdaptationSystem.STAT_NAMES:
+		var current_boost: int = AdaptationSystem.get_stat_boost(species.id, stat_name)
+		var base_val: int = int(stat_base_map.get(stat_name, 5))
+		var current_val: int = base_val + current_boost
+		var next_val: int = current_val + 1
+		var stat_btn := Button.new()
+		stat_btn.text = "%s: %d -> %d" % [stat_labels[stat_name], current_val, next_val]
+		stat_btn.custom_minimum_size = Vector2(0, 32)
+		stat_btn.add_theme_font_size_override("font_size", 13)
+		stat_btn.pressed.connect(func() -> void:
+			AdaptationSystem.level_up_stat(species.id, stat_name)
+			popup.queue_free()
+			_refresh()
+		)
+		vbox.add_child(stat_btn)
+
+	var cancel_btn := Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.add_theme_font_size_override("font_size", 11)
+	cancel_btn.pressed.connect(popup.queue_free)
+	vbox.add_child(cancel_btn)
+
+	popup.add_child(vbox)
+	add_child(popup)

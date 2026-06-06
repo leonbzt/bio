@@ -8,6 +8,7 @@ id = &"arthropleura"
 display_name = "Arthropleura"
 description = "Two meters long. Eats leaf litter. The largest land invertebrate ever to crawl."
 kingdom_id = &"animals"
+role = &"harvester"
 sprite = null
 base_traits = Array[Resource]([])
 introduce_cost = {

@@ -18,34 +18,52 @@ func _ready() -> void:
 		_nodes_by_id[node.id] = node
 
 
-static func calculate_prestige_reward(biomass: float, cycle_closed: bool, tier_mult: float = 1.0) -> int:
+static func calculate_prestige_reward(biomass: float, cycle_closed: bool, grade_mult: float = 1.0) -> int:
 	var reproductions: int = int(biomass / 100.0)
 	var closure_bonus: int = 50 if cycle_closed else 0
-	return int(round((reproductions + closure_bonus) * tier_mult))
+	return int(round(float(reproductions + closure_bonus) * grade_mult))
 
 
 func get_pending_reward() -> int:
 	var biomass: float = float(GameState.run_save.get("hero_biomass_lifetime_produced", 0.0))
 	var closed: bool = bool(GameState.run_save.get("cycle_closed", false))
-	return calculate_prestige_reward(biomass, closed, 1.0)
+	var grade_mult: float = _get_grade_multiplier()
+	return calculate_prestige_reward(biomass, closed, grade_mult)
+
+
+func _get_grade_multiplier() -> float:
+	if not has_node("/root/EcosystemScoring"):
+		return 1.0
+	var scoring: Node = get_node("/root/EcosystemScoring")
+	if not scoring.has_method("get_grade_multiplier"):
+		return 1.0
+	return float(scoring.get_grade_multiplier())
 
 
 func trigger_prestige() -> void:
 	var bonus_ep: int = _award_extinction_survivor_bonus_if_eligible()
 	var biomass: float = float(GameState.run_save.get("hero_biomass_lifetime_produced", 0.0))
 	var closed: bool = bool(GameState.run_save.get("cycle_closed", false))
-	var reward: int = calculate_prestige_reward(biomass, closed, 1.0) + bonus_ep
+	var grade_mult: float = _get_grade_multiplier()
+	var reward: int = calculate_prestige_reward(biomass, closed, grade_mult) + bonus_ep
 	var reproductions: int = int(biomass / 100.0)
 	_record_kingdom_played()
 	_record_species_played()
 	_update_meta_stats(reward, biomass)
 	_append_lineage_run(biomass, reproductions, closed, reward)
+	var grade: String = ""
+	if has_node("/root/EcosystemScoring"):
+		var scoring: Node = get_node("/root/EcosystemScoring")
+		if scoring.has_method("get_grade"):
+			grade = scoring.get_grade()
 	var summary := {
 		"evolution_points_earned": reward,
 		"extinction_bonus": bonus_ep,
 		"biomass": biomass,
 		"reproductions": reproductions,
-		"cycle_closed": closed
+		"cycle_closed": closed,
+		"grade": grade,
+		"grade_multiplier": grade_mult
 	}
 	_reset_run_state()
 	EventBus.prestige_triggered.emit(summary)
@@ -82,23 +100,35 @@ func purchase_node(node_id: StringName) -> bool:
 func start_run(species: SpeciesData) -> void:
 	if species == null:
 		return
-	if not _is_kingdom_available_in_current_era(species.kingdom_id):
-		push_warning("PrestigeSystem: kingdom %s is not available in the current era" % String(species.kingdom_id))
+	start_team_run([species])
+
+
+func start_team_run(team: Array[SpeciesData]) -> void:
+	if team.is_empty():
 		return
-	GameState.current_kingdom_id = species.kingdom_id
+	var first: SpeciesData = team[0]
+	if not _is_kingdom_available_in_current_era(first.kingdom_id):
+		push_warning("PrestigeSystem: kingdom %s is not available in the current era" % String(first.kingdom_id))
+		return
+	GameState.current_kingdom_id = first.kingdom_id
 	_reset_run_state()
 	var run: Dictionary = GameState.run_save
-	run["kingdom_id"] = String(species.kingdom_id)
-	run["starting_species_id"] = String(species.id)
-	run["unlocked_species_in_run"] = [String(species.id)]
-	run["starting_species_kingdom_id"] = String(species.kingdom_id)
+	run["kingdom_id"] = String(first.kingdom_id)
+	run["starting_species_id"] = String(first.id)
+	run["starting_species_kingdom_id"] = String(first.kingdom_id)
+	var ids: Array = []
+	for species in team:
+		ids.append(String(species.id))
+	run["unlocked_species_in_run"] = ids
+	run["team"] = ids.duplicate()
 	GameState.run_save = run
 	GameState.run_seed = randi()
 	GameState.is_run_active = true
-	GameState.placement_target_species_id = species.id
-	EventBus.placement_target_changed.emit(String(species.id))
-	EventBus.run_started.emit(species.kingdom_id)
-	EventBus.species_introduced.emit(species.id)
+	GameState.placement_target_species_id = first.id
+	EventBus.placement_target_changed.emit(String(first.id))
+	EventBus.run_started.emit(first.kingdom_id)
+	for species in team:
+		EventBus.species_introduced.emit(species.id)
 	SaveSystem.save_now()
 
 
@@ -255,10 +285,11 @@ func _reset_run_state() -> void:
 		"starting_species_id": "",
 		"starting_species_kingdom_id": "",
 		"unlocked_species_in_run": [],
+		"team": [],
 		"run_seed": 0,
 		"tick_count": 0,
 		"adaptation": 0.0,
-		"species_levels": {},
+		"species_stat_boosts": {},
 		"biome_map": {},
 		"tiles": [],
 		"organisms": [],

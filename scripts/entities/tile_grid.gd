@@ -1,15 +1,8 @@
 extends Node2D
 ##
-## TileGrid — 2026-05-21 visual-direction refactor.
-## Was: TileMap with ColorRect species overlays + Polygon2D animal markers.
-## Now: Sprite2D-per-tile for biome bases, custom Node2D icons drawn on top
-## for species (biome stays visible underneath), plus an explicit symbiosis
-## ring overlay when multiple kingdoms share a tile.
-##
-## Public API preserved: set_occupant, clear_occupant, clear_all_occupants,
-## clear_owned, map_to_local, local_to_map, set_fog_state, reveal_tiles,
-## set_obstacles, add_structure_halo, remove_structure_halo,
-## GRID_WIDTH/GRID_HEIGHT/TILE_SIZE constants.
+## TileGrid — world grid renderer.
+## Sprite2D-per-tile for biome bases, procedural scatter overlay for organisms,
+## flow arrows for resource transfer, buffer bars for tile fill state.
 ##
 
 const GRID_WIDTH: int = 32
@@ -25,41 +18,7 @@ const TILE_SIZE: int = 48   # Locked 2026-05-22 — see VISUAL_DIRECTION.md
 
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 
-const BIOME_IDS: Array[StringName] = [
-	&"grassland", &"rich_soil", &"forest_edge",
-	&"tundra", &"mineral_vent", &"swamp", &"rock"
-]
-
-# Locked palette: gold marker color for symbiosis adjacency indicators
-# (corner dots + edge highlights). Used by VM-B3 when adjacency-symbiosis
-# rendering lands.
-const SYMBIOSIS_GOLD: Color = Color(0.85, 0.72, 0.28, 1.0)
-
-# Phase 15a tile pulse — disabled, kept as concept for slime-mold-style flow.
-const PULSE_CHANCE: float = 0.0
-const PULSE_DURATION: float = 0.35
-const PULSE_BRIGHTNESS_BUMP: float = 0.60
-
 const FOG_COLOR: Color = Color(0.04, 0.04, 0.06, 1.0)
-const FOG_EDGE_COLOR: Color = Color(0.08, 0.08, 0.10, 1.0)
-
-# Animal marker — small inset diamond at tile center, on top of biome + species.
-const ANIMAL_MARKER_RADIUS: float = 6.0
-
-# Cluster outline placeholders, currently disabled.
-const EDGE_WIDTH: float = 1.0
-const EDGE_INSET_PLANTAE: float = 1.5
-const EDGE_INSET_FUNGI: float = 3.5
-
-
-class _EdgesOverlay extends Node2D:
-	var tile_grid
-
-	func _draw() -> void:
-		# Cluster edges disabled 2026-05-20 — revisit with halo-per-cluster
-		# approach. Keep overlay node so re-enabling is a single return removal.
-		return
-
 
 class _FogOverlay extends Node2D:
 	var tile_grid
@@ -76,71 +35,8 @@ class _FogOverlay extends Node2D:
 				draw_rect(Rect2(origin, Vector2(tile_grid.TILE_SIZE, tile_grid.TILE_SIZE)), tile_grid.FOG_COLOR, true)
 
 
-class _BondOverlay extends Node2D:
-	# Golden symbiosis markers — visualises mycorrhizal bonds between plant
-	# tiles and their adjacent fungus partners. Scans bonded plant tiles each
-	# redraw, finds the neighboring fungus, draws a gold link + a small dot
-	# on each end.
-	var tile_grid
-
-	const BOND_GOLD: Color = Color(1.0, 0.82, 0.32, 0.85)
-	const BOND_GOLD_BRIGHT: Color = Color(1.0, 0.92, 0.55, 1.0)
-
-	func _draw() -> void:
-		if tile_grid == null:
-			return
-		var territory: Node = tile_grid._get_territory_for_age()
-		if territory == null:
-			return
-		var ts: float = float(tile_grid.TILE_SIZE)
-		for coord in territory.get_all_owned_coords():
-			if not bool(territory.get_tile_data(coord, "mycorrhizal_bond", false)):
-				continue
-			var plant_center: Vector2 = tile_grid.map_to_local(coord)
-			# Find any adjacent fungus tile to anchor the link.
-			for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-				var n: Vector2i = coord + offset
-				var occ: Dictionary = territory.peek_occupants(n)
-				if not occ.has(&"fungi"):
-					continue
-				var fungus_center: Vector2 = tile_grid.map_to_local(n)
-				# Midpoint marker — a small golden capsule between the two tiles.
-				var mid: Vector2 = (plant_center + fungus_center) * 0.5
-				draw_line(plant_center, fungus_center, BOND_GOLD, 2.0, true)
-				draw_circle(mid, ts * 0.12, BOND_GOLD_BRIGHT)
-				draw_circle(mid, ts * 0.06, Color(1.0, 1.0, 0.85, 1.0))
 
 
-class _StatusOverlay extends Node2D:
-	var tile_grid
-	const COLOR_OK: Color = Color(0.53, 0.80, 0.40)
-	const COLOR_THROTTLED: Color = Color(0.92, 0.78, 0.30)
-	const COLOR_STARVING: Color = Color(0.86, 0.30, 0.30)
-	const OUTLINE: Color = Color(0.06, 0.06, 0.08, 0.85)
-
-	func _draw() -> void:
-		if tile_grid == null:
-			return
-		var growth: Node = tile_grid._get_growth_system()
-		if growth == null or not growth.has_method("get_tile_input_satisfaction"):
-			return
-		for coord in tile_grid._tile_occupants.keys():
-			var occupants: Dictionary = tile_grid._tile_occupants[coord]
-			if occupants.is_empty():
-				continue
-			var throttle: float = float(growth.get_tile_input_satisfaction(coord))
-			var color: Color = _status_color(throttle)
-			var radius: float = 4.0
-			var center: Vector2 = tile_grid.map_to_local(coord) + Vector2(0.0, -tile_grid.TILE_SIZE * 0.34)
-			draw_circle(center, radius + 1.5, OUTLINE)
-			draw_circle(center, radius, color)
-
-	func _status_color(throttle: float) -> Color:
-		if throttle >= 0.7:
-			return COLOR_OK
-		if throttle >= 0.3:
-			return COLOR_THROTTLED
-		return COLOR_STARVING
 
 
 class _FlowOverlay extends Node2D:
@@ -572,16 +468,10 @@ var _species_by_id: Dictionary[StringName, SpeciesData] = {}
 var _biome_textures: Dictionary[StringName, Texture2D] = {}
 var _biome_sprites: Dictionary[Vector2i, Sprite2D] = {}
 var _overlay_layer: Node2D
-var _edges_overlay: _EdgesOverlay
 var _fog_overlay: _FogOverlay
 var _halo_overlay: _HaloOverlay
-var _bond_overlay: _BondOverlay
-var _status_overlay: _StatusOverlay
 var _flow_overlay: _FlowOverlay
-# VM-B1.5: single overlay drawing all organisms across the grid in world
-# coords with side-view sprites. Replaces per-tile cluster Node2Ds.
 var _organism_overlay: _OrganismScatterOverlay
-var _pulse_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _revealed_set: Dictionary[Vector2i, bool] = {}
 var _obstacle_set: Dictionary[Vector2i, bool] = {}
 var _structure_halos: Dictionary[String, Array] = {}
@@ -611,6 +501,9 @@ const AGE_REFRESH_INTERVAL: int = 5
 var _ticks_since_age_refresh: int = 0
 var _last_stage_by_coord: Dictionary[Vector2i, int] = {}
 var _status_redraw_tick: int = 0
+var _animal_harvest_accum: Dictionary[Vector2i, float] = {}
+var _animal_harvest_ticks: Dictionary[Vector2i, int] = {}
+const ANIMAL_FLOAT_INTERVAL: int = 8
 
 
 func _ready() -> void:
@@ -628,44 +521,17 @@ func _ready() -> void:
 	_organism_overlay.z_index = 1
 	_overlay_layer.add_child(_organism_overlay)
 
-	_edges_overlay = _EdgesOverlay.new()
-	_edges_overlay.name = "EdgesOverlay"
-	_edges_overlay.tile_grid = self
-	_edges_overlay.z_index = 2
-	_overlay_layer.add_child(_edges_overlay)
-
 	_halo_overlay = _HaloOverlay.new()
 	_halo_overlay.name = "StructureHalos"
 	_halo_overlay.tile_grid = self
 	_halo_overlay.z_index = 3
 	_overlay_layer.add_child(_halo_overlay)
 
-	_bond_overlay = _BondOverlay.new()
-	_bond_overlay.name = "SymbiosisBonds"
-	_bond_overlay.tile_grid = self
-	# Same z as halos but draws after — sits on top of biome tile + halos,
-	# under organism sprites so the species art still reads clearly.
-	_bond_overlay.z_index = 3
-	_overlay_layer.add_child(_bond_overlay)
-
-	_status_overlay = _StatusOverlay.new()
-	_status_overlay.name = "StatusOverlay"
-	_status_overlay.tile_grid = self
-	# Status dots must sit above fog (z=4) so they remain visible on revealed
-	# tiles that fall in the fog overlay's draw set.
-	_status_overlay.z_index = 5
-	_overlay_layer.add_child(_status_overlay)
-
 	_flow_overlay = _FlowOverlay.new()
 	_flow_overlay.name = "FlowOverlay"
 	_flow_overlay.tile_grid = self
-	# Same layer as the status dots; arrows draw below the dots so the
-	# throttle indicator stays the strongest read.
 	_flow_overlay.z_index = 5
 	_overlay_layer.add_child(_flow_overlay)
-	# Ensure the status overlay is drawn AFTER the flow overlay within the
-	# same z so dots overlap arrowheads, not the other way around.
-	_overlay_layer.move_child(_status_overlay, -1)
 
 	_fusion_overlay = _StructureFusionOverlay.new()
 	_fusion_overlay.name = "StructureFusion"
@@ -694,9 +560,8 @@ func _ready() -> void:
 	EventBus.era_changed.connect(_on_era_changed)
 	EventBus.run_loaded.connect(_on_run_loaded)
 	EventBus.tick.connect(_on_tick_pulse)
-	EventBus.tick.connect(_on_tick_status_overlay)
 	EventBus.tile_harvested.connect(_on_tile_harvested)
-	_pulse_rng.randomize()
+	EventBus.animal_harvested.connect(_on_animal_harvested)
 
 	call_deferred("_populate")
 
@@ -954,8 +819,6 @@ func _update_tile_stage(coord: Vector2i) -> void:
 func _request_scatter_redraw() -> void:
 	if _organism_overlay != null:
 		_organism_overlay.queue_redraw()
-	if _status_overlay != null:
-		_status_overlay.queue_redraw()
 	if _flow_overlay != null:
 		_flow_overlay.queue_redraw()
 	if _outline_overlay != null:
@@ -973,34 +836,13 @@ func _species_color(species_id: StringName) -> Color:
 	return species.tile_marker_color
 
 
-# DEPRECATED shim.
-func set_surface_owner(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> void:
-	if kingdom_id == &"":
-		clear_occupant(coord, &"plantae")
-		clear_occupant(coord, &"animals")
-		return
-	if kingdom_id == &"plantae":
-		set_occupant(coord, &"plantae", &"pioneer_grass")
-	elif kingdom_id == &"animals":
-		var species_id: StringName = &"common_predator" if variant == &"animals_predator" else &"common_grazer"
-		set_occupant(coord, &"animals", species_id)
-
-
-# DEPRECATED shim.
-func set_subsurface_owner(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> void:
-	if kingdom_id == &"":
-		clear_occupant(coord, &"fungi")
-		return
-	if kingdom_id == &"fungi":
-		var species_id: StringName = &"mycelium_thread_mycorrhizal" if variant == &"mycorrhizal" else &"mycelium_thread"
-		set_occupant(coord, &"fungi", species_id)
-
-
 func clear_owned() -> void:
 	_tile_occupants.clear()
 	_structure_halos.clear()
 	_halo_colors.clear()
 	_last_stage_by_coord.clear()
+	_animal_harvest_accum.clear()
+	_animal_harvest_ticks.clear()
 	_request_scatter_redraw()
 	_redraw_halos()
 
@@ -1085,15 +927,6 @@ func _maturation_stage(age_ticks: int) -> int:
 	return 2
 
 
-func _on_tick_status_overlay(_delta: float) -> void:
-	_status_redraw_tick += 1
-	if _status_redraw_tick < 10:
-		return
-	_status_redraw_tick = 0
-	if _status_overlay != null:
-		_status_overlay.queue_redraw()
-	if _flow_overlay != null:
-		_flow_overlay.queue_redraw()
 
 
 func _get_growth_system() -> Node:
@@ -1114,14 +947,11 @@ func _get_territory_for_age() -> Node:
 
 
 func _on_tick_pulse(_delta: float) -> void:
-	# Bonds may have been added/removed by the growth tick — repaint markers.
-	if _bond_overlay != null:
-		_bond_overlay.queue_redraw()
-	if PULSE_CHANCE > 0.0:
-		for coord in _tile_occupants.keys():
-			if _pulse_rng.randf() > PULSE_CHANCE:
-				continue
-			_pulse_tile(coord)
+	_status_redraw_tick += 1
+	if _status_redraw_tick >= 10:
+		_status_redraw_tick = 0
+		if _flow_overlay != null:
+			_flow_overlay.queue_redraw()
 	# Maturation refresh: bump stages; one global redraw if anything changed.
 	_ticks_since_age_refresh += 1
 	if _ticks_since_age_refresh >= AGE_REFRESH_INTERVAL:
@@ -1137,41 +967,78 @@ func _on_tick_pulse(_delta: float) -> void:
 			_request_scatter_redraw()
 
 
-func _pulse_tile(_coord: Vector2i) -> void:
-	return
-
-
 func _on_tile_harvested(coord: Vector2i, amounts: Dictionary) -> void:
 	var center: Vector2 = map_to_local(coord)
-	var biomass: float = float(amounts.get(&"biomass", 0.0))
 	var total: float = 0.0
 	for v in amounts.values():
 		total += float(v)
 	if total <= 0.0:
 		return
 
-	# Flash the biome sprite white briefly
 	var sprite: Sprite2D = _biome_sprites.get(coord, null)
 	if sprite != null:
 		var tween: Tween = create_tween()
 		tween.tween_property(sprite, "modulate", Color(2.0, 2.0, 2.0, 1.0), 0.08)
 		tween.tween_property(sprite, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.2)
 
-	# Floating "+X" label
-	if biomass > 0.0:
-		_spawn_harvest_float(center, biomass)
+	var combo: int = _get_harvest_combo()
+	var bonus: float = 1.0 + 0.10 * float(combo)
+	_spawn_harvest_float(center, total * bonus, combo)
 
 
-func _spawn_harvest_float(pos: Vector2, amount: float) -> void:
+func _on_animal_harvested(coord: Vector2i, amount: float) -> void:
+	_animal_harvest_accum[coord] = _animal_harvest_accum.get(coord, 0.0) + amount
+	var tick_count: int = _animal_harvest_ticks.get(coord, 0) + 1
+	_animal_harvest_ticks[coord] = tick_count
+	if tick_count >= ANIMAL_FLOAT_INTERVAL:
+		var total: float = _animal_harvest_accum.get(coord, 0.0)
+		_animal_harvest_accum[coord] = 0.0
+		_animal_harvest_ticks[coord] = 0
+		if total > 0.0:
+			_spawn_animal_float(map_to_local(coord), total)
+
+
+func _get_harvest_combo() -> int:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return 0
+	var router: Node = tree.root.get_node_or_null("World/Systems/TileInputRouter")
+	if router != null and router.has_method("get_combo_level"):
+		return router.get_combo_level()
+	return 0
+
+
+func _spawn_harvest_float(pos: Vector2, amount: float, combo: int = 0) -> void:
 	var label := Label.new()
 	label.text = "+%s" % FormatUtils.abbreviate(amount)
-	label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.40))
-	label.add_theme_font_size_override("font_size", 14)
+	var t: float = clampf(float(combo) / 5.0, 0.0, 1.0)
+	var color: Color = Color(0.55, 0.85, 0.40).lerp(Color(1.0, 0.85, 0.25), t)
+	label.add_theme_color_override("font_color", color)
+	var font_size: int = 14 + combo * 2
+	label.add_theme_font_size_override("font_size", font_size)
 	label.position = pos - Vector2(20, 10)
+	label.z_index = 10
+	add_child(label)
+	var base_scale: float = 1.0 + 0.1 * float(combo)
+	label.scale = Vector2(base_scale * 1.3, base_scale * 1.3)
+	var tween := create_tween()
+	tween.tween_property(label, "scale", Vector2(base_scale, base_scale), 0.1).set_ease(Tween.EASE_OUT)
+	tween.set_parallel(true)
+	tween.tween_property(label, "position:y", pos.y - 35.0, 0.8)
+	tween.tween_property(label, "modulate:a", 0.0, 0.8).set_delay(0.3)
+	tween.chain().tween_callback(label.queue_free)
+
+
+func _spawn_animal_float(pos: Vector2, amount: float) -> void:
+	var label := Label.new()
+	label.text = "+%s" % FormatUtils.abbreviate(amount)
+	label.add_theme_color_override("font_color", Color(0.92, 0.72, 0.28, 0.85))
+	label.add_theme_font_size_override("font_size", 11)
+	label.position = pos - Vector2(14, 8)
 	label.z_index = 10
 	add_child(label)
 	var tween := create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(label, "position:y", pos.y - 30.0, 0.6)
-	tween.tween_property(label, "modulate:a", 0.0, 0.6)
+	tween.tween_property(label, "position:y", pos.y - 22.0, 1.2)
+	tween.tween_property(label, "modulate:a", 0.0, 1.2).set_delay(0.4)
 	tween.chain().tween_callback(label.queue_free)

@@ -1,40 +1,49 @@
 extends Node
 
 const CHECKPOINT_PLACE_HERO: StringName = &"place_hero"
-const CHECKPOINT_UNLOCK_MYCORRHIZAL: StringName = &"unlock_mycorrhizal"
-const CHECKPOINT_UNLOCK_ARTHROPLEURA: StringName = &"unlock_arthropleura"
+const CHECKPOINT_PLACE_RECYCLER: StringName = &"place_recycler"
+const CHECKPOINT_PLACE_HARVESTER: StringName = &"place_harvester"
 const CHECKPOINT_BOTTLENECK_NUTRIENTS: StringName = &"bottleneck_nutrients"
 const CHECKPOINT_BOTTLENECK_DETRITUS: StringName = &"bottleneck_detritus"
 const CHECKPOINT_RUN_COMPLETE: StringName = &"run_complete"
 const CHECKPOINT_ORDER: Array[StringName] = [
 	CHECKPOINT_PLACE_HERO,
-	CHECKPOINT_UNLOCK_MYCORRHIZAL,
-	CHECKPOINT_UNLOCK_ARTHROPLEURA,
+	CHECKPOINT_PLACE_RECYCLER,
+	CHECKPOINT_PLACE_HARVESTER,
 	CHECKPOINT_BOTTLENECK_NUTRIENTS,
 	CHECKPOINT_BOTTLENECK_DETRITUS,
 	CHECKPOINT_RUN_COMPLETE
 ]
 
-# Partial-order prereqs. Bottleneck checkpoints depend only on the matching
-# unlock checkpoint, not on each other or on the prior bottleneck — so the
-# happy path (no bottlenecks ever fire) doesn't block run_complete.
 const CHECKPOINT_PREREQS: Dictionary[StringName, Array] = {
-	CHECKPOINT_UNLOCK_MYCORRHIZAL: [CHECKPOINT_PLACE_HERO],
-	CHECKPOINT_UNLOCK_ARTHROPLEURA: [CHECKPOINT_UNLOCK_MYCORRHIZAL],
-	CHECKPOINT_BOTTLENECK_NUTRIENTS: [CHECKPOINT_UNLOCK_MYCORRHIZAL],
-	CHECKPOINT_BOTTLENECK_DETRITUS: [CHECKPOINT_UNLOCK_ARTHROPLEURA],
-	CHECKPOINT_RUN_COMPLETE: [CHECKPOINT_UNLOCK_ARTHROPLEURA]
+	CHECKPOINT_PLACE_RECYCLER: [CHECKPOINT_PLACE_HERO],
+	CHECKPOINT_PLACE_HARVESTER: [CHECKPOINT_PLACE_RECYCLER],
+	CHECKPOINT_BOTTLENECK_NUTRIENTS: [CHECKPOINT_PLACE_RECYCLER],
+	CHECKPOINT_BOTTLENECK_DETRITUS: [CHECKPOINT_PLACE_HARVESTER],
+	CHECKPOINT_RUN_COMPLETE: [CHECKPOINT_PLACE_HARVESTER]
 }
 
 var _fired: Dictionary[StringName, bool] = {}
 var _bottleneck_age_ticks: Dictionary[StringName, int] = {}
+var _species_cache: Dictionary[StringName, SpeciesData] = {}
 
 
 func _ready() -> void:
+	_build_species_cache()
 	EventBus.run_started.connect(_on_run_started)
 	EventBus.run_loaded.connect(_on_run_loaded)
 	EventBus.tick.connect(_on_tick)
 	_on_run_loaded(SaveSystem.SAVE_VERSION)
+
+
+func _build_species_cache() -> void:
+	_species_cache.clear()
+	var index: SpeciesIndex = load("res://data/species/_index.tres") as SpeciesIndex
+	if index == null:
+		return
+	for species in index.species:
+		if species != null:
+			_species_cache[species.id] = species
 
 
 func _on_run_started(_kingdom_id: StringName) -> void:
@@ -54,8 +63,8 @@ func _on_run_loaded(_save_version: int) -> void:
 
 
 func _on_tick(_delta: float) -> void:
-	_evaluate(CHECKPOINT_UNLOCK_MYCORRHIZAL, _unlock_mycorrhizal_ready())
-	_evaluate(CHECKPOINT_UNLOCK_ARTHROPLEURA, _unlock_arthropleura_ready())
+	_evaluate(CHECKPOINT_PLACE_RECYCLER, _has_role_placed(&"recycler"))
+	_evaluate(CHECKPOINT_PLACE_HARVESTER, _has_role_placed(&"harvester"))
 	_evaluate(CHECKPOINT_BOTTLENECK_NUTRIENTS, _bottleneck_nutrients_ready())
 	_evaluate(CHECKPOINT_BOTTLENECK_DETRITUS, _bottleneck_detritus_ready())
 	_evaluate(CHECKPOINT_RUN_COMPLETE, _run_complete_ready())
@@ -87,29 +96,21 @@ func _fire(id: StringName) -> void:
 	SaveSystem.save_now()
 
 
-const MIN_BIOMASS_MYCORRHIZAL: float = 36.0  # 30 introduce + 6 colonize
-const MIN_BIOMASS_ARTHROPLEURA: float = 58.0  # 50 introduce + 8 colonize
+func _has_role_placed(role: StringName) -> bool:
+	var territory: Node = _get_territory_system()
+	if territory == null:
+		return false
+	var unlocked: Array = GameState.run_save.get("unlocked_species_in_run", []) as Array
+	for species_id_str in unlocked:
+		var species_id: StringName = StringName(species_id_str)
+		var species: SpeciesData = _species_cache.get(species_id, null)
+		if species != null and species.role == role:
+			var coords: Array = territory.get_species_occupied_coords(species_id)
+			if not coords.is_empty():
+				return true
+	return false
 
 
-func _unlock_mycorrhizal_ready() -> bool:
-	# Fire after the player dismissed the place_hero bubble AND has enough
-	# biomass to actually introduce + place mycorrhizal. Earlier rounds
-	# fired the bubble before the player could act on it, which felt
-	# broken. Starvation fallback covers players who ignore prompts.
-	if _prereq_dismissed(CHECKPOINT_PLACE_HERO) and GameState.get_hero_biomass() >= MIN_BIOMASS_MYCORRHIZAL:
-		return true
-	return _age_starvation(CHECKPOINT_UNLOCK_MYCORRHIZAL, _short_grace_ticks())
-
-
-func _unlock_arthropleura_ready() -> bool:
-	if _prereq_dismissed(CHECKPOINT_UNLOCK_MYCORRHIZAL) and GameState.get_hero_biomass() >= MIN_BIOMASS_ARTHROPLEURA:
-		return true
-	return _age_starvation(CHECKPOINT_UNLOCK_ARTHROPLEURA, _short_grace_ticks())
-
-
-func _prereq_dismissed(id: StringName) -> bool:
-	var dismissed: Dictionary = GameState.run_save.get("checkpoints_dismissed", {}) as Dictionary
-	return bool(dismissed.get(String(id), false))
 
 
 func _bottleneck_nutrients_ready() -> bool:
@@ -127,9 +128,7 @@ func _bottleneck_detritus_ready() -> bool:
 
 
 func _run_complete_ready() -> bool:
-	var hero_biomass: float = GameState.get_hero_biomass()
-	var cycle_closed: bool = bool(GameState.run_save.get("cycle_closed", false))
-	return hero_biomass >= 15000.0 and cycle_closed
+	return RunGoalSystem.is_met()
 
 
 func _age_starvation(id: StringName, grace_ticks: int) -> bool:
@@ -168,10 +167,6 @@ func _get_territory_system() -> Node:
 	if tree == null:
 		return null
 	return tree.root.get_node_or_null("World/Systems/TerritorySystem")
-
-
-func _short_grace_ticks() -> int:
-	return int(round(60.0 * TickClock.tick_hz))
 
 
 func _long_grace_ticks() -> int:

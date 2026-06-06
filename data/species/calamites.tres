@@ -8,6 +8,7 @@ id = &"calamites"
 display_name = "Calamites"
 description = "Segmented stalks rise in dense stands at the water's edge. Where they fall, peat begins."
 kingdom_id = &"plantae"
+role = &"producer"
 sprite = null
 base_traits = Array[Resource]([])
 introduce_cost = {}

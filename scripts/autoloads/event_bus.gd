@@ -13,6 +13,8 @@ signal tile_tapped(coord: Vector2i)
 signal tile_colonized(coord: Vector2i, owner_id: StringName)
 signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
 signal tile_harvested(coord: Vector2i, amounts: Dictionary)
+signal animal_harvested(coord: Vector2i, amount: float)
+signal harvest_combo(level: int)
 
 # Structures
 signal structure_promoted(structure_id: StringName, anchor: Vector2i)
@@ -47,3 +49,4 @@ signal era_changed(era_id: StringName)
 # Offline progress
 signal replay_started(total_ticks: int)
 signal replay_finished()
+signal offline_summary(biomass_gained: float)

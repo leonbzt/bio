@@ -8,6 +8,7 @@ id = &"tree_fern_psaronius"
 display_name = "Tree Fern"
 description = "A fronded crown atop a slim trunk. Fills the middle layer of every forest in the era."
 kingdom_id = &"plantae"
+role = &"producer"
 sprite = null
 base_traits = Array[Resource]([])
 introduce_cost = {
@@ -17,7 +18,11 @@ colonize_cost = {
 "biomass": 8.0
 }
 tick_yield = {
-"biomass": 0.7
+"biomass": 1.2,
+"decay": 0.15
+}
+consume_input = {
+"nutrients": 0.6
 }
 placement_rule = &"adjacent_empty"
 placement_targets = Array[StringName]([])

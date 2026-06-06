@@ -1,11 +1,5 @@
 extends Node
 
-const _KINGDOM_DEFAULT_STARTERS: Dictionary[StringName, StringName] = {
-	&"plantae": &"pioneer_grass",
-	&"fungi": &"mycelium_thread",
-	&"animals": &"common_grazer"
-}
-
 # Per-tile state: {occupants: {kingdom_id: species_id}, data: Dictionary}
 # Single-species-per-tile invariant (locked 2026-05-22, save_version 18+):
 # the occupants dict has AT MOST ONE entry. The map-of-kingdom shape is
@@ -200,81 +194,6 @@ func get_all_owned_coords() -> Array[Vector2i]:
 	return result
 
 
-# DEPRECATED — see brief 04.
-func get_surface_owner(coord: Vector2i) -> StringName:
-	var occ: Dictionary = peek_occupants(coord)
-	if occ.has(&"animals"):
-		return &"animals"
-	if occ.has(&"plantae"):
-		return &"plantae"
-	return &""
-
-
-# DEPRECATED — see brief 04.
-func get_subsurface_owner(coord: Vector2i) -> StringName:
-	if peek_occupants(coord).has(&"fungi"):
-		return &"fungi"
-	return &""
-
-
-# DEPRECATED — see brief 04.
-func add_surface(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> bool:
-	var species_id: StringName = _kingdom_starter(kingdom_id)
-	if species_id == &"":
-		return false
-	return add_occupant(coord, kingdom_id, species_id)
-
-
-# DEPRECATED — see brief 04.
-func add_subsurface(coord: Vector2i, kingdom_id: StringName, variant: StringName = &"") -> bool:
-	if kingdom_id != &"fungi":
-		return false
-	var species_id: StringName = _kingdom_starter(kingdom_id)
-	return add_occupant(coord, kingdom_id, species_id)
-
-
-# DEPRECATED — see brief 04.
-func remove_surface(coord: Vector2i, cause: StringName) -> void:
-	var owner: StringName = get_surface_owner(coord)
-	if owner != &"":
-		remove_occupant(coord, owner, cause)
-
-
-# DEPRECATED — see brief 04.
-func remove_subsurface(coord: Vector2i, cause: StringName) -> void:
-	remove_occupant(coord, &"fungi", cause)
-
-
-# DEPRECATED — see brief 04.
-func get_surface_owned_coords(kingdom_id: StringName = &"") -> Array[Vector2i]:
-	if kingdom_id == &"":
-		var plant_coords: Dictionary = _kingdom_to_coords.get(&"plantae", {}) as Dictionary
-		var animal_coords: Dictionary = _kingdom_to_coords.get(&"animals", {}) as Dictionary
-		var seen: Dictionary = {}
-		var result: Array[Vector2i] = []
-		for coord in plant_coords.keys():
-			seen[coord] = true
-			result.append(coord)
-		for coord in animal_coords.keys():
-			if not seen.has(coord):
-				result.append(coord)
-		return result
-	return get_kingdom_occupied_coords(kingdom_id)
-
-
-# DEPRECATED — see brief 04.
-func get_subsurface_owned_coords(kingdom_id: StringName = &"") -> Array[Vector2i]:
-	return get_kingdom_occupied_coords(kingdom_id if kingdom_id != &"" else &"fungi")
-
-
-# DEPRECATED — see brief 04.
-func get_owned_coords() -> Array[Vector2i]:
-	var kingdom_id: StringName = StringName(GameState.run_save.get("starting_species_kingdom_id", ""))
-	if kingdom_id == &"":
-		return []
-	return get_kingdom_occupied_coords(kingdom_id)
-
-
 func reset_run() -> void:
 	_tiles.clear()
 	_species_to_coords.clear()
@@ -364,10 +283,6 @@ func _flush_run_save() -> void:
 			"data": entry.get("data", {})
 		})
 	run["tiles"] = tiles_array
-
-
-func _kingdom_starter(kingdom_id: StringName) -> StringName:
-	return _KINGDOM_DEFAULT_STARTERS.get(kingdom_id, &"")
 
 
 func _index_add(coord: Vector2i, kingdom_id: StringName, species_id: StringName) -> void:

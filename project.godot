@@ -30,6 +30,7 @@ EraSystem="*res://scripts/autoloads/era_system.gd"
 ColonizationRulesRegistry="*uid://q2r2gbhtvobq"
 KingdomTheme="*res://scripts/autoloads/kingdom_theme.gd"
 AdaptationSystem="*res://scripts/autoloads/adaptation_system.gd"
+EcosystemScoring="*res://scripts/autoloads/ecosystem_scoring.gd"
 
 [display]
 

@@ -8,6 +8,7 @@ id = &"meganeura"
 display_name = "Meganeura"
 description = "Wingspan: seventy centimeters. The high oxygen lets it grow. The high oxygen lets everything grow."
 kingdom_id = &"animals"
+role = &"harvester"
 sprite = null
 base_traits = Array[Resource]([])
 introduce_cost = {
@@ -17,7 +18,10 @@ colonize_cost = {
 "biomass": 10.0
 }
 tick_yield = {
-"biomass": 0.4
+"decay": 0.8
+}
+consume_input = {
+"biomass": 1.0
 }
 placement_rule = &"animal_anchor"
 placement_targets = Array[StringName]([])

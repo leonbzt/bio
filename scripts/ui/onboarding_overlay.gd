@@ -1,17 +1,17 @@
 extends Control
 
 const CHECKPOINT_TEXT: Dictionary[StringName, String] = {
-	&"place_hero": "Place your first Calamites on a wetland tile. Tap it to harvest biomass once it grows.",
-	&"unlock_mycorrhizal": "Soil nutrients are thinning. Place Mycorrhizal Network adjacent to your plant — it converts decay into nutrients automatically.",
-	&"unlock_arthropleura": "Place Arthropleura next to your plants. It auto-harvests biomass and feeds the cycle.",
+	&"place_hero": "Place your first producer on a wetland tile. Tap it to harvest biomass once it grows.",
+	&"place_recycler": "Place your recycler (fungi) adjacent to your plants — it converts decay into nutrients.",
+	&"place_harvester": "Place your harvester (animal) next to plants. It auto-harvests biomass and feeds the cycle.",
 	&"bottleneck_nutrients": "Your tiles are starving for nutrients. Place more fungi adjacent to your plants.",
-	&"bottleneck_detritus": "Decay is piling up with nowhere to go. Place another Arthropleura nearby.",
-	&"run_complete": "The forest is self-sustaining. Run complete."
+	&"bottleneck_detritus": "Decay is piling up with nowhere to go. Place another harvester nearby.",
+	&"run_complete": "Ecosystem sustained. Run complete!"
 }
 const CHECKPOINT_ORDER: Array[StringName] = [
 	&"place_hero",
-	&"unlock_mycorrhizal",
-	&"unlock_arthropleura",
+	&"place_recycler",
+	&"place_harvester",
 	&"bottleneck_nutrients",
 	&"bottleneck_detritus",
 	&"run_complete"
@@ -28,10 +28,6 @@ var _processed: Dictionary[StringName, bool] = {}
 
 
 func _load_dismissed() -> Dictionary:
-	# Persistent record of bubbles the player has dismissed. Distinct from
-	# CheckpointSystem's "fired" set: a checkpoint can be fired (the system
-	# recorded it) without having been seen yet (overlay loaded later in
-	# the frame). Only re-show on reload if NOT in dismissed.
 	return GameState.run_save.get("checkpoints_dismissed", {}) as Dictionary
 
 
@@ -56,21 +52,10 @@ func _ready() -> void:
 	_skip_btn.pressed.connect(_hide_overlay)
 	EventBus.checkpoint_triggered.connect(_on_checkpoint_triggered)
 	EventBus.tile_colonized.connect(_on_tile_colonized)
-	EventBus.species_introduced.connect(_on_species_introduced)
 	var territory: Node = get_tree().root.get_node_or_null("World/Systems/TerritorySystem")
 	if territory != null and territory.has_method("get_kingdom_tile_count"):
 		if int(territory.get_kingdom_tile_count(&"plantae")) > 0:
 			_processed[&"place_hero"] = true
-	var in_run: Array = GameState.run_save.get("unlocked_species_in_run", []) as Array
-	if in_run.has("mycorrhizal_network"):
-		_processed[&"unlock_mycorrhizal"] = true
-	if in_run.has("arthropleura"):
-		_processed[&"unlock_arthropleura"] = true
-	# Replay fired-but-not-dismissed checkpoints. CheckpointSystem may fire a
-	# checkpoint (e.g. place_hero on run_started) before this overlay is even
-	# instantiated, so the live signal is missed. Loading from save here is
-	# the catch-up path. Already-dismissed checkpoints are marked processed
-	# instead, so they don't re-show across sessions.
 	var fired: Dictionary = GameState.run_save.get("checkpoints_fired", {}) as Dictionary
 	var dismissed: Dictionary = _load_dismissed()
 	for id in CHECKPOINT_ORDER:
@@ -94,23 +79,11 @@ func _on_tile_colonized(_coord: Vector2i, owner_id: StringName) -> void:
 	if owner_id == &"plantae":
 		_complete_checkpoint(&"place_hero")
 	elif owner_id == &"fungi":
-		# Only dismiss the bottleneck bubble if it's actually showing —
-		# don't pre-empt a future post-closure bottleneck just because the
-		# player placed fungi early.
 		_dismiss_if_queued(&"bottleneck_nutrients")
+		_dismiss_if_queued(&"place_recycler")
 	elif owner_id == &"animals":
 		_dismiss_if_queued(&"bottleneck_detritus")
-
-
-func _on_species_introduced(species_id: StringName) -> void:
-	# Only complete the unlock checkpoint if the bubble is currently visible.
-	# Earlier we'd pre-empt it when the species was introduced manually,
-	# but that meant a player exploring the species panel before the
-	# checkpoint fired would permanently suppress the future bubble.
-	if species_id == &"mycorrhizal_network":
-		_dismiss_if_queued(&"unlock_mycorrhizal")
-	elif species_id == &"arthropleura":
-		_dismiss_if_queued(&"unlock_arthropleura")
+		_dismiss_if_queued(&"place_harvester")
 
 
 func _dismiss_current() -> void:
@@ -132,9 +105,6 @@ func _complete_checkpoint(id: StringName) -> void:
 
 
 func _dismiss_if_queued(id: StringName) -> void:
-	# Only acts when the bubble is currently in the queue. Used for bottleneck
-	# checkpoints so an early placement of fungi/animals doesn't pre-emptively
-	# suppress the post-closure bottleneck bubble.
 	if not _queue.has(id):
 		return
 	_queue.erase(id)
@@ -144,9 +114,6 @@ func _dismiss_if_queued(id: StringName) -> void:
 
 
 func _hide_overlay() -> void:
-	# Don't queue_free — the next checkpoint_triggered would have nowhere
-	# to land. Hide and stay alive; _refresh will flip us visible again
-	# when a new bubble joins the queue.
 	visible = false
 
 

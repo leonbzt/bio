@@ -8,6 +8,7 @@ id = &"mycorrhizal_network"
 display_name = "Mycorrhizal Network"
 description = "Threads of fungus weave under the soil, exchanging nutrients with plant roots. The hidden partner of every healthy forest."
 kingdom_id = &"fungi"
+role = &"recycler"
 sprite = null
 base_traits = Array[Resource]([])
 introduce_cost = {

@@ -1,9 +1,9 @@
 extends Node
 ##
-## GrowthSystem — Phase 18: local flow production.
-## Each tile has an output buffer. Production fills the buffer. Buffers
-## drain via player harvest (species panel button) or animal auto-harvest.
-## Hero biomass increases ONLY on extraction.
+## GrowthSystem — local flow production.
+## Each tile has an output buffer (cap 50). Production fills the buffer.
+## Hero biomass increases via: player tap-harvest, animal auto-harvest,
+## or buffer overflow (25% efficiency).
 ##
 
 const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
@@ -17,8 +17,9 @@ const SPROUTING_DURATION: int = 15
 const MATURE_DURATION: int = 45
 const CYCLE_CLOSURE_CONFIRM_TICKS: int = 5
 
-const BUFFER_CAP_BASE: float = 20.0
-const SOIL_START: float = 60.0
+const BUFFER_CAP_BASE: float = 50.0
+const SOIL_START: float = 120.0
+const SOIL_GRACE_TICKS: int = 60
 const AMBIENT_FLOOR: float = 0.20
 
 const _CARDINAL: Array[Vector2i] = [
@@ -91,11 +92,16 @@ func get_tile_buffer_fill(coord: Vector2i) -> float:
 	return minf(total / BUFFER_CAP_BASE, 1.0)
 
 
+const HARVEST_SOIL_KICKBACK: float = 0.10
+
 func drain_tile_buffer(coord: Vector2i) -> Dictionary:
 	var buf: Dictionary = _output_buffers.get(coord, {})
 	if buf.is_empty():
 		return {}
 	var drained: Dictionary = buf.duplicate()
+	var biomass_drained: float = float(drained.get(&"biomass", 0.0))
+	if biomass_drained > 0.0 and _soil_nutrients.has(coord):
+		_soil_nutrients[coord] = float(_soil_nutrients.get(coord, 0.0)) + biomass_drained * HARVEST_SOIL_KICKBACK
 	buf.clear()
 	_output_buffers[coord] = buf
 	return drained
@@ -155,6 +161,7 @@ func _tick_tile(coord: Vector2i) -> void:
 		var b_consumed: float = float(consumed.get(&"biomass", 0.0))
 		if b_consumed > 0.0:
 			_add_hero_lifetime_biomass(b_consumed)
+			EventBus.animal_harvested.emit(coord, b_consumed)
 
 
 func _compute_local_throttle(coord: Vector2i, species: SpeciesData) -> float:
@@ -176,16 +183,15 @@ func _compute_local_throttle(coord: Vector2i, species: SpeciesData) -> float:
 			var nbuf: Dictionary = _output_buffers.get(neighbor, {})
 			available += float(nbuf.get(rid, 0.0))
 
-		if rid == &"nutrients" and soil > 0.0:
-			available += minf(soil, needed)
+		if rid == &"nutrients":
+			available += soil
 
 		if available < needed:
 			throttle = minf(throttle, available / needed)
 
-	if soil <= 0.0 and throttle < AMBIENT_FLOOR:
-		throttle = AMBIENT_FLOOR
-
-	return throttle
+	var res_boost: int = AdaptationSystem.get_stat_boost(species.id, &"resistance")
+	var floor: float = AMBIENT_FLOOR + 0.05 * float(res_boost)
+	return maxf(throttle, floor)
 
 
 func _consume_local_inputs(coord: Vector2i, species: SpeciesData, throttle: float) -> Dictionary:
@@ -193,9 +199,12 @@ func _consume_local_inputs(coord: Vector2i, species: SpeciesData, throttle: floa
 	if species.consume_input.is_empty() or throttle <= 0.0:
 		return consumed
 
+	var eff_boost: int = AdaptationSystem.get_stat_boost(species.id, &"efficiency")
+	var eff_mult: float = 1.0 - 0.10 * float(eff_boost)
+
 	for resource_id in species.consume_input.keys():
 		var rid: StringName = StringName(resource_id)
-		var needed: float = float(species.consume_input[resource_id]) * throttle
+		var needed: float = float(species.consume_input[resource_id]) * throttle * eff_mult
 		if needed <= 0.0:
 			continue
 
@@ -205,7 +214,9 @@ func _consume_local_inputs(coord: Vector2i, species: SpeciesData, throttle: floa
 			var soil: float = float(_soil_nutrients.get(coord, 0.0))
 			var from_soil: float = minf(soil, needed)
 			if from_soil > 0.0:
-				_soil_nutrients[coord] = maxf(0.0, soil - from_soil)
+				var age_ticks: int = _cached_tick - _territory.get_tile_placed_tick(coord)
+				if age_ticks >= SOIL_GRACE_TICKS:
+					_soil_nutrients[coord] = maxf(0.0, soil - from_soil)
 				needed -= from_soil
 				total_taken += from_soil
 
@@ -235,6 +246,8 @@ func _consume_local_inputs(coord: Vector2i, species: SpeciesData, throttle: floa
 	return consumed
 
 
+const OVERFLOW_EFFICIENCY: float = 0.25
+
 func _produce_to_buffer(coord: Vector2i, species: SpeciesData, kingdom_id: StringName, throttle: float) -> void:
 	var buf: Dictionary = _output_buffers.get(coord, {})
 	var cap: float = get_buffer_cap(coord)
@@ -242,9 +255,6 @@ func _produce_to_buffer(coord: Vector2i, species: SpeciesData, kingdom_id: Strin
 	var buf_total: float = 0.0
 	for v in buf.values():
 		buf_total += float(v)
-
-	if buf_total >= cap:
-		return
 
 	var base_mult: float = throttle
 	if bool(GameState.run_save.get("cycle_closed", false)):
@@ -291,11 +301,17 @@ func _produce_to_buffer(coord: Vector2i, species: SpeciesData, kingdom_id: Strin
 			per_tile *= 1.05
 
 		var room: float = cap - buf_total
-		if room <= 0.0:
-			break
-		var added: float = minf(per_tile, room)
-		buf[resource_key] = float(buf.get(resource_key, 0.0)) + added
-		buf_total += added
+		if room >= per_tile:
+			buf[resource_key] = float(buf.get(resource_key, 0.0)) + per_tile
+			buf_total += per_tile
+		else:
+			var added: float = maxf(room, 0.0)
+			if added > 0.0:
+				buf[resource_key] = float(buf.get(resource_key, 0.0)) + added
+				buf_total += added
+			var excess: float = per_tile - added
+			if excess > 0.0 and resource_key == &"biomass":
+				_add_hero_lifetime_biomass(excess * OVERFLOW_EFFICIENCY)
 
 	_output_buffers[coord] = buf
 

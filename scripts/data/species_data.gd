@@ -20,6 +20,9 @@ extends Resource
 # era filtering. NOT a run-state field — runs reference species directly.
 @export var kingdom_id: StringName = &""
 
+# Ecological role: &"producer", &"harvester", &"recycler".
+@export var role: StringName = &""
+
 # Traits + numbers.
 @export var sprite: Texture2D
 @export var base_traits: Array[TraitData] = []

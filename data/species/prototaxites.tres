@@ -8,6 +8,7 @@ id = &"prototaxites"
 display_name = "Prototaxites"
 description = "Eight meters of fungal tower. Older than trees, taller than anything around them. What they ate, no one is sure."
 kingdom_id = &"fungi"
+role = &"recycler"
 sprite = null
 base_traits = Array[Resource]([])
 introduce_cost = {
@@ -17,8 +18,10 @@ colonize_cost = {
 "biomass": 12.0
 }
 tick_yield = {
-"biomass": 0.6,
-"nutrients": 0.3
+"nutrients": 1.0
+}
+consume_input = {
+"decay": 1.0
 }
 placement_rule = &"fungi_substrate"
 placement_targets = Array[StringName]([])

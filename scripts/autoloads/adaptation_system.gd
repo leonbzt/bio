@@ -8,10 +8,10 @@ extends Node
 signal adaptation_changed(new_amount: float)
 
 const TICKS_PER_MINUTE: float = 60.0
-const RATE_PER_CLUSTER_TILE: float = 1.0
+const RATE_PER_CLUSTER_TILE: float = 2.0
 const MIN_CLUSTER_SIZE: int = 5
-const RATE_PER_BIOME: float = 0.5
-const RATE_PER_SPECIES: float = 0.25
+const RATE_PER_BIOME: float = 1.0
+const RATE_PER_SPECIES: float = 0.5
 const MAX_LEVEL: int = 3
 const LEVEL_UP_COSTS: Array[float] = [
 	0.0,

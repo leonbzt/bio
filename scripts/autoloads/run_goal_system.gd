@@ -1,7 +1,7 @@
 extends Node
 
-const THROUGHPUT_THRESHOLD: float = 5.0
-const SUSTAINED_TICKS_TARGET: int = 30
+const THROUGHPUT_THRESHOLD: float = 8.0
+const SUSTAINED_TICKS_TARGET: int = 45
 const RATE_WINDOW: int = 10
 
 var _rate_history: Array[float] = []

@@ -11,11 +11,8 @@
 [ext_resource type="Script" path="res://scripts/systems/growth_system.gd" id="7"]
 [ext_resource type="Script" path="res://scripts/systems/structure_registry.gd" id="18"]
 [ext_resource type="Script" path="res://scripts/systems/offline_progress.gd" id="8"]
-[ext_resource type="Script" path="res://scripts/systems/run_stats_tracker.gd" id="13"]
 [ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="15"]
-[ext_resource type="Script" path="res://scripts/systems/ambient_modifier_system.gd" id="20"]
 [ext_resource type="Script" path="res://scripts/ui/era_background_tint.gd" id="21"]
-[ext_resource type="Script" path="res://scripts/systems/cluster_income_tracker.gd" id="22"]
 
 [node name="World" type="Node2D"]
 
@@ -54,17 +51,8 @@ script = ExtResource("7")
 [node name="StructureRegistry" type="Node" parent="Systems"]
 script = ExtResource("18")
 
-[node name="AmbientModifierSystem" type="Node" parent="Systems"]
-script = ExtResource("20")
-
 [node name="OfflineProgress" type="Node" parent="Systems"]
 script = ExtResource("8")
-
-[node name="RunStatsTracker" type="Node" parent="Systems"]
-script = ExtResource("13")
-
-[node name="ClusterIncomeTracker" type="Node" parent="Systems"]
-script = ExtResource("22")
 
 
 [node name="HUDLayer" type="CanvasLayer" parent="."]

@@ -312,6 +312,8 @@ func migrate(old: Dictionary, from_version: int) -> Dictionary:
 		_migrate_v17_to_v18(old)
 	if from_version < 19:
 		_migrate_v18_to_v19(old)
+	if from_version < 20:
+		_migrate_v19_to_v20(old)
 	return old
 
 
@@ -350,20 +352,8 @@ func _build_default_save() -> Dictionary:
 			"run_seed": 0,
 			"tick_count": 0,
 			"adaptation": 0.0,
-			"species_levels": {},
-			"resources": {
-				"biomass": 0.0,
-				"nutrients": 0.0,
-				"sunlight": 0.0,
-				"decay": 0.0,
-				"spores": 0.0,
-				"population_pressure": 0.0,
-				"protein": 0.0,
-				"lifeforce": 0.0,
-				"blood_cohesion": 0.0,
-				"gray_matter": 0.0,
-				"mycelial_stability": 0.0
-			},
+			"species_stat_boosts": {},
+			"team": [],
 			"biome_map": {},
 			"fog_revealed": [],
 			"obstacles": [],
@@ -884,3 +874,16 @@ func _migrate_v18_to_v19(save: Dictionary) -> void:
 	# see it once even if they had previously dismissed the old one.
 	meta["onboarding_step"] = 0
 	save["meta"] = meta
+
+
+func _migrate_v19_to_v20(save: Dictionary) -> void:
+	var run: Dictionary = save.get("run", {}) as Dictionary
+	if run.has("species_levels") and not run.has("species_stat_boosts"):
+		run["species_stat_boosts"] = {}
+		run.erase("species_levels")
+	if not run.has("species_stat_boosts"):
+		run["species_stat_boosts"] = {}
+	if not run.has("team"):
+		run["team"] = []
+	run.erase("resources")
+	save["run"] = run

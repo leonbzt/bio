@@ -16,7 +16,6 @@ var _criterion_progress: float = 0.0
 func _ready() -> void:
 	_load_indexes()
 	EventBus.run_started.connect(_on_run_started)
-	EventBus.run_started.connect(_on_run_started_for_extinction_debuff, CONNECT_DEFERRED)
 	EventBus.tile_colonized.connect(_on_tile_colonized)
 	EventBus.event_resolved.connect(_on_event_resolved)
 	EventBus.prestige_triggered.connect(_on_prestige_triggered)
@@ -286,24 +285,3 @@ func _emit_mass_extinction(from_era: StringName, to_era: StringName) -> void:
 	SaveSystem.save_now()
 
 
-func _on_run_started_for_extinction_debuff(_kingdom_id: StringName) -> void:
-	var pe: Dictionary = GameState.meta_save.get("post_extinction", {}) as Dictionary
-	if pe.is_empty():
-		return
-	var to_era: String = String(pe.get("to_era_id", ""))
-	var current_era: String = String(GameState.meta_save.get("current_era_id", ""))
-	if to_era != current_era:
-		return
-	var ticks: int = int(pe.get("debuff_ticks_remaining", 0))
-	if ticks <= 0:
-		return
-	var ams: Node = _get_ambient_system()
-	if ams != null and ams.has_method("apply_post_extinction_debuff"):
-		ams.apply_post_extinction_debuff(ticks)
-
-
-func _get_ambient_system() -> Node:
-	var tree := Engine.get_main_loop() as SceneTree
-	if tree == null:
-		return null
-	return tree.root.get_node_or_null("World/Systems/AmbientModifierSystem")

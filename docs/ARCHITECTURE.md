@@ -1,6 +1,6 @@
 # Architecture (authoritative spec)
 
-> Every agent (Claude, ChatGPT, Kilo) should read this document before making changes. It defines contracts that must not be violated. If a brief contradicts this document, this document wins.
+> Every agent (Claude, ChatGPT, Kilo) should read this document before making changes. It defines contracts that must not be violated. If another doc contradicts this document, this document wins.
 
 ## 1. Locked decisions
 
@@ -19,16 +19,14 @@
 
 ## 2. Architectural principles
 
-1. **Data-driven content.** Species, traits, events, biomes, kingdoms = `Resource` files in `data/`. Code holds behavior, resources hold content.
+1. **Data-driven content.** Species, events, biomes, kingdoms = `Resource` files in `data/`. Code holds behavior, resources hold content.
 2. **Autoload singletons for services.** Global services live in `scripts/autoloads/`. They expose state + signals. They contain no gameplay logic.
 3. **EventBus for cross-system communication.** Systems do not import each other. They emit and subscribe to signals on `EventBus`. This is the single most important architectural rule.
 4. **Tick-driven simulation.** All passive progression is driven by `TickClock.tick(delta)`. `_process` is reserved for UI, animation, input.
-5. **Composition over inheritance for organisms.** An organism is a scene + a list of `TraitData` resources. No `ThickBarkPlant` subclass — apply `thick_bark.tres` to a plant scene.
-6. **Two save layers.** `RunSave` resets on prestige. `MetaSave` persists evolution-tree unlocks, kingdom unlocks, statistics.
+5. **Two save layers.** `run_save` resets on prestige. `meta_save` persists evolution-tree unlocks, kingdom unlocks, statistics.
+6. **Local resource flow.** No global resource pools. Resources flow between adjacent tiles via per-tile output buffers (cap 50). See `V1_PROTOTYPE.md` § 2.
 
 ## 3. Autoload contracts
-
-These are committed contracts. Implementations may change; signatures may not without Claude review.
 
 ### `EventBus` (singleton, signals only)
 
@@ -37,39 +35,32 @@ These are committed contracts. Implementations may change; signatures may not wi
 signal tick(delta_seconds: float)
 signal paused_changed(is_paused: bool)
 
-# Resources
-signal resource_changed(resource_id: StringName, new_amount: float)
-
 # Territory
 signal tile_tapped(coord: Vector2i)
 signal tile_colonized(coord: Vector2i, owner_id: StringName)
 signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
+signal tile_harvested(coord: Vector2i, amounts: Dictionary)
+signal animal_harvested(coord: Vector2i, amount: float)
+signal harvest_combo(level: int)
 
 # Structures
 signal structure_promoted(structure_id: StringName, anchor: Vector2i)
 
-# Organisms
-signal organism_spawned(organism_id: int, species_id: StringName, coord: Vector2i)
-signal organism_died(organism_id: int, cause: StringName)
-
 # Evolution
-signal trait_unlocked(trait_id: StringName)
 signal evolution_node_unlocked(node_id: StringName)
 signal discovery_unlocked(entry_id: StringName)
 signal species_leveled(species_id: StringName, new_level: int)
 
-# Ecological pressure
+# Events
 signal event_started(event_id: StringName, payload: Dictionary)
 signal event_resolved(event_id: StringName, outcome: StringName)
 
-# Input mode and abilities
-signal input_mode_changed(mode: StringName)
-signal ability_used(ability_id: StringName, payload: Dictionary)
-signal placement_target_changed(target: StringName)
+# Placement
+signal placement_target_changed(target_species_id: StringName)
+signal species_introduced(species_id: StringName)
 
 # Run lifecycle
 signal run_started(kingdom_id: StringName)
-signal niche_changed(niche_id: StringName)
 signal prestige_triggered(summary: Dictionary)
 signal run_loaded(save_version: int)
 signal goal_progress_changed(progress: Dictionary)
@@ -77,120 +68,56 @@ signal goal_met()
 signal checkpoint_triggered(id: StringName, payload: Dictionary)
 signal cycle_closed()
 
+# Era
+signal era_transition_started(from_era: StringName, to_era: StringName)
+signal ecosystem_completed(ecosystem_id: StringName)
+signal era_changed(era_id: StringName)
+
 # Offline progress
 signal replay_started(total_ticks: int)
 signal replay_finished()
+signal offline_summary(biomass_gained: float)
 ```
 
 ### `TickClock`
 
 ```gdscript
 var is_paused: bool
-var tick_hz: float = 1.0      # configurable in project settings
+var tick_hz: float = 1.0
 
 func pause() -> void
 func resume() -> void
-func force_tick(n: int = 1) -> void   # for debugging / offline replay
+func force_tick(n: int = 1) -> void
 ```
 
 Emits `EventBus.tick(delta)` and `EventBus.paused_changed`.
 
-### `ResourceLedger`
-
-Holds the live numeric resources for the current run. All resources are `float`.
-
-```gdscript
-const BIOMASS    := &"biomass"
-const NUTRIENTS  := &"nutrients"
-const SUNLIGHT   := &"sunlight"
-const DECAY      := &"decay"
-const SPORES     := &"spores"
-const PRESSURE   := &"population_pressure"
-
-func get_amount(resource_id: StringName) -> float
-func add(resource_id: StringName, amount: float) -> void
-func spend(resource_id: StringName, amount: float) -> bool   # returns false if insufficient
-func can_afford(costs: Dictionary) -> bool                    # {resource_id: amount}
-func spend_bundle(costs: Dictionary) -> bool                  # atomic — all or nothing
-func reset_run() -> void                                      # zero all known on prestige
-```
-
-Emits `EventBus.resource_changed` after every mutation.
-
-**Persistence:** ResourceLedger subscribes to `EventBus.run_loaded` and hydrates `_amounts` from `GameState.run_save["resources"]`. Every mutation writes back into that dict so `SaveSystem.save_now()` captures the current balances without an explicit pre-save hook.
-
 ### `GameState`
 
 ```gdscript
-var current_kingdom_id: StringName     # which kingdom this run plays
-var current_niche_id: StringName       # which niche this run plays
-var run_seed: int                       # for deterministic events
+var current_kingdom_id: StringName
+var run_seed: int
 var is_run_active: bool
+var placement_target_species_id: StringName
+var run_save: Dictionary
+var meta_save: Dictionary
 
-# Two save layers — see SaveSystem
-var run_save: Dictionary                # serialized RunSave
-var meta_save: Dictionary               # serialized MetaSave
+func get_hero_biomass() -> float
+func can_afford_hero_biomass(amount: float) -> bool
+func spend_hero_biomass(amount: float) -> bool
 ```
 
 ### `SaveSystem`
 
 ```gdscript
-const SAVE_VERSION := 1
+const SAVE_VERSION := 20
 const SAVE_PATH := "user://save.json"
 
-func save_now() -> void                 # blocking, called on tree_exiting + app pause
-func load_or_create() -> void           # called once on boot
-func reset_save() -> void               # delete + rebuild default; emits run_loaded
+func save_now() -> void
+func load_or_create() -> void
+func reset_save() -> void
 func migrate(old: Dictionary, from_version: int) -> Dictionary
 ```
-
-Save schema:
-
-```json
-{
-  "save_version": 1,
-  "saved_at_unix": 1747234567,
-  "meta": {
-    "unlocked_kingdoms": ["plantae"],
-    "evolution_tree": {"unlock_fungi": true},
-    "discovery_log": {},
-    "kingdoms_played": [],
-    "niches_played": [],
-    "statistics": {
-      "prestige_count": 1,
-      "evolution_points_balance": 12,
-      "total_biomass_lifetime": 4583.0
-    }
-  },
-  "run": {
-    "kingdom_id": "plantae",
-    "run_seed": 12345,
-    "tick_count": 4821,
-    "resources": {"biomass": 120.0, "sunlight": 8.0},
-    "tiles": [{"coord": [12, 30], "surface_owner": "plantae", "subsurface_owner": "", "data": {}}],
-    "organisms": [],
-    "active_events": [
-      {"id": "herbivore_wave", "ticks_remaining": 45, "payload": {"spawn_count": 3}}
-    ],
-    "event_first_fires_seen": [],
-    "goal_id": "",
-    "goal_progress": {},
-    "goal_met": false,
-    "statistics": {
-      "total_biomass_earned": 1247.5,
-      "tiles_colonized": 18,
-      "waves_defeated": 2
-    }
-  }
-}
-```
-
-Per-array entry shapes:
-- **Phase 5+**: `run.tiles[i] = {"coord": [x,y], "surface_owner": String, "subsurface_owner": String, "data": Dictionary}`. Either owner may be `""` (empty). Surface = above ground (plantae). Subsurface = below ground (fungi).
-- **Phase 3+**: `run.organisms[i] = {"organism_id": int, "species_id": StringName, "coord": [x,y], "hp": float, "data": Dictionary}`. Phase 5 adds `species_id == "corpse"` as a recognized variant; corpses use `data.decay_remaining_ticks` and `data.decay_per_tick`.
-- **Phase 3+**: `run.active_events[i] = {"id": StringName, "ticks_remaining": int, "payload": Dictionary}`
-
-These shapes evolve additively — loaders should tolerate missing optional fields. Required fields above must always be present in any saved entry.
 
 ### `AudioManager`
 
@@ -200,273 +127,171 @@ func play_music(track_id: StringName, fade_in: float = 0.5) -> void
 func stop_music(fade_out: float = 0.5) -> void
 ```
 
-## 4. Resource schemas (in `scripts/data/`)
+### `RunGoalSystem`
 
-Every content file in `data/` extends one of these.
+Throughput-based run goal: sustain +5.0 biomass/s for 30 consecutive ticks after cycle closure.
 
-### `KingdomData`
 ```gdscript
-class_name KingdomData extends Resource
-@export var id: StringName
-@export var display_name: String
-@export var description: String
-@export var starting_species: Array[SpeciesData]
-@export var starting_resources: Dictionary    # {resource_id: float}
-@export var unlock_cost: Dictionary           # paid in MetaSave currency on prestige
+func get_progress() -> float          # sustained_ticks / target
+func get_sustained_ticks() -> int
+func get_current_rate() -> float      # rolling avg biomass/s
+func is_met() -> bool
 ```
 
-### `SpeciesData` (Phase 13 brief 02 — species-first model)
+### `EcosystemScoring`
+
+Composite score from throughput (40%), diversity (30%), sustainability (30%). Drives grade (S/A/B/C/D) and prestige reward multiplier.
+
+```gdscript
+func get_grade() -> String
+func get_score() -> float
+func get_breakdown() -> Dictionary
+func get_grade_multiplier() -> float   # S=2.0, A=1.5, B=1.0, C=0.75, D=0.5
+```
+
+### `AdaptationSystem`
+
+In-run stat-choice leveling. Each level-up picks one of: production, efficiency, resistance, spread.
+
+```gdscript
+func level_up_stat(species_id: StringName, stat_name: StringName) -> void
+func get_stat_boost(species_id: StringName, stat_name: StringName) -> int
+func get_level(species_id: StringName) -> int
+func species_level_multiplier(species_id: StringName) -> float
+func can_level_up(species_id: StringName) -> bool
+func get_level_cost(species_id: StringName) -> float
+```
+
+### `CheckpointSystem`
+
+Onboarding nudges. Fires `checkpoint_triggered` as the player places each role.
+
+```gdscript
+# Checkpoint order:
+# place_hero → place_recycler → place_harvester → bottleneck_nutrients → bottleneck_detritus → run_complete
+```
+
+### `EraSystem`, `DiscoveryLog`, `KingdomTheme`, `ColonizationRulesRegistry`
+
+See source files for API. These are autoloads registered in `project.godot`.
+
+## 4. Resource schemas (in `scripts/data/`)
+
+### `SpeciesData`
 ```gdscript
 class_name SpeciesData extends Resource
 @export var id: StringName
 @export var display_name: String
-@export var description: String
 @export var latin_name: String
-@export var lineage_id: StringName
-@export var kingdom_id: StringName            # tag, not run-state (see SPECIES_MODEL.md)
+@export var kingdom_id: StringName
+@export var role: StringName              # &"producer", &"harvester", &"recycler"
 @export var sprite: Texture2D
 @export var base_traits: Array[TraitData]
-@export var tick_yield: Dictionary            # resources generated per tick per tile
-@export var introduce_cost: Dictionary        # one-shot per-run cost (Locked Decision 13)
-@export var colonize_cost: Dictionary         # per-tile placement cost
-@export var placement_rule: StringName        # adjacent_empty|fungi_substrate|parasitic_plantae|mycorrhizal_fungi|animal_anchor|recipe
+@export var tick_yield: Dictionary         # {resource_id: float per tick}
+@export var consume_input: Dictionary      # {resource_id: float per tick}
+@export var introduce_cost: Dictionary     # one-shot per-run cost
+@export var colonize_cost: Dictionary      # per-tile placement cost
+@export var placement_rule: StringName     # adjacent_empty|fungi_substrate|recipe|...
 @export var placement_targets: Array[StringName]
-@export var tags: Array[StringName]           # herbivore|predator|parasite|pioneer|... (predicate-driving)
-@export var tick_effects: Array[StringName]   # parasite_steal|corpse_decay|mycorrhizal_bond_apply|... (brief 05 dispatcher)
+@export var tags: Array[StringName]
+@export var tick_effects: Array[StringName]
 @export var unlock_ep_cost: int
 @export var unlock_prerequisites: Array[StringName]
 @export var era_requires: StringName
-@export var recipe_components: Array[StringName]  # non-empty + placement_rule==&"recipe" → atomic multi-component placement
+@export var recipe_components: Array[StringName]
 @export var tile_marker_color: Color
-@export var tile_marker_shape: StringName     # square|circle|cross|leaf|spore|root|border
-@export var biome_affinity: Dictionary        # {biome_id: multiplier}; consumed by GrowthSystem biomass yields
+@export var tile_marker_shape: StringName
+@export var biome_affinity: Dictionary
+@export var tile_sprite_paths: Array[String]
 ```
 
-Removed fields: `layer_count`, `layer_species` (replaced by `recipe_components` per Locked Decision 12).
+### `EvolutionNodeData`, `BiomeData`, `TraitData`, `EventData`, `DiscoveryEntry`, `EraData`, `EcosystemData`, `StructureData`
 
-### `TraitData`
-```gdscript
-class_name TraitData extends Resource
-@export var id: StringName
-@export var display_name: String
-@export var description: String
-@export var modifiers: Dictionary             # {"defense": +5, "growth_speed": -0.1}
-@export var tradeoff_summary: String          # one-line "+X / -Y"
-```
-
-### `EventData`
-```gdscript
-class_name EventData extends Resource
-@export var id: StringName
-@export var display_name: String
-@export var description: String
-@export var trigger_weight: float
-@export var duration_ticks: int
-@export var payload: Dictionary               # event-specific (e.g. herbivore count)
-```
-
-### `BiomeData`
-```gdscript
-class_name BiomeData extends Resource
-@export var id: StringName
-@export var display_name: String
-@export var tile_texture: Texture2D
-@export var sunlight_per_tick: float
-@export var nutrient_per_tick: float
-@export var decay_per_tick: float
-```
+See source files in `scripts/data/` for schemas.
 
 ### Content indices (`data/<folder>/_index.tres`)
 
-**Never enumerate `data/` with `DirAccess` at runtime.** Exported Android builds don't reliably enumerate the virtual `res://` filesystem, and unreferenced `.tres` files may be stripped or unfindable.
+**Never enumerate `data/` with `DirAccess` at runtime.** Exported Android builds don't reliably enumerate the virtual `res://` filesystem.
 
-Instead, every content folder has an `_index.tres` resource holding a typed array of every resource in that folder. Systems load the index; the `ExtResource` references inside the index force the export pipeline to bundle the dependencies.
-
-Schemas live in `scripts/data/`:
-- `BiomeIndex` → `Array[BiomeData]`
-- `SpeciesIndex` → `Array[SpeciesData]`
-- `TraitIndex` → `Array[TraitData]`
-- `EventIndex` → `Array[EventData]`
-- `EvolutionTreeIndex` → `Array[EvolutionNodeData]`
-
-Adding a new content file means updating the corresponding `_index.tres` in the inspector. Forgetting is a loud editor error (unresolved ExtResource), not a silent runtime miss.
-
-### `EvolutionNodeData`
-```gdscript
-class_name EvolutionNodeData extends Resource
-@export var id: StringName
-@export var display_name: String
-@export var description: String
-@export var prerequisites: Array[StringName]  # other node ids
-@export var meta_cost: Dictionary
-@export var grants_traits: Array[TraitData]
-@export var grants_kingdoms: Array[StringName]
-@export var wing: StringName
-@export var tier: int
-@export var requires_kingdom_played: Array[StringName]
-```
-
-### `DiscoveryEntry` (Phase 9+)
-```gdscript
-class_name DiscoveryEntry extends Resource
-@export var id: StringName
-@export var title: String
-@export var body: String
-@export var category: StringName
-@export var trigger_id: StringName
-```
-
-### `AbilityData` (Phase 11+)
-```gdscript
-class_name AbilityData extends Resource
-@export var id: StringName
-@export var display_name: String
-@export var description: String
-@export var cost: Dictionary
-@export var unlock_node_id: StringName
-@export var requires_event_active: StringName
-@export var target_mode: StringName
-@export var radius: int
-@export var magnitude: float
-@export var extra_payload: Dictionary
-```
-
-### `PerRunGoalData` (Phase 11+)
-```gdscript
-class_name PerRunGoalData extends Resource
-@export var id: StringName
-@export var display_text: String
-@export var tracker: StringName
-@export var target: float
-@export var niches: Array[StringName]
-@export var kingdoms: Array[StringName]
-```
-
-### `NicheData` (Phase 8+)
-```gdscript
-class_name NicheData extends Resource
-@export var id: StringName                        # &"photosynthesizer", &"parasitic_plantae", etc.
-@export var display_name: String
-@export var description: String
-@export var kingdom_id: StringName                # which kingdom this niche belongs to
-@export var species_options: Array[SpeciesData]   # currently always exactly 1; Phase 9+ may add picker
-@export var colonization_rule: StringName         # key dispatched by ColonizationRulesRegistry
-@export var cost_override: Dictionary             # if non-empty, overrides species.colonize_cost
-@export var unlock_node_id: StringName            # &"" = default niche (always available)
-@export var tile_variant: StringName              # rendering variant key (TileGrid uses this)
-```
-
-A `NicheIndex` (`scripts/data/niche_index.gd`) wraps `Array[NicheData] niches`, loaded from `data/niches/_index.tres`.
+Every content folder has an `_index.tres` resource holding a typed array. Systems load the index; the `ExtResource` references force the export pipeline to bundle dependencies.
 
 ## 5. System map
 
-Each gameplay system is a single `.gd` script attached to a node under `world.tscn`. They communicate only via EventBus or by reading autoloads.
+Systems live under `World/Systems` in `world.tscn`. They communicate only via EventBus or by reading autoloads.
 
-| System | File | Subscribes to | Emits |
-|---|---|---|---|
-| `TerritorySystem` | `scripts/systems/territory_system.gd` | `run_loaded` | `tile_colonized`, `tile_lost` (via public mutators called by colonization systems) |
-| `PlantColonization` | `scripts/systems/plant_colonization.gd` | `tile_tapped` (when kingdom is plantae, or symbiosis with placement_target=plantae) | — (calls TerritorySystem) |
-| `FungiColonization` | `scripts/systems/fungi_colonization.gd` | `tile_tapped` (when kingdom is fungi, or symbiosis with placement_target=fungi) | — (calls TerritorySystem) |
-| `ColonizationRulesRegistry` | `scripts/systems/colonization_rules_registry.gd` (autoload, Phase 8+) | — | `evaluate(rule, coord, kingdom_id, species, niche) -> {valid: bool, cost: Dictionary, data: Dictionary}`. Built-in rules: `&"adjacent_empty"`, `&"fungi_substrate"`, `&"parasitic_plantae"`, `&"mycorrhizal_fungi"`. Returned `data` is merged into the new tile's `data` dict (e.g. `parasite_decay_ticks`). |
-| `ParasiteDecaySystem` | `scripts/systems/parasite_decay_system.gd` (Phase 8+, **scheduled for removal in Phase 13 brief 05** — generalized into per-species `tick_effects` on `GrowthSystem`) | `tick`, `replay_started`, `replay_finished` | calls `TerritorySystem.remove_surface(coord, &"parasite_wither")` when a parasitic plantae tile has < 2 neighbors for 30 consecutive ticks. Inactive when current niche ≠ `&"parasitic_plantae"`. |
-| `ParasiteStealSystem` | `scripts/systems/parasite_steal_system.gd` (Phase 10+, **scheduled for removal in Phase 13 brief 05** — generalized into per-species `tick_effects` on `GrowthSystem`) | `tick`, `replay_started`, `replay_finished` | per-tick biomass gain proportional to neighbor count of parasitic targets. |
-| `CorpseSystem` | `scripts/systems/corpse_system.gd` | `organism_died`, `tick`, `run_loaded` | `organism_spawned` (for corpses), `organism_died` (when corpse fully decays) |
-| `TileInputRouter` | `scripts/systems/tile_input_router.gd` | raw input | `tile_tapped` |
-| `GrowthSystem` | `scripts/systems/growth_system.gd` | `tick` | `resource_changed` (via Ledger) |
-| `NutrientSystem` | `scripts/systems/nutrient_system.gd` | `tick`, `organism_died` | — |
-| `EcologicalPressure` | `scripts/systems/ecological_pressure.gd` | `tick` | `event_started`, `event_resolved` |
-| `AbilitySystem` | `scripts/systems/ability_system.gd` | `tile_tapped`, HUD button signals | `input_mode_changed`, `ability_used` |
-| `HerbivoreManager` | `scripts/systems/herbivore_manager.gd` | `tick`, `event_started`, `event_resolved`, `ability_used` | `organism_spawned`, `organism_died`, `tile_lost` |
-| `EvolutionSystem` | `scripts/systems/evolution_system.gd` | input | `trait_unlocked`, `evolution_node_unlocked` |
-| `PrestigeSystem` | `scripts/systems/prestige_system.gd` | UI button signals | `prestige_triggered`, `run_started`, `evolution_node_unlocked` |
-| `DiscoveryLog` | `scripts/autoloads/discovery_log.gd` | `evolution_node_unlocked`, `niche_changed`, `event_resolved`, `prestige_triggered` | `discovery_unlocked` |
-| `RunGoalSystem` | `scripts/autoloads/run_goal_system.gd` | `run_started`, `tick` | `goal_progress_changed`, `goal_met` |
-| `CheckpointSystem` | `scripts/autoloads/checkpoint_system.gd` | `run_started`, `run_loaded`, `tick` | `checkpoint_triggered` |
-| `RunStatsTracker` | `scripts/systems/run_stats_tracker.gd` | `resource_changed`, `tile_colonized`, `event_resolved` | — (writes only to `GameState.run_save.statistics`) |
-| `OfflineProgress` | `scripts/systems/offline_progress.gd` | `run_loaded` | `replay_started`, `replay_finished`; drives `force_tick(n)` on TickClock |
+| System | File | Role |
+|---|---|---|
+| `TerritorySystem` | `scripts/systems/territory_system.gd` | Tile ownership, occupants, species coords |
+| `GrowthSystem` | `scripts/systems/growth_system.gd` | Per-tile production, local flow, buffer management |
+| `NutrientSystem` | `scripts/systems/nutrient_system.gd` | Soil depletion, symbiotic nutrient transfer |
+| `TileInputRouter` | `scripts/systems/tile_input_router.gd` | Tap → colonize or harvest; combo tracking |
+| `ObstacleSystem` | `scripts/systems/obstacle_system.gd` | Rock obstacles on grid |
+| `FogSystem` | `scripts/systems/fog_system.gd` | Fog of war reveal |
+| `StructureRegistry` | `scripts/systems/structure_registry.gd` | Spatial pattern detection, structure halos |
+| `OfflineProgress` | `scripts/systems/offline_progress.gd` | Replays missed ticks on cold start |
+| `PrestigeSystem` | `scripts/systems/prestige_system.gd` | Run end, evolution points, team run start |
 
 ## 6. Scene composition
 
 ```
 world.tscn
 └── World (Node2D)
+    ├── EraBackgroundTint (ColorRect)
     ├── CameraRig (touch pan/pinch)
     ├── TileGrid (TileMap)
-    ├── Organisms (Node2D)        # parent for spawned organism scenes
-    ├── Systems (Node)             # holds the system scripts above
+    ├── Organisms (Node2D)
+    ├── Systems (Node)
+    │   ├── TileInputRouter
     │   ├── TerritorySystem
-    │   ├── GrowthSystem
+    │   ├── ObstacleSystem
+    │   ├── FogSystem
     │   ├── NutrientSystem
-    │   ├── EcologicalPressure
-    │   ├── EvolutionSystem
-    │   └── PrestigeSystem
+    │   ├── GrowthSystem
+    │   ├── StructureRegistry
+    │   ├── OfflineProgress
+    │   └── PrestigeSystem (group: "prestige_system")
     └── HUDLayer (CanvasLayer)
-        └── HUD (Control)
+        ├── PauseMenu
+        └── HUD
 ```
 
 ## 7. Input model (mobile)
 
-- Tap = primary action (colonize tile, trigger ability button).
+- Tap = primary action (colonize tile or harvest buffer).
 - Drag = pan camera.
 - Pinch = zoom camera (clamp 0.5×–2.0×).
-- Long-press on tile = inspect (popup with tile info).
-- No keyboard inputs in gameplay (debug only, hidden behind a build flag).
+- No keyboard inputs in gameplay.
 
 ## 7a. World-scope hydration pattern
 
-**Problem:** `EventBus.run_loaded` is emitted by `SaveSystem.load_or_create()` during `boot.tscn`, before `world.tscn` (and its child systems) exist. Systems that subscribe only via `_ready()` miss the signal.
+**Problem:** `EventBus.run_loaded` is emitted by `SaveSystem.load_or_create()` during `boot.tscn`, before `world.tscn` exists. Systems that subscribe only via `_ready()` miss the signal.
 
-**Rule:** Any system living inside `world.tscn` that needs to hydrate from `GameState.run_save` must use the catch-up pattern:
+**Rule:** Any system inside `world.tscn` that hydrates from `GameState.run_save` must use the catch-up pattern:
 
 ```gdscript
 func _ready() -> void:
     EventBus.run_loaded.connect(_on_run_loaded)
-    # Catch-up: the signal may have fired before this scene loaded.
     if _has_save_state():
         _on_run_loaded(SaveSystem.SAVE_VERSION)
 ```
 
-The handler must be idempotent — a no-op if state is empty or already applied — because `run_loaded` can also fire later (e.g. from `SaveSystem.reset_save()`).
-
-Autoloads do not need the catch-up because they are connected before `boot.gd` ever calls `load_or_create()`.
+The handler must be idempotent. Autoloads do not need the catch-up because they connect before `boot.gd` calls `load_or_create()`.
 
 ## 8. Non-negotiables (for agent reviewers)
 
-When reviewing AI-generated code, reject any change that:
+Reject any change that:
 1. Calls a system directly from another system (must go through EventBus).
 2. Uses `_process` for simulation logic (must use `tick` signal).
 3. Hardcodes content values that belong in a `.tres` resource.
 4. Writes to `user://` without going through `SaveSystem`.
 5. Adds a new signal without adding it to this document first.
-6. Introduces inheritance for organism variants instead of trait composition.
 
 ## 9. Save versioning
 
-Increment `SAVE_VERSION` and add a `migrate()` case any time the JSON schema changes. Never ship a schema change without a migration — players will have saves from earlier builds.
+Increment `SAVE_VERSION` and add a `migrate()` case any time the JSON schema changes. Never ship a schema change without a migration.
 
-**Migrations must cascade.** A v0 save loaded under build vN must pass through every intermediate step (v0→v1, v1→v2, …, v(N-1)→vN). Implement `migrate()` as a sequence of `if from_version < N:` blocks — *not* a `match` statement, because `match` only fires one arm and would silently skip later steps. Each version bump adds exactly one new `if` block to the chain.
-
-### Schema history
-
-| Version | Change |
-|---|---|
-| v1 | `run.kingdom` → `run.kingdom_id` |
-| v2 | `run.biome_map` added |
-| v3 | `meta.unlocked_kingdoms`, `meta.statistics`, `run.statistics` scaffolded |
-| v4 | tiles split into `surface_owner` / `subsurface_owner` |
-| v5 | `run.niche_id` added (defaults: plantae→`photosynthesizer`, fungi→`decomposer`, others→`""`); tile `data.parasite_decay_ticks` may be present; tile `data.surface_variant` / `data.subsurface_variant` may be present |
-| v6 | `meta.discovery_log`, `meta.kingdoms_played`, `meta.niches_played`, `run.event_first_fires_seen` added |
-| v7 | niche id rename `parasite_plantae` → `parasitic_plantae` |
-| v9 | `run.goal_id`, `run.goal_progress`, `run.goal_met` added |
-| v10 | symbiosis retired from active kingdom state; legacy run/resources compatibility backfills |
-| v11 | era/ecosystem state added (`current_era_id`, `current_ecosystem_id`, `ecosystem_completions`, `eras_unlocked`) |
-| v12 | species-first migration (`species_unlocked`, `species_played`, `starting_species_id`, per-tile `occupants`) |
-| v13 | `meta.lineages_played` added; backfilled from `meta.species_played` |
-| v14 | `meta.post_extinction`, `meta.first_run_in_era_completed`, `meta.first_era_seen` added |
-| v15 | `run.tile_ages`, `run.species_tile_counts`, `meta.lifetime_counters` added |
-| v16 | `run.fog_revealed`, `run.obstacles`, `run.active_structures`, `meta.structures_discovered` added |
-| v17 | `run.adaptation`, `run.species_levels` added |
+**Migrations must cascade.** A v0 save loaded under build vN must pass through every intermediate step. Implement `migrate()` as a sequence of `if from_version < N:` blocks — *not* a `match` statement.
 
 ---
 
-**Last updated**: Phase 15c adaptation + run evolution. Update this doc whenever a contract changes; do not update it speculatively.
+**Last updated**: Phase 19 (team loadout, ecosystem scoring, stat leveling). Current SAVE_VERSION = 20.

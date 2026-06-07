@@ -112,10 +112,16 @@ func _try_colonize(coord: Vector2i) -> void:
 	var biomass_cost: float = float(cost.get("biomass", 0.0))
 	if biomass_cost > 0.0 and not GameState.spend_hero_biomass(biomass_cost):
 		return
+	var placed: bool = false
 	for placement in result.get("placements", []):
-		_territory.add_occupant(placement["coord"], placement["kingdom_id"], placement["species_id"])
-		for key in placement.get("data", {}).keys():
-			_territory.set_tile_data(placement["coord"], key, placement["data"][key])
+		if _territory.add_occupant(placement["coord"], placement["kingdom_id"], placement["species_id"]):
+			placed = true
+			for key in placement.get("data", {}).keys():
+				_territory.set_tile_data(placement["coord"], key, placement["data"][key])
+	if not placed:
+		if biomass_cost > 0.0:
+			GameState.run_save["hero_biomass_lifetime_produced"] = GameState.get_hero_biomass() + biomass_cost
+		return
 	for key in result.get("data", {}).keys():
 		_territory.set_tile_data(coord, key, result["data"][key])
 	SaveSystem.save_now()

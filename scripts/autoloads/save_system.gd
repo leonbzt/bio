@@ -490,8 +490,8 @@ func _repair_species_unlocked(meta: Dictionary) -> void:
 		run["species_tile_counts"] = {}
 	if not run.has("adaptation"):
 		run["adaptation"] = 0.0
-	if not run.has("species_levels"):
-		run["species_levels"] = {}
+	if not run.has("species_stat_boosts"):
+		run["species_stat_boosts"] = {}
 	if not run.has("hero_biomass_lifetime_produced"):
 		run["hero_biomass_lifetime_produced"] = 0.0
 	if not run.has("cycle_closed"):

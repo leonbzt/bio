@@ -169,8 +169,7 @@ func _tick_tile(coord: Vector2i) -> void:
 		var b_consumed: float = float(consumed.get(&"biomass", 0.0))
 		if b_consumed > 0.0:
 			_add_hero_lifetime_biomass(b_consumed)
-			for source_coord in drain_sources:
-				EventBus.animal_harvested.emit(source_coord, drain_sources[source_coord])
+			EventBus.animal_harvested.emit(coord, b_consumed)
 
 
 func _compute_local_throttle(coord: Vector2i, species: SpeciesData) -> float:
@@ -263,10 +262,6 @@ func _produce_to_buffer(coord: Vector2i, species: SpeciesData, kingdom_id: Strin
 	var buf: Dictionary = _output_buffers.get(coord, {})
 	var cap: float = get_buffer_cap(coord)
 
-	var buf_total: float = 0.0
-	for v in buf.values():
-		buf_total += float(v)
-
 	var base_mult: float = throttle
 	if bool(GameState.run_save.get("cycle_closed", false)):
 		base_mult *= 1.5
@@ -311,15 +306,14 @@ func _produce_to_buffer(coord: Vector2i, species: SpeciesData, kingdom_id: Strin
 		if resource_key == &"biomass" and _has_ancient_neighbor_of_same_kingdom(coord, kingdom_id):
 			per_tile *= 1.05
 
-		var room: float = cap - buf_total
+		var current_amount: float = float(buf.get(resource_key, 0.0))
+		var room: float = cap - current_amount
 		if room >= per_tile:
-			buf[resource_key] = float(buf.get(resource_key, 0.0)) + per_tile
-			buf_total += per_tile
+			buf[resource_key] = current_amount + per_tile
 		else:
 			var added: float = maxf(room, 0.0)
 			if added > 0.0:
-				buf[resource_key] = float(buf.get(resource_key, 0.0)) + added
-				buf_total += added
+				buf[resource_key] = current_amount + added
 			var excess: float = per_tile - added
 			if excess > 0.0 and resource_key == &"biomass":
 				_add_hero_lifetime_biomass(excess * OVERFLOW_EFFICIENCY)
@@ -366,6 +360,7 @@ func _animal_auto_harvest(all_coords: Array) -> void:
 		var occ: Dictionary = _territory.peek_occupants(coord)
 		if not occ.has(&"animals"):
 			continue
+		var total_harvested: float = 0.0
 		for offset in _CARDINAL:
 			var neighbor: Vector2i = coord + offset
 			var nbuf: Dictionary = _output_buffers.get(neighbor, {})
@@ -376,8 +371,10 @@ func _animal_auto_harvest(all_coords: Array) -> void:
 			if not nocc.has(&"plantae"):
 				continue
 			nbuf[&"biomass"] = 0.0
-			_add_hero_lifetime_biomass(biomass)
-			EventBus.animal_harvested.emit(neighbor, biomass)
+			total_harvested += biomass
+		if total_harvested > 0.0:
+			_add_hero_lifetime_biomass(total_harvested)
+			EventBus.animal_harvested.emit(coord, total_harvested)
 
 
 func _on_run_started(_kingdom_id: StringName) -> void:

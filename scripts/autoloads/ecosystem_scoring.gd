@@ -129,7 +129,7 @@ func _cache_era_species_count() -> void:
 	if index == null:
 		_era_species_count = 7
 		return
-	var era_id: StringName = StringName(GameState.run_save.get("era_id", "carboniferous"))
+	var era_id: StringName = StringName(GameState.meta_save.get("current_era_id", "carboniferous"))
 	if era_id == &"":
 		era_id = &"carboniferous"
 	var count: int = 0

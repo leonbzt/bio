@@ -46,7 +46,7 @@ func _rule_adjacent_empty(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	if territory == null:
 		return _invalid()
 	var kingdom_id: StringName = species.kingdom_id
-	if territory.get_occupant(coord, kingdom_id) != &"":
+	if territory.is_tile_occupied(coord):
 		return _invalid()
 
 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
@@ -100,12 +100,11 @@ func _rule_fungi_substrate(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	var territory: Node = _get_territory()
 	if territory == null:
 		return _invalid()
-	var kingdom_id: StringName = species.kingdom_id
-	if territory.get_occupant(coord, kingdom_id) != &"":
+	if territory.is_tile_occupied(coord):
 		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
 
-	# Phase 14a: pioneer-tagged fungi can colonize bare tiles without substrate.
 	if species.tags.has(&"pioneer"):
 		var pioneer_cost: Dictionary = _scaled_cost_with_traits(species)
 		if owned.is_empty():
@@ -115,13 +114,8 @@ func _rule_fungi_substrate(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	if owned.is_empty():
 		return _single(coord, species, {}, {})
 
-	if territory.get_occupant(coord, &"plantae") != &"":
-		return _single(coord, species, _scaled_cost_with_traits(species), {})
-	var owned_set: Dictionary = {}
-	for c in owned:
-		owned_set[c] = true
-	for offset in neighbors(coord):
-		if owned_set.has(offset):
+	for n in neighbors(coord):
+		if territory.is_tile_occupied(n):
 			return _single(coord, species, _scaled_cost_with_traits(species), {})
 
 	return _invalid()
@@ -131,9 +125,9 @@ func _rule_parasitic_plantae(coord: Vector2i, species: SpeciesData) -> Dictionar
 	var territory: Node = _get_territory()
 	if territory == null:
 		return _invalid()
-	var kingdom_id: StringName = species.kingdom_id
-	if territory.get_occupant(coord, kingdom_id) != &"":
+	if territory.is_tile_occupied(coord):
 		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
 	if owned.is_empty():
 		return _single(coord, species, {}, {"parasite_decay_ticks": 30})
@@ -154,30 +148,25 @@ func _rule_mycorrhizal_fungi(coord: Vector2i, species: SpeciesData) -> Dictionar
 	var territory: Node = _get_territory()
 	if territory == null:
 		return _invalid()
-	var kingdom_id: StringName = species.kingdom_id
-	if territory.get_occupant(coord, kingdom_id) != &"":
+	if territory.is_tile_occupied(coord):
 		return _invalid()
-	var plant_at_or_adjacent: bool = territory.get_occupant(coord, &"plantae") != &""
-	if not plant_at_or_adjacent:
-		for n in neighbors(coord):
-			if territory.get_occupant(n, &"plantae") != &"":
-				plant_at_or_adjacent = true
-				break
-	if not plant_at_or_adjacent:
+	var has_adjacent_plant: bool = false
+	for n in neighbors(coord):
+		if territory.has_kingdom_at(n, &"plantae"):
+			has_adjacent_plant = true
+			break
+	if not has_adjacent_plant:
 		return _invalid()
-	var data := {}
-	if territory.get_occupant(coord, &"plantae") != &"":
-		data["mycorrhizal_bond"] = true
-	return _single(coord, species, _scaled_cost_with_traits(species), data)
+	return _single(coord, species, _scaled_cost_with_traits(species), {})
 
 
 func _rule_animal_anchor(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	var territory: Node = _get_territory()
 	if territory == null:
 		return _invalid()
-	var kingdom_id: StringName = species.kingdom_id
-	if territory.get_occupant(coord, kingdom_id) != &"":
+	if territory.is_tile_occupied(coord):
 		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
 	if owned.is_empty():
 		return _single(coord, species, {}, {})
@@ -196,9 +185,9 @@ func _rule_diagonal_only(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	var territory: Node = _get_territory()
 	if territory == null:
 		return _invalid()
-	var kingdom_id: StringName = species.kingdom_id
-	if territory.get_occupant(coord, kingdom_id) != &"":
+	if territory.is_tile_occupied(coord):
 		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
 	if owned.is_empty():
 		return _single(coord, species, {}, {})
@@ -222,9 +211,9 @@ func _rule_gap_jumper(coord: Vector2i, species: SpeciesData) -> Dictionary:
 	var territory: Node = _get_territory()
 	if territory == null:
 		return _invalid()
-	var kingdom_id: StringName = species.kingdom_id
-	if territory.get_occupant(coord, kingdom_id) != &"":
+	if territory.is_tile_occupied(coord):
 		return _invalid()
+	var kingdom_id: StringName = species.kingdom_id
 	var owned: Array[Vector2i] = territory.get_kingdom_occupied_coords(kingdom_id)
 	if owned.is_empty():
 		return _single(coord, species, {}, {})

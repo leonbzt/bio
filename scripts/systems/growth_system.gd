@@ -1,7 +1,7 @@
 extends Node
 ##
 ## GrowthSystem — local flow production.
-## Each tile has an output buffer (cap 50). Production fills the buffer.
+## Each tile has an output buffer (cap 15). Production fills the buffer.
 ## Hero biomass increases via: player tap-harvest, animal auto-harvest,
 ## or buffer overflow (25% efficiency).
 ##
@@ -17,7 +17,7 @@ const SPROUTING_DURATION: int = 15
 const MATURE_DURATION: int = 45
 const CYCLE_CLOSURE_CONFIRM_TICKS: int = 5
 
-const BUFFER_CAP_BASE: float = 50.0
+const BUFFER_CAP_BASE: float = 15.0
 const SOIL_START: float = 120.0
 const SOIL_GRACE_TICKS: int = 60
 const AMBIENT_FLOOR: float = 0.20
@@ -92,19 +92,25 @@ func get_tile_buffer_fill(coord: Vector2i) -> float:
 	return minf(total / BUFFER_CAP_BASE, 1.0)
 
 
+func get_tile_biomass_fill(coord: Vector2i) -> float:
+	var buf: Dictionary = _output_buffers.get(coord, {})
+	var biomass: float = float(buf.get(&"biomass", 0.0))
+	if BUFFER_CAP_BASE <= 0.0:
+		return 0.0
+	return minf(biomass / BUFFER_CAP_BASE, 1.0)
+
+
 const HARVEST_SOIL_KICKBACK: float = 0.10
 
 func drain_tile_buffer(coord: Vector2i) -> Dictionary:
 	var buf: Dictionary = _output_buffers.get(coord, {})
-	if buf.is_empty():
+	var biomass: float = float(buf.get(&"biomass", 0.0))
+	if biomass <= 0.0:
 		return {}
-	var drained: Dictionary = buf.duplicate()
-	var biomass_drained: float = float(drained.get(&"biomass", 0.0))
-	if biomass_drained > 0.0 and _soil_nutrients.has(coord):
-		_soil_nutrients[coord] = float(_soil_nutrients.get(coord, 0.0)) + biomass_drained * HARVEST_SOIL_KICKBACK
-	buf.clear()
-	_output_buffers[coord] = buf
-	return drained
+	buf[&"biomass"] = 0.0
+	if _soil_nutrients.has(coord):
+		_soil_nutrients[coord] = float(_soil_nutrients.get(coord, 0.0)) + biomass * HARVEST_SOIL_KICKBACK
+	return {&"biomass": biomass}
 
 
 func _on_tick(_delta_seconds: float) -> void:
@@ -121,6 +127,7 @@ func _on_tick(_delta_seconds: float) -> void:
 		_tick_tile(coord)
 
 	_symbiotic_auto_transfer(all_coords)
+	_animal_auto_harvest(all_coords)
 
 	var unlocked: Array = GameState.run_save.get("unlocked_species_in_run", []) as Array
 	for species_id_str in unlocked:
@@ -154,14 +161,16 @@ func _tick_tile(coord: Vector2i) -> void:
 	if throttle <= 0.0:
 		return
 
-	var consumed: Dictionary = _consume_local_inputs(coord, species, throttle)
+	var drain_sources: Dictionary = {}
+	var consumed: Dictionary = _consume_local_inputs(coord, species, throttle, drain_sources)
 	_produce_to_buffer(coord, species, kingdom_id, throttle)
 
 	if kingdom_id == &"animals":
 		var b_consumed: float = float(consumed.get(&"biomass", 0.0))
 		if b_consumed > 0.0:
 			_add_hero_lifetime_biomass(b_consumed)
-			EventBus.animal_harvested.emit(coord, b_consumed)
+			for source_coord in drain_sources:
+				EventBus.animal_harvested.emit(source_coord, drain_sources[source_coord])
 
 
 func _compute_local_throttle(coord: Vector2i, species: SpeciesData) -> float:
@@ -194,7 +203,7 @@ func _compute_local_throttle(coord: Vector2i, species: SpeciesData) -> float:
 	return maxf(throttle, floor)
 
 
-func _consume_local_inputs(coord: Vector2i, species: SpeciesData, throttle: float) -> Dictionary:
+func _consume_local_inputs(coord: Vector2i, species: SpeciesData, throttle: float, drain_sources: Dictionary = {}) -> Dictionary:
 	var consumed: Dictionary = {}
 	if species.consume_input.is_empty() or throttle <= 0.0:
 		return consumed
@@ -239,6 +248,8 @@ func _consume_local_inputs(coord: Vector2i, species: SpeciesData, throttle: floa
 					var take: float = minf(needed * fraction, avail)
 					_output_buffers[neighbor][rid] = maxf(0.0, float(_output_buffers[neighbor].get(rid, 0.0)) - take)
 					total_taken += take
+					if rid == &"biomass" and take > 0.0:
+						drain_sources[neighbor] = float(drain_sources.get(neighbor, 0.0)) + take
 
 		if total_taken > 0.0:
 			consumed[rid] = total_taken
@@ -325,7 +336,7 @@ func _symbiotic_auto_transfer(all_coords: Array) -> void:
 		var species: SpeciesData = _all_species.get(species_id, null)
 		if species == null:
 			continue
-		if not species.tick_effects.has(&"mycorrhizal_bond_apply"):
+		if not species.tick_yield.has(&"nutrients"):
 			continue
 
 		var buf: Dictionary = _output_buffers.get(coord, {})
@@ -346,7 +357,27 @@ func _symbiotic_auto_transfer(all_coords: Array) -> void:
 		var per_plant: float = n_avail / float(plant_neighbors.size())
 		for plant_coord in plant_neighbors:
 			_soil_nutrients[plant_coord] = float(_soil_nutrients.get(plant_coord, 0.0)) + per_plant
+			EventBus.soil_replenished.emit(plant_coord, per_plant)
 		buf[&"nutrients"] = 0.0
+
+
+func _animal_auto_harvest(all_coords: Array) -> void:
+	for coord in all_coords:
+		var occ: Dictionary = _territory.peek_occupants(coord)
+		if not occ.has(&"animals"):
+			continue
+		for offset in _CARDINAL:
+			var neighbor: Vector2i = coord + offset
+			var nbuf: Dictionary = _output_buffers.get(neighbor, {})
+			var biomass: float = float(nbuf.get(&"biomass", 0.0))
+			if biomass <= 0.0:
+				continue
+			var nocc: Dictionary = _territory.peek_occupants(neighbor)
+			if not nocc.has(&"plantae"):
+				continue
+			nbuf[&"biomass"] = 0.0
+			_add_hero_lifetime_biomass(biomass)
+			EventBus.animal_harvested.emit(neighbor, biomass)
 
 
 func _on_run_started(_kingdom_id: StringName) -> void:

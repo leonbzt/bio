@@ -231,6 +231,15 @@ func _build_introduced_row(species: SpeciesData) -> Control:
 	role_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	container.add_child(role_lbl)
 
+	var place_cost: float = float(species.colonize_cost.get("biomass", 0.0))
+	if place_cost > 0.0:
+		var cost_lbl := Label.new()
+		cost_lbl.text = "-%s" % FormatUtils.abbreviate(place_cost)
+		cost_lbl.add_theme_font_size_override("font_size", 9)
+		cost_lbl.add_theme_color_override("font_color", Color(0.85, 0.65, 0.35))
+		cost_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		container.add_child(cost_lbl)
+
 	if next_cost >= 0.0:
 		var up_btn := Button.new()
 		up_btn.text = "+"

@@ -127,17 +127,19 @@ func _try_harvest(coord: Vector2i) -> bool:
 	var occupants: Dictionary = _territory.get_occupants(coord)
 	if occupants.is_empty():
 		return false
+	var species_id: StringName = occupants.values()[0]
+	var species: SpeciesData = _species_by_id.get(species_id, null)
+	if species != null and species.role != &"producer":
+		return false
 	var drained: Dictionary = _growth.drain_tile_buffer(coord)
-	var total: float = 0.0
-	for amount in drained.values():
-		total += float(amount)
-	if total <= 0.0:
+	var biomass: float = float(drained.get(&"biomass", 0.0))
+	if biomass <= 0.0:
 		return false
 	_combo_count = mini(_combo_count + 1, COMBO_MAX)
 	_combo_timer = COMBO_WINDOW
 	var bonus: float = 1.0 + COMBO_BONUS_PER_LEVEL * float(_combo_count)
-	total *= bonus
-	GameState.run_save["hero_biomass_lifetime_produced"] = GameState.get_hero_biomass() + total
+	biomass *= bonus
+	GameState.run_save["hero_biomass_lifetime_produced"] = GameState.get_hero_biomass() + biomass
 	EventBus.tile_harvested.emit(coord, drained)
 	EventBus.harvest_combo.emit(_combo_count)
 	return true

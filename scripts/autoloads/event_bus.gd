@@ -14,6 +14,7 @@ signal tile_colonized(coord: Vector2i, owner_id: StringName)
 signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
 signal tile_harvested(coord: Vector2i, amounts: Dictionary)
 signal animal_harvested(coord: Vector2i, amount: float)
+signal soil_replenished(coord: Vector2i, amount: float)
 signal harvest_combo(level: int)
 
 # Structures

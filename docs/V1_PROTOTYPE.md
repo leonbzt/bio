@@ -36,7 +36,7 @@ Resources flow **locally between adjacent tiles**, not through global pools.
 
 ### Per-tile output buffer
 
-Every occupied tile has an output buffer (cap 50 units). Each tick, the species produces resources into its own buffer based on its tick_yield, throttled by local input satisfaction. When the buffer is full, excess biomass drips to hero at 25% efficiency (overflow).
+Every occupied tile has an output buffer (cap 15 units). Each tick, the species produces resources into its own buffer based on its tick_yield, throttled by local input satisfaction. When the buffer is full, excess biomass drips to hero at 25% efficiency (overflow).
 
 ### Soil nutrients & depletion
 
@@ -93,7 +93,7 @@ Grade thresholds: S ≥ 90, A ≥ 75, B ≥ 60, C ≥ 40, D < 40. Grade multipli
 
 ## 4. Species rates (sketch — to playtest)
 
-All rates fill per-tile output buffers (cap 50). Production throttles based on local input satisfaction.
+All rates fill per-tile output buffers (cap 15). Production throttles based on local input satisfaction.
 
 | Species | Role | Output (to buffer) | Input | Notes |
 |---|---|---|---|---|

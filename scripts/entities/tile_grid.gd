@@ -439,12 +439,19 @@ class _BufferBarOverlay extends Node2D:
 		if tile_grid == null:
 			return
 		var growth: Node = tile_grid._get_growth_system()
-		if growth == null or not growth.has_method("get_tile_buffer_fill"):
+		if growth == null or not growth.has_method("get_tile_biomass_fill"):
 			return
 		var ts: float = float(tile_grid.TILE_SIZE)
 		var bar_width: float = ts - BAR_INSET * 2.0
 		for coord in tile_grid._tile_occupants.keys():
-			var fill: float = float(growth.get_tile_buffer_fill(coord))
+			var occ: Dictionary = tile_grid._tile_occupants[coord]
+			if occ.is_empty():
+				continue
+			var sid: StringName = occ.values()[0]
+			var sp: SpeciesData = tile_grid._species_by_id.get(sid, null)
+			if sp != null and sp.role != &"producer":
+				continue
+			var fill: float = float(growth.get_tile_biomass_fill(coord))
 			if fill <= 0.0:
 				continue
 			var origin: Vector2 = tile_grid.map_to_local(coord)
@@ -503,7 +510,10 @@ var _last_stage_by_coord: Dictionary[Vector2i, int] = {}
 var _status_redraw_tick: int = 0
 var _animal_harvest_accum: Dictionary[Vector2i, float] = {}
 var _animal_harvest_ticks: Dictionary[Vector2i, int] = {}
-const ANIMAL_FLOAT_INTERVAL: int = 8
+const ANIMAL_FLOAT_INTERVAL: int = 4
+var _soil_replenish_accum: Dictionary[Vector2i, float] = {}
+var _soil_replenish_ticks: Dictionary[Vector2i, int] = {}
+const SOIL_FLOAT_INTERVAL: int = 6
 
 
 func _ready() -> void:
@@ -562,6 +572,7 @@ func _ready() -> void:
 	EventBus.tick.connect(_on_tick_pulse)
 	EventBus.tile_harvested.connect(_on_tile_harvested)
 	EventBus.animal_harvested.connect(_on_animal_harvested)
+	EventBus.soil_replenished.connect(_on_soil_replenished)
 
 	call_deferred("_populate")
 
@@ -843,6 +854,8 @@ func clear_owned() -> void:
 	_last_stage_by_coord.clear()
 	_animal_harvest_accum.clear()
 	_animal_harvest_ticks.clear()
+	_soil_replenish_accum.clear()
+	_soil_replenish_ticks.clear()
 	_request_scatter_redraw()
 	_redraw_halos()
 
@@ -998,6 +1011,18 @@ func _on_animal_harvested(coord: Vector2i, amount: float) -> void:
 			_spawn_animal_float(map_to_local(coord), total)
 
 
+func _on_soil_replenished(coord: Vector2i, amount: float) -> void:
+	_soil_replenish_accum[coord] = _soil_replenish_accum.get(coord, 0.0) + amount
+	var tick_count: int = _soil_replenish_ticks.get(coord, 0) + 1
+	_soil_replenish_ticks[coord] = tick_count
+	if tick_count >= SOIL_FLOAT_INTERVAL:
+		var total: float = _soil_replenish_accum.get(coord, 0.0)
+		_soil_replenish_accum[coord] = 0.0
+		_soil_replenish_ticks[coord] = 0
+		if total > 0.0:
+			_spawn_soil_float(map_to_local(coord), total)
+
+
 func _get_harvest_combo() -> int:
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null:
@@ -1041,4 +1066,19 @@ func _spawn_animal_float(pos: Vector2, amount: float) -> void:
 	tween.set_parallel(true)
 	tween.tween_property(label, "position:y", pos.y - 22.0, 1.2)
 	tween.tween_property(label, "modulate:a", 0.0, 1.2).set_delay(0.4)
+	tween.chain().tween_callback(label.queue_free)
+
+
+func _spawn_soil_float(pos: Vector2, _amount: float) -> void:
+	var label := Label.new()
+	label.text = "soil +"
+	label.add_theme_color_override("font_color", Color(0.45, 0.78, 0.35, 0.75))
+	label.add_theme_font_size_override("font_size", 9)
+	label.position = pos - Vector2(14, -4)
+	label.z_index = 10
+	add_child(label)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "position:y", pos.y - 8.0, 1.4)
+	tween.tween_property(label, "modulate:a", 0.0, 1.4).set_delay(0.5)
 	tween.chain().tween_callback(label.queue_free)

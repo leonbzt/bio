@@ -24,7 +24,7 @@
 3. **EventBus for cross-system communication.** Systems do not import each other. They emit and subscribe to signals on `EventBus`. This is the single most important architectural rule.
 4. **Tick-driven simulation.** All passive progression is driven by `TickClock.tick(delta)`. `_process` is reserved for UI, animation, input.
 5. **Two save layers.** `run_save` resets on prestige. `meta_save` persists evolution-tree unlocks, kingdom unlocks, statistics.
-6. **Local resource flow.** No global resource pools. Resources flow between adjacent tiles via per-tile output buffers (cap 50). See `V1_PROTOTYPE.md` § 2.
+6. **Local resource flow.** No global resource pools. Resources flow between adjacent tiles via per-tile output buffers (cap 15). See `V1_PROTOTYPE.md` § 2.
 
 ## 3. Autoload contracts
 
@@ -41,6 +41,7 @@ signal tile_colonized(coord: Vector2i, owner_id: StringName)
 signal tile_lost(coord: Vector2i, prev_owner_id: StringName)
 signal tile_harvested(coord: Vector2i, amounts: Dictionary)
 signal animal_harvested(coord: Vector2i, amount: float)
+signal soil_replenished(coord: Vector2i, amount: float)
 signal harvest_combo(level: int)
 
 # Structures

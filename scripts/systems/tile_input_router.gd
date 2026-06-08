@@ -5,7 +5,6 @@ const SPECIES_INDEX_PATH: String = "res://data/species/_index.tres"
 const COMBO_WINDOW: float = 2.0
 const COMBO_MAX: int = 5
 const COMBO_BONUS_PER_LEVEL: float = 0.10
-const TAP_FLAT_BONUS: float = 0.5
 
 var _press_pos: Vector2 = Vector2.ZERO
 var _press_index: int = -1
@@ -145,7 +144,7 @@ func _try_harvest(coord: Vector2i) -> bool:
 	_combo_count = mini(_combo_count + 1, COMBO_MAX)
 	_combo_timer = COMBO_WINDOW
 	var bonus: float = 1.0 + COMBO_BONUS_PER_LEVEL * float(_combo_count)
-	biomass = (biomass + TAP_FLAT_BONUS) * bonus
+	biomass *= bonus
 	GameState.run_save["hero_biomass_lifetime_produced"] = GameState.get_hero_biomass() + biomass
 	EventBus.tile_harvested.emit(coord, drained)
 	EventBus.harvest_combo.emit(_combo_count)
